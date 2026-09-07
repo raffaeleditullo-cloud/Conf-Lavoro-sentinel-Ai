@@ -51,7 +51,7 @@ services:
       # Montaggio dell'INTERA cartella di configurazione (mosquitto.conf + pwfile)
       # per garantire persistenza sull'host ed evitare perdite di credenziali.
       - ./mosquitto/config:/mosquitto/config
-      - ./storage/mosquitto_data:/mosquitto/data
+
 
   orchestrator:
     container_name: orchestrator

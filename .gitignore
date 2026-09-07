@@ -4,8 +4,8 @@
 # Dati persistenti di registrazione e database
 storage/recordings/
 storage/db/
-storage/mosquitto_data/
 storage/logs/
+
 
 
 # Cache modelli generati localmente a runtime (es. TensorRT engine compilati sul Jetson)
