@@ -1,0 +1,69 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# CONF-LAVORO SENTINEL AI - FASE 1: MOTORE PERCETTIVO
+# COMPOSE UNIFICATO (PC x86_64 e Jetson Orin Nano arm64)
+# ══════════════════════════════════════════════════════════════════════════════
+
+services:
+  frigate:
+    container_name: frigate
+    image: ghcr.io/blakeblackshear/frigate:${FRIGATE_VERSION:-0.17.2}${FRIGATE_IMAGE_SUFFIX}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    runtime: ${DOCKER_RUNTIME:-runc}
+    shm_size: "256mb"
+    tmpfs:
+      - /tmp/cache:size=1g
+    volumes:
+      # Sincronizzazione fuso orario con l'host (su Linux/Jetson)
+      - /etc/localtime:/etc/localtime:ro
+      # File di configurazione e cartella cache modelli
+      - ./config:/config
+      # Registrazioni video (su Jetson puntano all'SSD NVMe tramite STORAGE_RECORDINGS_PATH)
+      - ${STORAGE_RECORDINGS_PATH:-./storage/recordings}:/media/frigate/recordings
+      # Database SQLite (su Jetson punta all'SSD NVMe tramite STORAGE_DB_PATH)
+      - ${STORAGE_DB_PATH:-./storage/db}:/media/frigate/db
+      # Opzionale: decommentare su PC Linux con GPU Intel integrata per VAAPI
+      # - /dev/dri:/dev/dri
+    ports:
+      - "8971:8971"             # Interfaccia Web Frigate autenticata (HTTPS) per operatore/LAN
+      - "127.0.0.1:5000:5000"   # Interfaccia Web/API interna NON autenticata (solo localhost)
+      - "8554:8554"             # Flussi RTSP ritrasmessi da go2rtc
+      - "8555:8555/tcp"         # go2rtc WebRTC
+      - "8555:8555/udp"         # go2rtc WebRTC
+    env_file:
+      - .env
+    environment:
+      # Modello TensorRT generato automaticamente al primo avvio sul Jetson.
+      # Il processo di generazione richiede 3-5 minuti: NON riavviare il container.
+      - YOLO_MODELS=yolov4-416
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      # Rilegata esclusivamente a localhost: Frigate e l'orchestratore comunicano
+      # tramite rete interna Docker; nessuna esposizione sulla rete delle telecamere.
+      - "127.0.0.1:1883:1883"
+    volumes:
+      # Montaggio dell'INTERA cartella di configurazione (mosquitto.conf + pwfile)
+      # per garantire persistenza sull'host ed evitare perdite di credenziali.
+      - ./mosquitto/config:/mosquitto/config
+      - ./storage/mosquitto_data:/mosquitto/data
+
+  orchestrator:
+    container_name: orchestrator
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      # Registro eventi persistente sull'host con rotazione automatica (max 50MB)
+      - ./storage/logs:/app/logs
+    env_file:
+      - .env
+    depends_on:
+      - mosquitto
+

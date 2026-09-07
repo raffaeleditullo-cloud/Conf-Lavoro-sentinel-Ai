@@ -1,0 +1,19 @@
+# File di ambiente con credenziali reali
+.env
+
+# Dati persistenti di registrazione e database
+storage/recordings/
+storage/db/
+storage/mosquitto_data/
+storage/logs/
+
+
+# Cache modelli generati localmente a runtime (es. TensorRT engine compilati sul Jetson)
+config/model_cache/*
+!config/model_cache/.gitkeep
+
+
+# File temporanei di sistema
+*.log
+.DS_Store
+Thumbs.db

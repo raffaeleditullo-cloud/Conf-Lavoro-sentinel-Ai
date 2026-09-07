@@ -1,0 +1,333 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# CONF-LAVORO SENTINEL AI - FASE 1: MOTORE PERCETTIVO
+# CONFIGURAZIONE PRINCIPALE FRIGATE (config.yml)
+# Verificato rigorosamente su Frigate v0.17.2 Reference
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ══════ INIZIO PARAMETRI SPECIFICI DEL SITO (CONFIGURAZIONE CLIENTE) ══════
+# Questo blocco raggruppa tutti i parametri specifici del cliente e dell'impianto
+# che NON supportano la sostituzione automatica da variabili d'ambiente (.env).
+# Per installare un nuovo cliente, modificare il file .env e SOLO questo blocco.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# A) PIATTAFORMA HARDWARE (ACCELERAZIONE VIDEO DECODIFICA FFMPEG)
+# - Su Jetson Orin Nano (JetPack 6 con NVDEC): decommentare le 2 righe sottostanti
+# - Su PC di sviluppo x86_64 standard: lasciare entrambe le righe commentate (decodifica CPU)
+# ffmpeg:
+#   hwaccel_args: preset-jetson-h264
+
+# B) CLASSIFICAZIONE EVENTI PER L'ORCHESTRATORE (REVIEW: ALERTS vs DETECTIONS)
+# Definisce il livello di severità degli eventi pubblicati su topic frigate/reviews:
+# - alerts: generano notifica immediata ed escalation (persone e veicoli non autorizzati)
+# - detections: registrati per audit/statistica senza far scattare allarme sonoro
+review:
+  alerts:
+    labels:
+      - person
+      - car
+  detections:
+    labels:
+      - motorcycle
+      - bicycle
+      - bus
+      - truck
+
+# C) CONSERVAZIONE REGISTRAZIONI (POLITICA SITO - DEFAULT INIZIALE: 3 GIORNI = 72 ORE)
+# Modalità di base impostata su 'motion' (zero consumo disco a piazzale vuoto).
+record:
+  enabled: True
+  continuous:
+    days: 0
+  motion:
+    days: 3      # Giorni di conservazione base su movimento
+  alerts:
+    pre_capture: 5
+    post_capture: 10
+    retain:
+      days: 3    # Giorni di conservazione clip di allarme
+      mode: motion
+  detections:
+    pre_capture: 5
+    post_capture: 10
+    retain:
+      days: 3    # Giorni di conservazione clip di rilevamento
+      mode: motion
+
+# D) ISTANTANEE (SNAPSHOTS)
+snapshots:
+  enabled: True
+  timestamp: False
+  bounding_box: True
+  crop: False
+  retain:
+    default: 3   # Giorni di conservazione istantanee
+
+# E) LETTURA TARGHE (LPR) E TARGHE NOTE DEL CLIENTE
+lpr:
+  enabled: True
+  device: CPU
+  model_size: small
+  detection_threshold: 0.7
+  min_area: 1000
+  recognition_threshold: 0.9
+  min_plate_length: 4
+  # Regex standard targa italiana (2 lettere, 3 cifre, 2 lettere, es. AB123CD).
+  # Scarta letture spurie o malformate. (N.B. Nello standard ordinario sono escluse I, O, Q, U).
+  format: '^[A-Z]{2}[0-9]{3}[A-Z]{2}$'
+  match_distance: 1
+  enhancement: 0
+  debug_save_plates: False
+  replace_rules: {}
+  # Elenco targhe autorizzate specifiche dell'azienda cliente.
+  # Compilare inserendo la targa e la descrizione identificativa.
+  known_plates: {}
+  # Esempio di compilazione:
+  # known_plates:
+  #   AB123CD: "Furgone Magazzino 1"
+  #   EF456GH: "Auto Titolare"
+
+# ══════ FINE PARAMETRI SPECIFICI DEL SITO (CONFIGURAZIONE GLOBALE) ══════
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. DATABASE SQLITE (SU SSD NVMe TRAMITE MOUNT /media/frigate/db)
+# ──────────────────────────────────────────────────────────────────────────────
+database:
+  path: /media/frigate/db/frigate.db
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. INTEGRAZIONE BROKER MQTT (MOSQUITTO)
+# Campi host, user, password risolti nativamente da .env tramite {FRIGATE_...}.
+# La porta (1883) non supporta sostituzione ed è cablata come intero standard.
+# ──────────────────────────────────────────────────────────────────────────────
+mqtt:
+  enabled: True
+  host: '{FRIGATE_MQTT_HOST}'
+  port: 1883
+  user: '{FRIGATE_MQTT_USER}'
+  password: '{FRIGATE_MQTT_PASSWORD}'
+  topic_prefix: frigate
+  client_id: sentinel_ai_frigate
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. RILEVATORE PRIMARIO OGGETTI (YOLOv4-416 / TensorRT)
+# Generato automaticamente al primo avvio dall'immagine Frigate -tensorrt-jp6.
+# Licenza: YOLO LICENSE (pubblico dominio), file LICENSE in
+# https://github.com/AlexeyAB/darknet/blob/master/LICENSE
+# ──────────────────────────────────────────────────────────────────────────────
+detectors:
+  tensorrt:
+    type: tensorrt
+    device: 0
+
+model:
+  path: /config/model_cache/tensorrt/yolov4-416.trt
+  input_tensor: nchw
+  input_pixel_format: rgb
+  width: 416
+  height: 416
+  labelmap_path: /labelmap/coco-80.txt
+
+# ──────────────────────────────────────────────────────────────────────────────
+# AGGIORNAMENTO FUTURO: D-FINE / ONNX (Apache 2.0)
+# Per attivare questo rilevatore:
+# 1. Esportare il modello ONNX con la ricetta ufficiale Frigate
+#    (vedi docs/PROCEDURA_ESPORTAZIONE_ONNX.md) su una macchina con
+#    almeno 8 GB di RAM liberi e Docker.
+# 2. Copiare il file .onnx in config/model_cache/
+# 3. Commentare il blocco 'detectors: tensorrt' e 'model:' sopra
+# 4. Decommentare il blocco sottostante
+# 5. Rimuovere la variabile YOLO_MODELS dal docker-compose.yml
+# ──────────────────────────────────────────────────────────────────────────────
+# detectors:
+#   onnx:
+#     type: onnx
+#
+# model:
+#   model_type: dfine
+#   width: 640
+#   height: 640
+#   input_tensor: nchw
+#   input_dtype: float
+#   path: /config/model_cache/dfine_s_obj2coco.onnx
+#   labelmap_path: /labelmap/coco-80.txt
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. SERVER STREAMING INTERNO (GO2RTC) - PROXY RTSP REOLINK
+# Mappa gli stream RTSP definiti nel .env tramite go2rtc.
+# ──────────────────────────────────────────────────────────────────────────────
+go2rtc:
+  streams:
+    varco_carrabile_main:
+      - "{FRIGATE_CAM_VARCO_CARRABILE_MAIN_URL}"
+    varco_carrabile_sub:
+      - "{FRIGATE_CAM_VARCO_CARRABILE_SUB_URL}"
+
+    varco_pedonale_main:
+      - "{FRIGATE_CAM_VARCO_PEDONALE_MAIN_URL}"
+    varco_pedonale_sub:
+      - "{FRIGATE_CAM_VARCO_PEDONALE_SUB_URL}"
+
+    piazzale_main:
+      - "{FRIGATE_CAM_PIAZZALE_MAIN_URL}"
+    piazzale_sub:
+      - "{FRIGATE_CAM_PIAZZALE_SUB_URL}"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 5. CONFIGURAZIONE GLOBALE OGGETTI E FILTRI
+# ──────────────────────────────────────────────────────────────────────────────
+objects:
+  track:
+    - person
+    - car
+    - motorcycle
+    - bicycle
+    - bus
+    - truck
+  filters:
+    person:
+      min_score: 0.55
+      threshold: 0.70
+    car:
+      min_score: 0.55
+      threshold: 0.70
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6. RICONOSCIMENTO VOLTI (VINCOLO 3: PREDISPOSTO MA DISATTIVATO)
+# Modello 'small' (FaceNet) su CPU.
+# ──────────────────────────────────────────────────────────────────────────────
+face_recognition:
+  enabled: False
+  unknown_score: 0.8
+  detection_threshold: 0.7
+  recognition_threshold: 0.9
+  min_area: 500
+  min_faces: 1
+  save_attempts: 200
+  blur_confidence_filter: True
+  model_size: small
+  device: CPU
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. RILEVAMENTO AUDIO (RUMORI CRITICI DI PERICOLO)
+# Ascolto mirato a emergenze fisiche (urla, allarmi antincendio).
+# Escluso 'speech' per tutela della privacy e prevenzione falsi allarmi.
+# ──────────────────────────────────────────────────────────────────────────────
+audio:
+  enabled: True
+  max_not_heard: 30
+  min_volume: 500
+  listen:
+    - scream
+    - yell
+    - fire_alarm
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 8. CONFIGURAZIONE DELLE TELECAMERE
+# ──────────────────────────────────────────────────────────────────────────────
+cameras:
+
+  # ─── TELECAMERA 1: VARCO CARRABILE ──────────────────────────────────────────
+  varco_carrabile:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/varco_carrabile_main
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/varco_carrabile_sub
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - audio
+    detect:
+      enabled: True
+      width: 640
+      height: 360
+      fps: 5
+
+    # ┌────────────────────────────────────────────────────────────────────────┐
+    # │ NOTA TECNICA SULLA LETTURA TARGHE (QUESTIONE APERTA):                  │
+    # │ Il flusso secondario Reolink è a 640x360. A questa risoluzione la      │
+    # │ targa potrebbe risultare troppo piccola per PaddleOCR.                 │
+    # │ In sede di collaudo con l'ottica zoom 5x, se la lettura fallisce,      │
+    # │ la soluzione consiste nello spostare il ruolo 'detect' sul flusso 4K   │
+    # │ varco_carrabile_main (impostando width: 3840, height: 2160).           │
+    # │ Vedere dettagli e costi di memoria in docs/BUDGET_RISORSE.md.          │
+    # └────────────────────────────────────────────────────────────────────────┘
+    lpr:
+      enabled: True
+
+# ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE VARCO CARRABILE ══════
+    zones:
+      zona_accesso_veicoli:
+        coordinates: 0.15,0.40,0.85,0.40,0.95,0.95,0.05,0.95
+        objects:
+          - car
+          - motorcycle
+          - bus
+          - truck
+# ══════ FINE PARAMETRI SPECIFICI DEL SITO ══════
+
+  # ─── TELECAMERA 2: VARCO PEDONALE ───────────────────────────────────────────
+  varco_pedonale:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/varco_pedonale_main
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/varco_pedonale_sub
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - audio
+    detect:
+      enabled: True
+      width: 640
+      height: 360
+      fps: 5
+    face_recognition:
+      enabled: False
+
+# ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE VARCO PEDONALE ══════
+    zones:
+      zona_transito_pedoni:
+        coordinates: 0.20,0.30,0.80,0.30,0.85,0.95,0.15,0.95
+        objects:
+          - person
+# ══════ FINE PARAMETRI SPECIFICI DEL SITO ══════
+
+  # ─── TELECAMERA 3: PIAZZALE ─────────────────────────────────────────────────
+  piazzale:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/piazzale_main
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/piazzale_sub
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - audio
+    detect:
+      enabled: True
+      width: 640
+      height: 360
+      fps: 5
+
+# ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE PIAZZALE ══════
+    zones:
+      zona_parcheggio:
+        coordinates: 0.05,0.20,0.60,0.20,0.60,0.80,0.05,0.80
+        objects:
+          - car
+          - truck
+      zona_perimetro:
+        coordinates: 0.02,0.85,0.98,0.85,0.98,0.98,0.02,0.98
+        objects:
+          - person
+# ══════ FINE PARAMETRI SPECIFICI DEL SITO ══════
