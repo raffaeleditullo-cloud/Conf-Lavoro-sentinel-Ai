@@ -233,17 +233,20 @@ orchestrator   Up
 > **CHE COS'È L'ORCHESTRATORE IN QUESTA VERSIONE (FASE 1)**  
 > Il servizio `orchestrator` incluso in questa cartella è un **osservatore diagnostico e nulla di più**.  
 > - Si collega a Mosquitto con le stesse credenziali di Frigate.  
-> - Si sottoscrive a `frigate/#` e scrive ogni singolo evento ricevuto nel file `storage/logs/sentinel_events.log` con timestamp.  
-> - Ha un meccanismo di rotazione integrato (10 MB per file, max 5 file = max 50 MB su disco): non riempirà mai la memoria.  
+> - Si sottoscrive a `frigate/#` e registra ogni evento nel file `storage/logs/sentinel_events.log` in formato **JSON Lines (una riga JSON per evento)** con orario ISO 8601, topic e payload nativo.  
+> - Ha un meccanismo di rotazione integrato (10 MB per file, max 5 file = max 50 MB su disco): non saturerà mai la memoria.  
+> - Filtra automaticamente le immagini binarie salvando solo i metadati, impedendo il consumo indebito dello spazio.  
 > - **NON comanda relè, NON invia comandi all'altoparlante, NON decide allarmi.**  
 > *La logica di allarme, la voce, i relè e l'interfaccia utente arrivano nel prossimo aggiornamento della Fase 2, senza reinstallare nulla.*  
-> Questo registro è fondamentale: permette a noi sviluppatori di verificare sul campo la corrispondenza esatta con il contratto degli eventi.
+> Questo registro è fondamentale: permette a noi sviluppatori di verificare sul campo la corrispondenza esatta con il contratto degli eventi e di rigiocarli nei test.
 
 Per verificare che l'orchestratore stia registrando gli eventi in tempo reale:
 ```bash
 tail -f storage/logs/sentinel_events.log
 ```
-Facendo passare una persona o un'auto davanti a una telecamera, compariranno immediatamente le righe `[EVENT] Topic: frigate/events | Payload: {...}`.
+Facendo passare una persona o un'auto davanti a una telecamera, compariranno immediatamente le righe JSON:  
+`{"timestamp":"2026-09-07T12:00:00+02:00","topic":"frigate/events","payload_bytes":820,"type":"json","payload":{...}}`
+
 
 ---
 

@@ -5,27 +5,31 @@ CONF-LAVORO Sentinel AI — Orchestratore Osservatore (Fase 1 / Modalita' Diagno
 Ruolo:
 - Connessione al broker MQTT locale (Mosquitto) con credenziali da ambiente.
 - Sottoscrizione al wildcard topic 'frigate/#'.
-- Protezione del registro da payload binari (es. snapshot JPEG su frigate/<cam>/<obj>/snapshot):
-  - Verifica UTF-8 rigorosa (strict): se fallisce, logga solo topic e dimensione byte.
-  - Troncatura controllata dei messaggi testuali superiori a MAX_TEXT_LENGTH caratteri.
-- Scrittura di ogni evento in formato strutturato su file di log rotante:
-  - Rotazione automatica a 10 MB per file, max 5 backup storici (max 50 MB totali su disco).
-  - Riconnessione esponenziale automatica in caso di caduta del broker senza inondare i log.
+- Registrazione degli eventi su file in formato JSON Lines (JSONL):
+  - Ogni riga e' un oggetto JSON completo e indipendente, direttamente deserializzabile
+    e "rigiocabile" (replay) nei test di sviluppo della Fase 2.
+  - Campi garantiti: timestamp (ISO 8601 con fuso orario esplicito), topic, type (text, json, binary, truncated),
+    payload_bytes, payload (annidato come dict nativo se JSON valido, stringa se testo ordinario, omesso se binario).
+- Protezione da immagini JPEG grezze (es. frigate/<cam>/<obj>/snapshot):
+  - Verifica UTF-8 rigorosa (strict): se fallisce, logga type="binary" senza dump dei byte.
+- Troncamento di sicurezza per testi eccedenti MAX_TEXT_LENGTH caratteri.
+- Rotazione automatica a 10 MB per file, max 5 backup storici (tetto massimo 50 MB su disco).
+- Console stdout per Alessio via `docker compose logs -f orchestrator` in formato testuale sintetico.
 - NESSUNA azione attiva: non comanda rele', non invia comandi SIP, non decide allarmi.
 """
 
 import os
 import sys
 import time
+import json
 import logging
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 import paho.mqtt.client as mqtt
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. CONFIGURAZIONE PARAMETRI DI RUNTIME
 # ──────────────────────────────────────────────────────────────────────────────
-# In Frigate e Mosquitto la porta 1883 e' standard interno alla rete Docker.
-# Uniformata la convenzione: host, user e password provengono dalle variabili FRIGATE_*.
 MQTT_HOST = os.environ.get("FRIGATE_MQTT_HOST", "mosquitto")
 MQTT_PORT = 1883  # Porta standard interna cablata coerentemente con config.yml
 MQTT_USER = os.environ.get("FRIGATE_MQTT_USER", "")
@@ -37,42 +41,39 @@ LOG_FILE = os.path.join(LOG_DIR, "sentinel_events.log")
 MAX_TEXT_LENGTH = 3000
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 2. INIZIALIZZAZIONE LOGGER ROTANTE
+# 2. INIZIALIZZAZIONE LOGGERS
 # ──────────────────────────────────────────────────────────────────────────────
 os.makedirs(LOG_DIR, exist_ok=True)
 
+# Logger di sistema (operativo, diagnostico, console)
 logger = logging.getLogger("SentinelObserver")
 logger.setLevel(logging.INFO)
 
-# Formattatore: Data e ora precisa (fuso locale tramite tzdata + TZ), livello e messaggio
-formatter = logging.Formatter(
+console_formatter = logging.Formatter(
     fmt="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(console_formatter)
+logger.addHandler(console_handler)
 
-# Handler rotante su file: 10 MB per file, max 5 backup storici (tetto massimo: 50 MB)
+# Logger dedicato al file JSON Lines: scrive la stringa JSON grezza pura senza prefissi
+jsonl_logger = logging.getLogger("SentinelEventLog")
+jsonl_logger.setLevel(logging.INFO)
+jsonl_logger.propagate = False  # Non duplica su stdout
+
+file_formatter = logging.Formatter(fmt="%(message)s")
 file_handler = RotatingFileHandler(
     LOG_FILE,
-    maxBytes=10 * 1024 * 1024,
-    backupCount=5,
+    maxBytes=10 * 1024 * 1024,  # 10 MB
+    backupCount=5,              # max 5 file = 50 MB totali
     encoding="utf-8"
 )
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-# Handler stdout su console (visibile via `docker compose logs -f orchestrator`)
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+file_handler.setFormatter(file_formatter)
+jsonl_logger.addHandler(file_handler)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 3. CALLBACK MQTT — API VERSION2 (paho-mqtt >= 2.0.0)
-# Documentazione: https://github.com/eclipse-paho/paho.mqtt.python
-# In CallbackAPIVersion.VERSION2:
-#   - on_connect:    (client, userdata, flags, reason_code, properties)
-#   - on_disconnect: (client, userdata, disconnect_flags, reason_code, properties)
-#   - reason_code:   istanza di paho.mqtt.reasoncodes.ReasonCode
-#                    (ha il metodo reason_code.is_failure per valutare l'esito)
 # ──────────────────────────────────────────────────────────────────────────────
 def on_connect(client, userdata, flags, reason_code, properties):
     if not reason_code.is_failure:
@@ -80,7 +81,6 @@ def on_connect(client, userdata, flags, reason_code, properties):
             "Connessione stabilita con successo al broker MQTT (%s:%d) [ReasonCode: %s]",
             MQTT_HOST, MQTT_PORT, reason_code
         )
-        # Sottoscrizione all'intero albero di eventi di Frigate
         client.subscribe("frigate/#", qos=0)
         logger.info("Sottoscrizione attiva al wildcard topic 'frigate/#' — in ascolto...")
     else:
@@ -103,30 +103,56 @@ def on_message(client, userdata, msg):
     raw_payload = msg.payload
     payload_len = len(raw_payload)
 
-    # 1. Verifica rigorosa se il payload e' testo valido (UTF-8 strict)
-    #    Scarta immagini JPEG binarie (es. frigate/<cam>/<obj>/snapshot) evitando caratteri spuri nel log.
+    # Orario in formato ISO 8601 con fuso orario esplicito (eredita TZ da container, es. +02:00)
+    iso_timestamp = datetime.now(timezone.utc).astimezone().isoformat()
+
+    # 1. Verifica binaria (UTF-8 strict)
+    #    Scarta immagini JPEG grezze (es. frigate/<cam>/<obj>/snapshot) salvando solo i metadati
     try:
         text_payload = raw_payload.decode("utf-8")
         is_binary = False
     except UnicodeDecodeError:
         is_binary = True
 
-    if is_binary:
-        logger.info(
-            "[EVENT-BIN] Topic: %s | [contenuto binario non stampato, dimensione: %d byte]",
-            topic, payload_len
-        )
-        return
+    record = {
+        "timestamp": iso_timestamp,
+        "topic": topic,
+        "payload_bytes": payload_len
+    }
 
-    # 2. Controllo e troncamento di sicurezza sulla lunghezza del testo
-    if len(text_payload) > MAX_TEXT_LENGTH:
-        truncated_text = text_payload[:MAX_TEXT_LENGTH]
-        logger.info(
-            "[EVENT-TRUNC] Topic: %s | [lunghezza originale: %d caratteri, troncato a %d]: %s... [TRONCATO]",
-            topic, len(text_payload), MAX_TEXT_LENGTH, truncated_text
-        )
+    if is_binary:
+        record["type"] = "binary"
+        # Omette il campo 'payload' per non inquinare il file con byte illeggibili
+        logger.info("[EVENT-BIN] Topic: %s | Dimensione: %d byte", topic, payload_len)
     else:
-        logger.info("[EVENT] Topic: %s | Payload: %s", topic, text_payload)
+        # 2. Verifica se il testo e' un JSON valido per annidarlo come dict nativo
+        parsed_json = None
+        if (text_payload.startswith("{") and text_payload.endswith("}")) or \
+           (text_payload.startswith("[") and text_payload.endswith("]")):
+            try:
+                parsed_json = json.loads(text_payload)
+            except Exception:
+                parsed_json = None
+
+        if parsed_json is not None:
+            record["type"] = "json"
+            record["payload"] = parsed_json
+            logger.info("[EVENT-JSON] Topic: %s (%d byte)", topic, payload_len)
+        else:
+            # 3. Testo ordinario (es. "ON", "OFF", stringhe semplici) con controllo di lunghezza
+            if len(text_payload) > MAX_TEXT_LENGTH:
+                record["type"] = "truncated"
+                record["payload"] = text_payload[:MAX_TEXT_LENGTH]
+                record["original_length"] = len(text_payload)
+                logger.info("[EVENT-TRUNC] Topic: %s (%d byte, troncato)", topic, payload_len)
+            else:
+                record["type"] = "text"
+                record["payload"] = text_payload
+                logger.info("[EVENT-TEXT] Topic: %s | Valore: %s", topic, text_payload)
+
+    # Scrittura di una singola riga JSON (separatori compatti senza a capo interni)
+    json_line = json.dumps(record, ensure_ascii=False, separators=(',', ':'))
+    jsonl_logger.info(json_line)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. CICLO PRINCIPALE DI VITA DEL SERVIZIO
@@ -135,11 +161,11 @@ def main():
     logger.info("════════════════════════════════════════════════════════════════════")
     logger.info("Avvio CONF-LAVORO Sentinel AI — Orchestratore Osservatore v1.0")
     logger.info("Broker target: %s:%d | Utente: %s", MQTT_HOST, MQTT_PORT, MQTT_USER)
-    logger.info("Destinazione registro eventi: %s (Rotazione: 10MB x 5 backup)", LOG_FILE)
-    logger.info("Fuso orario configurato: %s", os.environ.get("TZ", "UTC"))
+    logger.info("Registro eventi (JSON Lines): %s", LOG_FILE)
+    logger.info("Politica rotazione: 10 MB x 5 file backup (Max 50 MB)")
+    logger.info("Fuso orario attivo: %s", os.environ.get("TZ", "Europe/Rome"))
     logger.info("════════════════════════════════════════════════════════════════════")
 
-    # Inizializzazione client Paho MQTT con API VERSION2 formale
     client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
         client_id="sentinel_ai_observer"

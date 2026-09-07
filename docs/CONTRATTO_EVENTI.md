@@ -282,3 +282,42 @@ dei messaggi MQTT. Corrispondono ai nomi definiti in `config/config.yml`.
 | `scream` | Urlo |
 | `yell` | Grido |
 | `fire_alarm` | Allarme antincendio |
+
+---
+
+## 6. Formato Registro Diagnostico per la Fase 2 (JSON Lines)
+
+Il demone `orchestrator` scrive tutti i messaggi ricevuti dal broker nel file:
+`storage/logs/sentinel_events.log`
+
+Il file adotta il formato **JSON Lines (JSONL)**: ogni riga è un oggetto JSON
+autonomo e valido, privo di a capo interni, direttamente deserializzabile
+da script di test o riproducibile tramite mock MQTT nella Fase 2.
+
+### Schema del Record JSONL
+
+```json
+{
+  "timestamp": "2026-09-07T12:00:05.123456+02:00",
+  "topic": "frigate/events",
+  "payload_bytes": 1420,
+  "type": "json",
+  "payload": {
+    "type": "new",
+    "before": {...},
+    "after": {...}
+  }
+}
+```
+
+### Definizione Campi
+
+| Campo | Tipo | Descrizione |
+|-------|------|-------------|
+| `timestamp` | `string` | Data e ora di ricezione in standard ISO 8601 con fuso orario esplicito (es. `+02:00`). |
+| `topic` | `string` | Nome completo del topic MQTT (es. `frigate/events`, `frigate/stats`, `frigate/varco_carrabile/car`). |
+| `payload_bytes` | `integer` | Dimensione originaria del payload grezzo in byte. |
+| `type` | `string` | Tipologia del messaggio registrato: `"json"`, `"text"`, `"binary"`, `"truncated"`. |
+| `payload` | `object` / `string` | **Contenuto del messaggio**: se JSON valido, è annidato come dizionario/lista nativa; se testo normale, è una stringa; se `"binary"` (es. frame snapshot JPEG), il campo è omesso. |
+| `original_length` | `integer` | *(Opzionale)* Presente solo se `type == "truncated"` (testi superiori a 3.000 caratteri). |
+
