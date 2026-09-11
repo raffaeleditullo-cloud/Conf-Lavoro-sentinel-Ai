@@ -99,6 +99,11 @@ nas = UgreenNASArchiver(nas_ip=NAS_IP, share_name=NAS_SHARE, user=NAS_USER, pass
 # Tracciamento cooldown per telecamera/azione: { "camera_azione": timestamp_ultimo_trigger }
 cooldown_tracker = {}
 
+# Tracciamento deduplicazione archiviazione NAS per event_id
+archived_snapshots = set()
+archived_clips = set()
+MAX_TRACKED_EVENTS = 2000
+
 def is_in_cooldown(key: str, cooldown_seconds: float) -> bool:
     now = time.time()
     last_time = cooldown_tracker.get(key, 0.0)
@@ -106,6 +111,26 @@ def is_in_cooldown(key: str, cooldown_seconds: float) -> bool:
         return True
     cooldown_tracker[key] = now
     return False
+
+def mark_snapshot_archived(event_id: str) -> bool:
+    """Restituisce True solo la prima volta per un dato event_id (evita burst di salvataggi)."""
+    if not event_id:
+        return True
+    if event_id in archived_snapshots:
+        return False
+    if len(archived_snapshots) > MAX_TRACKED_EVENTS:
+        archived_snapshots.clear()
+    archived_snapshots.add(event_id)
+    return True
+
+def mark_clip_archived(event_id: str) -> bool:
+    """Restituisce True solo la prima volta che viene archiviata la clip di un evento."""
+    if not event_id:
+        return True
+    if len(archived_clips) > MAX_TRACKED_EVENTS:
+        archived_clips.clear()
+    archived_clips.add(event_id)
+    return True
 
 def get_audio_path(sound_id: str) -> str:
     """Restituisce il percorso assoluto del file audio per il pacchetto vocale attivo."""
@@ -135,32 +160,39 @@ def handle_frigate_event(event_data: dict, topic: str):
         return
 
     # Scenario A: RILEVAMENTO PERSONA (Varco pedonale, piazzale o carrabile)
-    if label == "person" and event_type in ("new", "update"):
-        # 1. Accensione Faretto (Relè Canale 1) con antirimbalzo di 10s
-        if not is_in_cooldown(f"{camera}_faretto", cooldown_seconds=10.0):
-            logger.info(">>> AZIONE: Persona rilevata su '%s' -> Accensione Faretto (Relè 1) per %ds", camera, int(FARETTO_DURATION))
-            relay.accendi_faretto(durata_secondi=FARETTO_DURATION)
+    if label == "person":
+        if event_type in ("new", "update"):
+            # 1. Accensione Faretto (Relè Canale 1) con antirimbalzo di 10s
+            if not is_in_cooldown(f"{camera}_faretto", cooldown_seconds=10.0):
+                logger.info(">>> AZIONE: Persona rilevata su '%s' -> Accensione Faretto (Relè 1) per %ds", camera, int(FARETTO_DURATION))
+                relay.accendi_faretto(durata_secondi=FARETTO_DURATION)
 
-        # 2. Avviso Vocale sull'Altoparlante Fanvil con cooldown dedicato
-        if not is_in_cooldown(f"{camera}_audio", cooldown_seconds=AUDIO_COOLDOWN):
-            if camera == "varco_pedonale":
-                audio_file = get_audio_path("01_accesso_consentito")
-            elif camera == "piazzale":
+            # 2. Avviso Vocale sull'Altoparlante Fanvil con cooldown dedicato (default 15s)
+            # Qualsiasi persona rilevata su varchi perimetrali o piazzale riceve avviso di dissuasione
+            if not is_in_cooldown(f"{camera}_audio", cooldown_seconds=AUDIO_COOLDOWN):
                 audio_file = get_audio_path("03_avviso_dissuasione")
-            else:
-                audio_file = get_audio_path("03_avviso_dissuasione")
+                logger.info(">>> AZIONE: Riproduzione avviso vocale '%s' per '%s'", os.path.basename(audio_file), camera)
+                speaker.play_audio_file(audio_file)
 
-            logger.info(">>> AZIONE: Riproduzione avviso vocale '%s' per '%s'", os.path.basename(audio_file), camera)
-            speaker.play_audio_file(audio_file)
+            # 3. Archiviazione Snapshot sul NAS (una sola volta per ID evento, istantanea)
+            if has_snapshot and mark_snapshot_archived(event_id):
+                nas.archive_snapshot(event_id=event_id, camera=camera, label=label)
 
-        # 3. Archiviazione evento sul NAS Ugreen
-        if event_type == "new" or has_snapshot:
-            nas.archive_event(event_id=event_id, camera=camera, label=label, has_snapshot=has_snapshot, has_clip=has_clip)
+        elif event_type == "end":
+            # 4. Archiviazione Clip Video sul NAS solo a conclusione dell'evento (risolve HTTP 400)
+            if has_clip and mark_clip_archived(event_id):
+                logger.info(">>> Evento concluso su '%s' (ID: %s). Avvio download clip video...", camera, event_id)
+                nas.archive_clip(event_id=event_id, camera=camera, label=label, delay_seconds=3.0)
 
     # Scenario B: RILEVAMENTO VEICOLO (Varco carrabile o piazzale)
-    elif label in ("car", "truck", "motorcycle") and event_type == "new":
-        logger.info(">>> Rilevato veicolo (%s) su '%s'. Verifica targa in corso...", label, camera)
-        nas.archive_event(event_id=event_id, camera=camera, label=label, has_snapshot=has_snapshot, has_clip=has_clip)
+    elif label in ("car", "truck", "motorcycle"):
+        if event_type in ("new", "update"):
+            if has_snapshot and mark_snapshot_archived(event_id):
+                logger.info(">>> Rilevato veicolo (%s) su '%s' (ID: %s). Archiviazione snapshot...", label, camera, event_id)
+                nas.archive_snapshot(event_id=event_id, camera=camera, label=label)
+        elif event_type == "end":
+            if has_clip and mark_clip_archived(event_id):
+                nas.archive_clip(event_id=event_id, camera=camera, label=label, delay_seconds=3.0)
 
 def handle_lpr_update(lpr_data: dict):
     """Elabora le letture targa pubblicate su 'frigate/tracked_object_update'."""

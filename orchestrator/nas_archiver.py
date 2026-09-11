@@ -5,11 +5,13 @@ CONF-LAVORO Sentinel AI — Modulo Archiviazione NAS Ugreen (SMB / Windows Share
 Caratteristiche:
 - Si collega al NAS Ugreen su IP 192.168.1.11, condivisione 'sentinel-eventi'.
 - Credenziali: utente 'jetson', password (configurabile da .env).
-- Preleva lo snapshot ad alta risoluzione o la clip video da Frigate tramite API interna (http://frigate:5000/api/events/<event_id>/snapshot.jpg).
+- Supporto NTLM esplicito tramite smbclient.ClientConfig per prevenire 'No username or password was specified'.
+- Preleva lo snapshot JPEG ad alta risoluzione o la clip video MP4 da Frigate tramite API interna.
+- Snapshot: scaricato immediatamente al primo rilevamento.
+- Clip MP4: scaricata SOLO alla fine dell'evento con ritardo programmato e retry automatici (risolve HTTP 400).
 - Salva l'evidenza sul NAS organizzata per Data e Telecamera:
   `//192.168.1.11/sentinel-eventi/YYYY-MM-DD/<camera>/<id_evento>_<label>.jpg`
-- Include salvataggio di emergenza su disco locale se il NAS è temporaneamente offline.
-- Totalmente asincrono: l'invio al NAS non rallenta l'orchestratore.
+- Include buffer di emergenza locale se il NAS è temporaneamente non raggiungibile.
 """
 
 import os
@@ -20,6 +22,7 @@ import threading
 from datetime import datetime
 import requests
 import smbclient
+from smbclient import ClientConfig, register_session, makedirs, open_file
 
 logger = logging.getLogger("SentinelNAS")
 
@@ -43,77 +46,105 @@ class UgreenNASArchiver:
         self.unc_base = f"\\\\{self.nas_ip}\\{self.share_name}"
         self._lock = threading.Lock()
 
-        # Registrazione credenziali di sessione SMB (smbprotocol)
+        # Configurazione globale e registrazione credenziali SMB (smbprotocol)
         if self.user and self.password:
             try:
-                smbclient.register_session(self.nas_ip, username=self.user, password=self.password)
-                logger.info("Credenziali registrate per il NAS Ugreen %s (utente: %s)", self.nas_ip, self.user)
+                ClientConfig(username=self.user, password=self.password, auth_protocol="ntlm")
+                register_session(self.nas_ip, username=self.user, password=self.password)
+                logger.info("Configurazione SMB completata per NAS Ugreen %s (utente: %s)", self.nas_ip, self.user)
             except Exception as e:
-                logger.warning("Impossibile registrare subito la sessione SMB per %s: %s", self.nas_ip, e)
+                logger.warning("Avviso configurazione iniziale sessione SMB per %s: %s", self.nas_ip, e)
 
-    def archive_event(self, event_id: str, camera: str, label: str, has_snapshot: bool = True, has_clip: bool = False):
+    def archive_snapshot(self, event_id: str, camera: str, label: str):
         """
-        Scarica gli allegati dell'evento da Frigate e li copia nella cartella del NAS.
-        Esegue l'operazione in un thread in background.
+        Scarica immediatamente lo snapshot JPEG dell'evento da Frigate e lo invia al NAS.
+        Esegue l'operazione in un thread dedicato per non bloccare l'orchestratore.
         """
-        def _archive_worker():
+        def _snapshot_worker():
             date_folder = datetime.now().strftime("%Y-%m-%d")
             remote_cam_dir = f"{self.unc_base}\\{date_folder}\\{camera}"
+            snapshot_url = f"{self.frigate_base_url}/api/events/{event_id}/snapshot.jpg"
+            filename = f"{event_id}_{label}.jpg"
 
-            # 1. Archiviazione Snapshot (Immagine JPEG nitida)
-            if has_snapshot:
-                snapshot_url = f"{self.frigate_base_url}/api/events/{event_id}/snapshot.jpg"
-                filename = f"{event_id}_{label}.jpg"
-                self._transfer_file_from_frigate(snapshot_url, remote_cam_dir, filename)
+            try:
+                logger.info("Scaricamento snapshot da Frigate: %s", snapshot_url)
+                res = requests.get(snapshot_url, timeout=10.0)
+                if res.status_code == 200 and len(res.content) > 0:
+                    success = self._write_to_smb(remote_cam_dir, filename, res.content)
+                    if not success:
+                        self._save_local_fallback(remote_cam_dir, filename, res.content)
+                else:
+                    logger.warning("Frigate snapshot HTTP %d per %s", res.status_code, snapshot_url)
+            except Exception as exc:
+                logger.error("Errore durante archiviazione snapshot %s: %s", filename, exc)
 
-            # 2. Archiviazione Clip Video (se disponibile)
-            if has_clip:
-                clip_url = f"{self.frigate_base_url}/api/events/{event_id}/clip.mp4"
-                filename = f"{event_id}_{label}.mp4"
-                self._transfer_file_from_frigate(clip_url, remote_cam_dir, filename)
-
-        t = threading.Thread(target=_archive_worker, daemon=True)
+        t = threading.Thread(target=_snapshot_worker, daemon=True)
         t.start()
 
-    def _transfer_file_from_frigate(self, download_url: str, remote_dir: str, filename: str):
-        try:
-            # Download contenuto dall'API interna di Frigate (molto veloce)
-            logger.info("Scaricamento file evidenza da Frigate: %s", download_url)
-            res = requests.get(download_url, timeout=10.0)
-            if res.status_code != 200:
-                logger.warning("Frigate ha risposto con HTTP %d per %s", res.status_code, download_url)
-                return
+    def archive_clip(self, event_id: str, camera: str, label: str, delay_seconds: float = 3.0, max_retries: int = 3):
+        """
+        Scarica la clip MP4 dell'evento da Frigate SOLO dopo la conclusione dell'evento.
+        Attende delay_seconds e riprova fino a max_retries volte per dare a Frigate il tempo di remuxare l'MP4.
+        """
+        def _clip_worker():
+            if delay_seconds > 0:
+                time.sleep(delay_seconds)
 
-            data_bytes = res.content
+            date_folder = datetime.now().strftime("%Y-%m-%d")
+            remote_cam_dir = f"{self.unc_base}\\{date_folder}\\{camera}"
+            clip_url = f"{self.frigate_base_url}/api/events/{event_id}/clip.mp4"
+            filename = f"{event_id}_{label}.mp4"
 
-            # Tentativo scrittura su NAS Ugreen via SMB
-            success = self._write_to_smb(remote_dir, filename, data_bytes)
-            if not success:
-                # Fallback di emergenza: se il NAS è spento, salviamo in locale per non perdere l'evento
-                self._save_local_fallback(remote_dir, filename, data_bytes)
+            for attempt in range(1, max_retries + 1):
+                try:
+                    logger.info("Scaricamento clip da Frigate (tentativo %d/%d): %s", attempt, max_retries, clip_url)
+                    res = requests.get(clip_url, timeout=25.0)
+                    if res.status_code == 200 and len(res.content) > 0:
+                        success = self._write_to_smb(remote_cam_dir, filename, res.content)
+                        if not success:
+                            self._save_local_fallback(remote_cam_dir, filename, res.content)
+                        return
+                    elif res.status_code in (400, 404):
+                        logger.info("Clip non ancora finalizzata da Frigate (HTTP %d, tentativo %d/%d). Attendo 3s...", res.status_code, attempt, max_retries)
+                        time.sleep(3.0)
+                    else:
+                        logger.warning("Frigate clip HTTP %d per %s", res.status_code, clip_url)
+                        break
+                except Exception as exc:
+                    logger.error("Errore durante scaricamento clip %s (tentativo %d): %s", filename, attempt, exc)
+                    time.sleep(2.0)
 
-        except Exception as exc:
-            logger.error("Errore durante l'archiviazione di %s: %s", filename, exc)
+            logger.warning("Clip per l'evento %s non disponibile dopo %d tentativi.", event_id, max_retries)
+
+        t = threading.Thread(target=_clip_worker, daemon=True)
+        t.start()
+
+    def archive_event(self, event_id: str, camera: str, label: str, has_snapshot: bool = True, has_clip: bool = False):
+        """Metodo retrocompatibile per archiviazione cumulativa."""
+        if has_snapshot:
+            self.archive_snapshot(event_id, camera, label)
+        if has_clip:
+            self.archive_clip(event_id, camera, label, delay_seconds=3.0)
 
     def _write_to_smb(self, remote_dir: str, filename: str, data: bytes) -> bool:
         try:
-            # Crea ricorsivamente la cartella del giorno e della telecamera sul NAS se non esiste
+            # Crea ricorsivamente la cartella sul NAS passando sempre credenziali esplicite
             try:
-                smbclient.makedirs(remote_dir, exist_ok=True)
-            except Exception:
-                pass
+                makedirs(remote_dir, exist_ok=True, username=self.user, password=self.password)
+            except Exception as dir_err:
+                logger.debug("makedirs su %s: %s", remote_dir, dir_err)
 
             remote_file_path = f"{remote_dir}\\{filename}"
-            with smbclient.open_file(remote_file_path, mode="wb") as f:
+            with open_file(remote_file_path, mode="wb", username=self.user, password=self.password) as f:
                 f.write(data)
 
             logger.info("Evidenza salvata con successo sul NAS: %s (%d byte)", remote_file_path, len(data))
             return True
 
         except Exception as smb_err:
-            logger.warning(
-                "Impossibile scrivere su NAS Ugreen (%s). Se il NAS non è ancora acceso sul banco, è previsto: %s",
-                remote_dir, smb_err
+            logger.error(
+                "Errore scrittura SMB su NAS Ugreen (%s/%s): %s",
+                remote_dir, filename, smb_err
             )
             return False
 
