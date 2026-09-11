@@ -58,6 +58,19 @@ AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "15.0"))
 RELAY_HOST = os.environ.get("RELAY_HOST", "192.168.1.30")
 RELAY_PORT = int(os.environ.get("RELAY_PORT", "4196"))
 
+# Mappatura Canali Relè Waveshare (1-based da .env -> convertiti in 0-based per Modbus)
+# Di default tutti i fari puntano al Canale 1 (faretto del banco di test)
+RELAY_CHANNEL_PIAZZALE = max(0, int(os.environ.get("RELAY_CHANNEL_PIAZZALE", "1")) - 1)
+RELAY_CHANNEL_VARCO_PEDONALE = max(0, int(os.environ.get("RELAY_CHANNEL_VARCO_PEDONALE", "1")) - 1)
+RELAY_CHANNEL_VARCO_CARRABILE = max(0, int(os.environ.get("RELAY_CHANNEL_VARCO_CARRABILE", "1")) - 1)
+RELAY_CHANNEL_CANCELLO = max(0, int(os.environ.get("RELAY_CHANNEL_CANCELLO", "2")) - 1)
+
+CAMERA_RELAY_MAP = {
+    "piazzale": RELAY_CHANNEL_PIAZZALE,
+    "varco_pedonale": RELAY_CHANNEL_VARCO_PEDONALE,
+    "varco_carrabile": RELAY_CHANNEL_VARCO_CARRABILE,
+}
+
 SPEAKER_HOST = os.environ.get("SPEAKER_HOST", "192.168.1.31")
 SPEAKER_PORT = int(os.environ.get("SPEAKER_PORT", "80"))
 SPEAKER_USER = os.environ.get("SPEAKER_USER", "admin")
@@ -162,10 +175,11 @@ def handle_frigate_event(event_data: dict, topic: str):
     # Scenario A: RILEVAMENTO PERSONA (Varco pedonale, piazzale o carrabile)
     if label == "person":
         if event_type in ("new", "update"):
-            # 1. Accensione Faretto (Relè Canale 1) con antirimbalzo di 10s
-            if not is_in_cooldown(f"{camera}_faretto", cooldown_seconds=10.0):
-                logger.info(">>> AZIONE: Persona rilevata su '%s' -> Accensione Faretto (Relè 1) per %ds", camera, int(FARETTO_DURATION))
-                relay.accendi_faretto(durata_secondi=FARETTO_DURATION)
+            # 1. Accensione Faretto con antirimbalzo e prolungamento timer intelligente
+            relay_channel = CAMERA_RELAY_MAP.get(camera, RELAY_CHANNEL_PIAZZALE)
+            if not is_in_cooldown(f"{camera}_faretto", cooldown_seconds=5.0):
+                logger.info(">>> AZIONE: Persona rilevata su '%s' -> Accensione Faretto (Relè Canale %d) per %ds", camera, relay_channel + 1, int(FARETTO_DURATION))
+                relay.accendi_faretto(channel=relay_channel, durata_secondi=FARETTO_DURATION)
 
             # 2. Avviso Vocale sull'Altoparlante Fanvil con cooldown dedicato (default 15s)
             # Qualsiasi persona rilevata su varchi perimetrali o piazzale riceve avviso di dissuasione
@@ -209,8 +223,8 @@ def handle_lpr_update(lpr_data: dict):
     # Se la targa è riconosciuta (nota) con alta confidenza
     if name is not None and score >= 0.85:
         if not is_in_cooldown("cancello_apertura", cooldown_seconds=10.0):
-            logger.info(">>> AZIONE: Targa autorizzata '%s' (%s) -> Apertura Cancello (Relè 2) + Voce", plate, name)
-            relay.apri_cancello(impulso_secondi=3.0)
+            logger.info(">>> AZIONE: Targa autorizzata '%s' (%s) -> Apertura Cancello (Relè Canale %d) + Voce", plate, name, RELAY_CHANNEL_CANCELLO + 1)
+            relay.apri_cancello(channel=RELAY_CHANNEL_CANCELLO, impulso_secondi=3.0)
             speaker.play_audio_file(get_audio_path("02_targa_autorizzata"))
     elif name is None and score >= 0.85:
         # Targa sconosciuta
@@ -222,7 +236,7 @@ def handle_audio_alarm(topic: str, value: str):
     """Elabora rilevamenti audio di emergenza ('frigate/<camera>/audio/<type>')."""
     if value.upper() == "ON":
         logger.warning(">>> ALLARME AUDIO RILEVATO su topic %s: Valore=%s -> Accensione faretto immediata", topic, value)
-        relay.accendi_faretto(durata_secondi=45.0)
+        relay.accendi_faretto(channel=RELAY_CHANNEL_PIAZZALE, durata_secondi=45.0)
         speaker.play_audio_file(get_audio_path("04_allarme_intrusione"))
 
 # ──────────────────────────────────────────────────────────────────────────────
