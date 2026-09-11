@@ -62,7 +62,10 @@ services:
     volumes:
       # Registro eventi persistente sull'host con rotazione automatica (max 50MB)
       - ./storage/logs:/app/logs
+      # Pacchetti audio ufficiali (carmelo e sami) residenti a bordo
+      - ./orchestrator/audio:/app/audio:ro
     env_file:
+
       - .env
     depends_on:
       - mosquitto

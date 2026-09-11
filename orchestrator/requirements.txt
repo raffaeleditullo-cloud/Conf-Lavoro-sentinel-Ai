@@ -1,3 +1,9 @@
-# Dependencies for Sentinel AI Orchestrator (Observer mode)
-# Licenza: Dual Eclipse Public License 2.0 / Eclipse Distribution License 1.0 (BSD-style, permissiva)
+# Dependencies for Sentinel AI Orchestrator (Phase 2)
+# paho-mqtt: Dual EPL-2.0 / EDL-1.0 (BSD)
 paho-mqtt==2.1.0
+# pymodbus: BSD-3-Clause (permissiva per uso commerciale)
+pymodbus==3.8.3
+# requests: Apache-2.0 (per chiamate HTTP ad altoparlante Fanvil e Frigate API)
+requests==2.32.3
+# smbprotocol: MIT (per connessione diretta e sicura SMB v2/v3 al NAS Ugreen senza bisogno di mount root di sistema)
+smbprotocol==1.15.0

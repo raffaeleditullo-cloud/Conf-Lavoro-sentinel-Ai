@@ -14,8 +14,8 @@
 # A) PIATTAFORMA HARDWARE (ACCELERAZIONE VIDEO DECODIFICA FFMPEG)
 # - Su Jetson Orin Nano (JetPack 6 con NVDEC): decommentare le 2 righe sottostanti
 # - Su PC di sviluppo x86_64 standard: lasciare entrambe le righe commentate (decodifica CPU)
-# ffmpeg:
-#   hwaccel_args: preset-jetson-h264
+ffmpeg:
+  hwaccel_args: preset-jetson-h264
 
 # B) CLASSIFICAZIONE EVENTI PER L'ORCHESTRATORE (REVIEW: ALERTS vs DETECTIONS)
 # Definisce il livello di severità degli eventi pubblicati su topic frigate/reviews:
@@ -36,7 +36,7 @@ review:
 # C) CONSERVAZIONE REGISTRAZIONI (POLITICA SITO - DEFAULT INIZIALE: 3 GIORNI = 72 ORE)
 # Modalità di base impostata su 'motion' (zero consumo disco a piazzale vuoto).
 record:
-  enabled: True
+  enabled: true
   continuous:
     days: 0
   motion:
@@ -56,16 +56,16 @@ record:
 
 # D) ISTANTANEE (SNAPSHOTS)
 snapshots:
-  enabled: True
-  timestamp: False
-  bounding_box: True
-  crop: False
+  enabled: true
+  timestamp: false
+  bounding_box: true
+  crop: false
   retain:
     default: 3   # Giorni di conservazione istantanee
 
 # E) LETTURA TARGHE (LPR) E TARGHE NOTE DEL CLIENTE
 lpr:
-  enabled: True
+  enabled: true
   device: CPU
   model_size: small
   detection_threshold: 0.7
@@ -74,11 +74,11 @@ lpr:
   min_plate_length: 4
   # Regex standard targa italiana (2 lettere, 3 cifre, 2 lettere, es. AB123CD).
   # Scarta letture spurie o malformate. (N.B. Nello standard ordinario sono escluse I, O, Q, U).
-  format: '^[A-Z]{2}[0-9]{3}[A-Z]{2}$'
+  format: ^[A-Z]{2}[0-9]{3}[A-Z]{2}$
   match_distance: 1
   enhancement: 0
-  debug_save_plates: False
-  replace_rules: {}
+  debug_save_plates: false
+  replace_rules: []
   # Elenco targhe autorizzate specifiche dell'azienda cliente.
   # Compilare inserendo la targa e la descrizione identificativa.
   known_plates: {}
@@ -102,7 +102,7 @@ database:
 # La porta (1883) non supporta sostituzione ed è cablata come intero standard.
 # ──────────────────────────────────────────────────────────────────────────────
 mqtt:
-  enabled: True
+  enabled: true
   host: '{FRIGATE_MQTT_HOST}'
   port: 1883
   user: '{FRIGATE_MQTT_USER}'
@@ -161,19 +161,19 @@ model:
 go2rtc:
   streams:
     varco_carrabile_main:
-      - "{FRIGATE_CAM_VARCO_CARRABILE_MAIN_URL}"
+      - '{FRIGATE_CAM_VARCO_CARRABILE_MAIN_URL}'
     varco_carrabile_sub:
-      - "{FRIGATE_CAM_VARCO_CARRABILE_SUB_URL}"
+      - '{FRIGATE_CAM_VARCO_CARRABILE_SUB_URL}'
 
     varco_pedonale_main:
-      - "{FRIGATE_CAM_VARCO_PEDONALE_MAIN_URL}"
+      - '{FRIGATE_CAM_VARCO_PEDONALE_MAIN_URL}'
     varco_pedonale_sub:
-      - "{FRIGATE_CAM_VARCO_PEDONALE_SUB_URL}"
+      - '{FRIGATE_CAM_VARCO_PEDONALE_SUB_URL}'
 
     piazzale_main:
-      - "{FRIGATE_CAM_PIAZZALE_MAIN_URL}"
+      - '{FRIGATE_CAM_PIAZZALE_MAIN_URL}'
     piazzale_sub:
-      - "{FRIGATE_CAM_PIAZZALE_SUB_URL}"
+      - '{FRIGATE_CAM_PIAZZALE_SUB_URL}'
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. CONFIGURAZIONE GLOBALE OGGETTI E FILTRI
@@ -199,14 +199,14 @@ objects:
 # Modello 'small' (FaceNet) su CPU.
 # ──────────────────────────────────────────────────────────────────────────────
 face_recognition:
-  enabled: False
+  enabled: false
   unknown_score: 0.8
   detection_threshold: 0.7
   recognition_threshold: 0.9
   min_area: 500
   min_faces: 1
   save_attempts: 200
-  blur_confidence_filter: True
+  blur_confidence_filter: true
   model_size: small
   device: CPU
 
@@ -216,7 +216,7 @@ face_recognition:
 # Escluso 'speech' per tutela della privacy e prevenzione falsi allarmi.
 # ──────────────────────────────────────────────────────────────────────────────
 audio:
-  enabled: True
+  enabled: true
   max_not_heard: 30
   min_volume: 500
   listen:
@@ -243,7 +243,7 @@ cameras:
             - detect
             - audio
     detect:
-      enabled: True
+      enabled: true
       width: 640
       height: 360
       fps: 5
@@ -258,7 +258,7 @@ cameras:
     # │ Vedere dettagli e costi di memoria in docs/BUDGET_RISORSE.md.          │
     # └────────────────────────────────────────────────────────────────────────┘
     lpr:
-      enabled: True
+      enabled: true
 
 # ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE VARCO CARRABILE ══════
     zones:
@@ -285,12 +285,12 @@ cameras:
             - detect
             - audio
     detect:
-      enabled: True
+      enabled: true
       width: 640
       height: 360
       fps: 5
     face_recognition:
-      enabled: False
+      enabled: false
 
 # ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE VARCO PEDONALE ══════
     zones:
@@ -314,7 +314,7 @@ cameras:
             - detect
             - audio
     detect:
-      enabled: True
+      enabled: true
       width: 640
       height: 360
       fps: 5
@@ -331,3 +331,4 @@ cameras:
         objects:
           - person
 # ══════ FINE PARAMETRI SPECIFICI DEL SITO ══════
+version: 0.17-0
