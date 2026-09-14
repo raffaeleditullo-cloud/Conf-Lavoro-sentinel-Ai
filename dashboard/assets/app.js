@@ -45,29 +45,36 @@ document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 2. TEMA SCURO / CHIARO CON LOGO VETTORIALE UFFICIALE
+// 2. TEMA SCURO / CHIARO CON LOGO VETTORIALE ED ICONA SOLE/LUNA
 // ──────────────────────────────────────────────────────────────────────────────
 const themeToggleBtn = document.getElementById('themeToggle');
-const themeLabel = document.getElementById('themeLabel');
+const themeSvg = document.getElementById('themeSvg');
 const brandLogo = document.getElementById('brandLogo');
+
+const SUN_ICON = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+const MOON_ICON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('sentinel_theme', theme);
 
   if (theme === 'light') {
-    themeLabel.textContent = 'Tema Scuro';
-    brandLogo.src = 'assets/img/icona-ai-acqua-su-scuro.svg';
+    if (themeToggleBtn) themeToggleBtn.title = 'Passa a Tema Scuro';
+    if (themeSvg) themeSvg.innerHTML = MOON_ICON;
+    if (brandLogo) brandLogo.src = 'assets/img/icona-ai-acqua-su-scuro.svg';
   } else {
-    themeLabel.textContent = 'Tema Chiaro';
-    brandLogo.src = 'assets/img/icona-ai-viola-su-scuro.svg';
+    if (themeToggleBtn) themeToggleBtn.title = 'Passa a Tema Chiaro';
+    if (themeSvg) themeSvg.innerHTML = SUN_ICON;
+    if (brandLogo) brandLogo.src = 'assets/img/icona-ai-viola-su-scuro.svg';
   }
 }
 
-themeToggleBtn.addEventListener('click', () => {
-  const current = document.documentElement.getAttribute('data-theme');
-  applyTheme(current === 'light' ? 'dark' : 'light');
-});
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    applyTheme(current === 'light' ? 'dark' : 'light');
+  });
+}
 
 const savedTheme = localStorage.getItem('sentinel_theme') || 'dark';
 applyTheme(savedTheme);
