@@ -305,117 +305,120 @@ function closeVideoModal() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 6. GESTIONE IMPOSTAZIONI SINTESI VOCALE AI & AUDIO HARDWARE
+// 6. GESTIONE PACCHETTI AUDIO UFFICIALI (CARMELO & SAMI) & HARDWARE
 // ──────────────────────────────────────────────────────────────────────────────
-const PRESET_MESSAGES = {
-  preset1: "Attenzione: Area sotto sorveglianza video con tracciamento biometrico. Allontanarsi immediatamente.",
-  preset2: "Avviso di sicurezza: Rilevata violazione perimetrale. Registrazione forense in corso.",
-  preset3: "Proprietà privata sorvegliata da intelligenza artificiale. Allarme attivo."
-};
+let currentAudioPlayer = null;
 
 let currentSettings = {
-  voice_gender: 'male',
-  voice_profile: 'marco_tactical',
+  voice_pack: 'carmelo',
+  active_track: '03_avviso_dissuasione',
   voice_volume: 85,
   siren_enabled: true,
   faro_sec: 30,
-  gate_sec: 3,
-  preset: 'preset1',
-  custom_message: PRESET_MESSAGES.preset1
+  gate_sec: 3
 };
 
-function handleVoiceChange(gender) {
-  currentSettings.voice_gender = gender;
-  const cardMale = document.getElementById('cardVoiceMale');
-  const cardFemale = document.getElementById('cardVoiceFemale');
+function handleVoiceChange(pack) {
+  currentSettings.voice_pack = pack;
+  const cardCarmelo = document.getElementById('cardVoiceCarmelo');
+  const cardSami = document.getElementById('cardVoiceSami');
 
-  if (gender === 'male') {
-    if (cardMale) cardMale.classList.add('active');
-    if (cardFemale) cardFemale.classList.remove('active');
+  if (pack === 'carmelo') {
+    if (cardCarmelo) cardCarmelo.classList.add('active');
+    if (cardSami) cardSami.classList.remove('active');
   } else {
-    if (cardFemale) cardFemale.classList.add('active');
-    if (cardMale) cardMale.classList.remove('active');
+    if (cardSami) cardSami.classList.add('active');
+    if (cardCarmelo) cardCarmelo.classList.remove('active');
+  }
+
+  updateTrackLabel();
+  if (currentAudioPlayer) {
+    currentAudioPlayer.pause();
+    resetPlayBtn();
   }
 }
 
-function handlePresetChange() {
-  const sel = document.getElementById('selVoicePreset');
-  const txt = document.getElementById('txtCustomMessage');
-  if (!sel || !txt) return;
-
-  const val = sel.value;
-  currentSettings.preset = val;
-  if (val === 'custom') {
-    txt.value = '';
-    txt.placeholder = 'Digita qui il messaggio personalizzato da far pronunciare all\'IA...';
-    txt.focus();
-  } else if (PRESET_MESSAGES[val]) {
-    txt.value = PRESET_MESSAGES[val];
+function handleTrackChange() {
+  const sel = document.getElementById('selAudioTrack');
+  if (sel) {
+    currentSettings.active_track = sel.value;
   }
+  updateTrackLabel();
+  if (currentAudioPlayer) {
+    currentAudioPlayer.pause();
+    resetPlayBtn();
+  }
+}
+
+function updateTrackLabel() {
+  const lbl = document.getElementById('playingTrackLabel');
+  if (lbl) {
+    lbl.textContent = `audio/${currentSettings.voice_pack}/${currentSettings.active_track}.mp3`;
+  }
+}
+
+function resetPlayBtn() {
+  const btnText = document.getElementById('playBtnText');
+  const indicator = document.getElementById('audioPlayingIndicator');
+  if (btnText) btnText.textContent = 'Ascolta Traccia Reale';
+  if (indicator) indicator.style.display = 'none';
+}
+
+function playRealAudioTrack() {
+  const audioPath = `audio/${currentSettings.voice_pack}/${currentSettings.active_track}.mp3`;
+  const btnText = document.getElementById('playBtnText');
+  const indicator = document.getElementById('audioPlayingIndicator');
+
+  if (currentAudioPlayer && !currentAudioPlayer.paused) {
+    currentAudioPlayer.pause();
+    resetPlayBtn();
+    return;
+  }
+
+  if (currentAudioPlayer) {
+    currentAudioPlayer.pause();
+  }
+
+  currentAudioPlayer = new Audio(audioPath);
+  currentAudioPlayer.volume = (currentSettings.voice_volume || 85) / 100;
+
+  if (btnText) btnText.textContent = 'Ferma Riproduzione';
+  if (indicator) indicator.style.display = 'inline-flex';
+
+  currentAudioPlayer.play().catch(err => {
+    console.warn("Autoplay error or missing audio file:", err);
+    resetPlayBtn();
+  });
+
+  currentAudioPlayer.onended = () => {
+    resetPlayBtn();
+  };
 }
 
 function updateVolumeLabel(val) {
   const lbl = document.getElementById('valVolume');
   if (lbl) lbl.textContent = `${val}%`;
   currentSettings.voice_volume = parseInt(val, 10);
-}
-
-function testVoicePreview() {
-  const txt = document.getElementById('txtCustomMessage');
-  const textToSpeak = (txt && txt.value.trim()) ? txt.value.trim() : PRESET_MESSAGES.preset1;
-
-  if (!('speechSynthesis' in window)) {
-    alert("Sintesi vocale Web Speech non supportata da questo browser.");
-    return;
+  if (currentAudioPlayer) {
+    currentAudioPlayer.volume = currentSettings.voice_volume / 100;
   }
-
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(textToSpeak);
-  utterance.lang = 'it-IT';
-
-  // Configura pitch e velocità in base al profilo selezionato
-  if (currentSettings.voice_gender === 'female') {
-    utterance.pitch = 1.15;
-    utterance.rate = 1.02;
-  } else {
-    utterance.pitch = 0.85;
-    utterance.rate = 0.95;
-  }
-
-  // Cerca voce italiana registrata nel sistema
-  const voices = window.speechSynthesis.getVoices();
-  const itVoices = voices.filter(v => v.lang.startsWith('it'));
-  if (itVoices.length > 0) {
-    if (currentSettings.voice_gender === 'female') {
-      const fVoice = itVoices.find(v => v.name.toLowerCase().includes('elsa') || v.name.toLowerCase().includes('alice') || v.name.toLowerCase().includes('federica') || v.name.toLowerCase().includes('female'));
-      if (fVoice) utterance.voice = fVoice;
-      else utterance.voice = itVoices[0];
-    } else {
-      const mVoice = itVoices.find(v => v.name.toLowerCase().includes('cosimo') || v.name.toLowerCase().includes('giorgio') || v.name.toLowerCase().includes('male'));
-      if (mVoice) utterance.voice = mVoice;
-      else utterance.voice = itVoices[0];
-    }
-  }
-
-  window.speechSynthesis.speak(utterance);
 }
 
 function saveSettings() {
-  const txt = document.getElementById('txtCustomMessage');
   const rngVol = document.getElementById('rngVolume');
   const chkSiren = document.getElementById('chkSiren');
   const numFaro = document.getElementById('numFaroSec');
   const numGate = document.getElementById('numGateSec');
-  const selPreset = document.getElementById('selVoicePreset');
+  const selTrack = document.getElementById('selAudioTrack');
 
   const payload = {
-    voice_gender: currentSettings.voice_gender,
+    voice_pack: currentSettings.voice_pack,
+    voice_gender: currentSettings.voice_pack,
+    active_track: selTrack ? selTrack.value : '03_avviso_dissuasione',
     voice_volume: rngVol ? parseInt(rngVol.value, 10) : 85,
     siren_enabled: chkSiren ? chkSiren.checked : true,
     faro_sec: numFaro ? parseInt(numFaro.value, 10) : 30,
-    gate_sec: numGate ? parseInt(numGate.value, 10) : 3,
-    preset: selPreset ? selPreset.value : 'preset1',
-    custom_message: txt ? txt.value.trim() : PRESET_MESSAGES.preset1
+    gate_sec: numGate ? parseInt(numGate.value, 10) : 3
   };
 
   localStorage.setItem('sentinel_settings', JSON.stringify(payload));
@@ -440,10 +443,17 @@ function loadSettings() {
   let data = stored ? JSON.parse(stored) : currentSettings;
 
   currentSettings = Object.assign(currentSettings, data);
-  handleVoiceChange(currentSettings.voice_gender);
+  if (currentSettings.voice_gender && !currentSettings.voice_pack) {
+    currentSettings.voice_pack = (currentSettings.voice_gender === 'female' || currentSettings.voice_gender === 'sami') ? 'sami' : 'carmelo';
+  }
 
-  const radio = document.querySelector(`input[name="voiceGender"][value="${currentSettings.voice_gender}"]`);
+  handleVoiceChange(currentSettings.voice_pack);
+
+  const radio = document.querySelector(`input[name="voicePack"][value="${currentSettings.voice_pack}"]`);
   if (radio) radio.checked = true;
+
+  const selTrack = document.getElementById('selAudioTrack');
+  if (selTrack && currentSettings.active_track) selTrack.value = currentSettings.active_track;
 
   const rngVol = document.getElementById('rngVolume');
   if (rngVol) {
@@ -460,11 +470,7 @@ function loadSettings() {
   const numGate = document.getElementById('numGateSec');
   if (numGate) numGate.value = currentSettings.gate_sec;
 
-  const selPreset = document.getElementById('selVoicePreset');
-  if (selPreset && currentSettings.preset) selPreset.value = currentSettings.preset;
-
-  const txt = document.getElementById('txtCustomMessage');
-  if (txt) txt.value = currentSettings.custom_message || PRESET_MESSAGES.preset1;
+  updateTrackLabel();
 }
 
 // Inizializzazione iniziale

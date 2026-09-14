@@ -64,6 +64,7 @@ services:
       - ./storage/logs:/app/logs
       # Pacchetti audio ufficiali (carmelo e sami) residenti a bordo
       - ./orchestrator/audio:/app/audio:ro
+      - ./config:/config:ro
     env_file:
       - .env
     depends_on:
@@ -80,6 +81,7 @@ services:
       - "8080:8080"
     volumes:
       - ./config:/config
+      - ./orchestrator/audio:/app/audio:ro
       - ./storage/logs:/app/logs:ro
     env_file:
       - .env

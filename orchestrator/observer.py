@@ -145,9 +145,27 @@ def mark_clip_archived(event_id: str) -> bool:
     archived_clips.add(event_id)
     return True
 
+def get_voice_pack() -> str:
+    """Restituisce il pacchetto vocale attivo, verificando dinamicamente system_settings.json o fallback su env."""
+    settings_file = os.environ.get("SETTINGS_FILE", "/config/system_settings.json")
+    if os.path.exists(settings_file):
+        try:
+            with open(settings_file, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                pack = cfg.get("voice_pack", cfg.get("voice_gender", VOICE_PACK)).lower()
+                if pack in ("carmelo", "male"):
+                    return "carmelo"
+                elif pack in ("sami", "female"):
+                    return "sami"
+                return pack
+        except Exception:
+            pass
+    return VOICE_PACK
+
 def get_audio_path(sound_id: str) -> str:
     """Restituisce il percorso assoluto del file audio per il pacchetto vocale attivo."""
-    pack_folder = os.path.join(AUDIO_BASE_DIR, VOICE_PACK)
+    pack = get_voice_pack()
+    pack_folder = os.path.join(AUDIO_BASE_DIR, pack)
     if not os.path.exists(pack_folder):
         pack_folder = os.path.join(AUDIO_BASE_DIR, "carmelo")
     return os.path.join(pack_folder, f"{sound_id}.mp3")

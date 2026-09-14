@@ -331,77 +331,85 @@
       <div id="view-settings" class="view-panel" style="display:none;">
         <div class="data-split-zone">
 
-          <!-- Colonna 1: Profilo Voce & TTS Dissuasione -->
+          <!-- Colonna 1: Pacchetti Vocali Ufficiali Sentinel AI -->
           <div class="glass-panel">
             <div class="panel-header-minimal">
               <div>
-                <h3>Sintesi Vocale AI // Motore TTS</h3>
-                <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Configura la voce per la dissuasione automatica e manuale</p>
+                <h3>Pacchetti Vocali Ufficiali Sentinel AI</h3>
+                <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Seleziona e ascolta i pacchetti audio registrati a bordo del sistema</p>
               </div>
-              <span class="status-beacon">TTS ENGINE ONLINE</span>
+              <span class="status-beacon">AUDIO ENGINE ONLINE</span>
             </div>
 
-            <!-- Selezione Genere Voce (Cards Radio Tattiche) -->
+            <!-- Selezione Voce Carmelo / Sami -->
             <div style="margin-top:18px;">
-              <label class="setting-section-label">GENERE & PROFILO VOCE</label>
+              <label class="setting-section-label">PACCHETTO VOCALE ATTIVO</label>
               <div class="voice-selector-grid">
                 
-                <label class="voice-card-option active" id="cardVoiceMale">
-                  <input type="radio" name="voiceGender" value="male" checked onchange="handleVoiceChange('male')">
+                <label class="voice-card-option active" id="cardVoiceCarmelo">
+                  <input type="radio" name="voicePack" value="carmelo" checked onchange="handleVoiceChange('carmelo')">
                   <div class="voice-card-body">
                     <div class="voice-card-header">
                       <div class="voice-icon-badge">
                         <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v5a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                       </div>
                       <div>
-                        <strong class="voice-title">Voce Maschile</strong>
-                        <span class="voice-sub">Marco // Tattico Deciso</span>
+                        <strong class="voice-title">CARMELO</strong>
+                        <span class="voice-sub">Voce Maschile Ufficiale</span>
                       </div>
                     </div>
-                    <p class="voice-desc">Timbro profondo e perentorio, ottimizzato per allontanare intrusioni con massima autorevolezza.</p>
+                    <p class="voice-desc">Pacchetto audio maschile: timbro perentorio, fermo e autorevole per dissuasione ad alto impatto.</p>
                   </div>
                 </label>
 
-                <label class="voice-card-option" id="cardVoiceFemale">
-                  <input type="radio" name="voiceGender" value="female" onchange="handleVoiceChange('female')">
+                <label class="voice-card-option" id="cardVoiceSami">
+                  <input type="radio" name="voicePack" value="sami" onchange="handleVoiceChange('sami')">
                   <div class="voice-card-body">
                     <div class="voice-card-header">
                       <div class="voice-icon-badge">
                         <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v5a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                       </div>
                       <div>
-                        <strong class="voice-title">Voce Femminile</strong>
-                        <span class="voice-sub">Elena // Sintetico SOC</span>
+                        <strong class="voice-title">SAMI</strong>
+                        <span class="voice-sub">Voce Femminile Ufficiale</span>
                       </div>
                     </div>
-                    <p class="voice-desc">Dizione chiara, cristallina e metallica in stile centrale operativa di difesa e sicurezza AI.</p>
+                    <p class="voice-desc">Pacchetto audio femminile: dizione cristallina, chiara e metallica in stile centrale operativa di difesa.</p>
                   </div>
                 </label>
 
               </div>
             </div>
 
-            <!-- Preset Messaggio o Personalizzato -->
+            <!-- Selezione Traccia Audio da Ascoltare / Provare -->
             <div style="margin-top:22px;">
-              <label class="setting-section-label">MESSAGGIO DI DISSUASIONE PREDEFINITO</label>
-              <select id="selVoicePreset" class="ultra-input" onchange="handlePresetChange()" style="margin-bottom:12px; font-weight:600;">
-                <option value="preset1">Preset 1: "Attenzione: Area sotto sorveglianza video con tracciamento biometrico. Allontanarsi immediatamente."</option>
-                <option value="preset2">Preset 2: "Avviso di sicurezza: Rilevata violazione perimetrale. Registrazione forense in corso."</option>
-                <option value="preset3">Preset 3: "Proprietà privata sorvegliata da intelligenza artificiale. Allarme attivo."</option>
-                <option value="custom">Messaggio Personalizzato (scrivi sotto)...</option>
+              <label class="setting-section-label">TRACCE AUDIO REGISTRATE SUL SISTEMA</label>
+              <select id="selAudioTrack" class="ultra-input" style="margin-bottom:14px; font-weight:600;" onchange="handleTrackChange()">
+                <option value="01_accesso_consentito">01 // Accesso Consentito (Apertura Varco)</option>
+                <option value="02_targa_autorizzata">02 // Targa Autorizzata (Apertura Cancello)</option>
+                <option value="03_avviso_dissuasione" selected>03 // Avviso Dissuasione (Presenza nel Piazzale)</option>
+                <option value="04_allarme_intrusione">04 // Allarme Intrusione (Violazione Orario Notturno)</option>
+                <option value="05_targa_non_autorizzata">05 // Targa Non Autorizzata (Accesso Negato)</option>
               </select>
 
-              <textarea id="txtCustomMessage" class="ultra-input" rows="3" placeholder="Scrivi il messaggio vocale che l'AI pronuncerà..." style="resize:vertical; font-family:var(--font-tech); font-size:13.5px;"></textarea>
+              <!-- Mini Player Anteprima Audio Reale -->
+              <div class="audio-player-box" style="padding:14px 16px; background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:var(--radius-xs); display:flex; align-items:center; justify-content:space-between; gap:16px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <button type="button" id="btnPlayTrack" class="ultra-primary-btn" onclick="playRealAudioTrack()" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px;">
+                    <svg id="playIconSvg" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span id="playBtnText">Ascolta Traccia Reale</span>
+                  </button>
+                  <span id="playingTrackLabel" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">audio/carmelo/03_avviso_dissuasione.mp3</span>
+                </div>
+                <span id="audioPlayingIndicator" class="status-beacon" style="display:none; color:var(--cai-gold);">IN RIPRODUZIONE</span>
+              </div>
             </div>
 
-            <!-- Pulsanti di Test Voce -->
-            <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap;">
-              <button type="button" class="ultra-primary-btn" onclick="testVoicePreview()" style="display:inline-flex; align-items:center; gap:8px;">
-                <svg style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                <span>Ascolta Anteprima Voce</span>
-              </button>
-              <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:12px; padding:8px 16px;">
-                <span>Invia Test a Diffusore Fanvil (.35)</span>
+            <!-- Pulsante invio al Fanvil -->
+            <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+              <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:12px; padding:9px 18px;">
+                <svg class="dock-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <span>Trasmetti Traccia su Diffusore Fanvil (.35)</span>
               </button>
             </div>
 
