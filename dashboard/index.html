@@ -81,19 +81,23 @@
       <div class="hud-telemetry-zone">
         <div class="telemetry-chip">
           <span>TEMP:</span>
-          <strong id="hudTemp">54.8°C</strong>
+          <strong id="hudTemp">61.0°C</strong>
         </div>
         <div class="telemetry-chip">
           <span>SWAP:</span>
-          <strong id="hudSwap" style="color:var(--accent-green)">180 MB</strong>
+          <strong id="hudSwap" style="color:var(--accent-green)">4 MB</strong>
         </div>
         <div class="telemetry-chip">
           <span>RAM:</span>
-          <strong id="hudRam">4.8 GB</strong>
+          <strong id="hudRam">4.56 GB</strong>
+        </div>
+        <div class="telemetry-chip">
+          <span>PWR:</span>
+          <strong style="color:var(--cai-gold)">16 W</strong>
         </div>
         <div class="telemetry-chip">
           <span>RELÈ:</span>
-          <strong style="color:var(--cai-gold)">192.168.1.30</strong>
+          <strong style="color:var(--accent-green)">.30:4196</strong>
         </div>
       </div>
     </header>
@@ -275,19 +279,23 @@
             <div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
                 <span style="color:var(--text-muted); font-size:13px;">Temperatura SoC (GPU/CPU)</span>
-                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--cai-gold);">54.8 °C</strong>
+                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--cai-gold);">61.0 °C (Ottimale)</strong>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
                 <span style="color:var(--text-muted); font-size:13px;">Memoria Swap NVMe</span>
-                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">180 MB / 3.8 GB (swappiness=10)</strong>
+                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">4 MB / 3.8 GB (swappiness=10, Validato)</strong>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">RAM Fisica Libera</span>
-                <strong style="font-family:var(--font-mono); font-size:16px;">2.480 MB</strong>
+                <span style="color:var(--text-muted); font-size:13px;">RAM Fisica in Uso</span>
+                <strong style="font-family:var(--font-mono); font-size:16px;">4.566 MB / 7.6 GB (~3 GB liberi)</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                <span style="color:var(--text-muted); font-size:13px;">Potenza Assorbita & Clock EMC</span>
+                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">16 W (Profilo 25W) // 3199 MHz</strong>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--text-muted); font-size:13px;">Uptime Sistema</span>
-                <strong style="font-family:var(--font-mono); font-size:16px;">5h 42m</strong>
+                <span style="color:var(--text-muted); font-size:13px;">Uptime Banco di Collaudo</span>
+                <strong style="font-family:var(--font-mono); font-size:16px;">1h 35m (Zero Leak)</strong>
               </div>
             </div>
           </div>
@@ -425,10 +433,19 @@
               <span class="status-beacon">HARDWARE LINKED</span>
             </div>
 
-            <!-- Volume Altoparlante -->
+            <!-- Destinazione Output Audio (Reolink vs Fanvil) -->
             <div style="margin-top:18px;">
+              <label class="setting-section-label">DESTINAZIONE OUTPUT AUDIO</label>
+              <select id="selAudioTarget" class="ultra-input" style="margin-bottom:14px; font-weight:600;">
+                <option value="cameras" selected>Altoparlanti Integrati Telecamere Reolink (Banco Collaudo)</option>
+                <option value="fanvil">Diffusore IP Fanvil A233 // 192.168.1.35 (Esterno)</option>
+              </select>
+            </div>
+
+            <!-- Volume Altoparlante -->
+            <div style="margin-top:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <label class="setting-section-label" style="margin-bottom:0;">VOLUME ALTOPARLANTE FANVIL</label>
+                <label class="setting-section-label" style="margin-bottom:0;">VOLUME DIFFUSIONE AUDIO</label>
                 <strong id="valVolume" style="font-family:var(--font-mono); font-size:14px; color:var(--cai-gold);">85%</strong>
               </div>
               <input type="range" id="rngVolume" min="10" max="100" value="85" class="tactical-slider" oninput="updateVolumeLabel(this.value)">
