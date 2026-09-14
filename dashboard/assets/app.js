@@ -1,11 +1,10 @@
 /* ══════════════════════════════════════════════════════════════════════════════
- * CONF-LAVORO Sentinel AI — Dashboard Logic & Client Controller
+ * CONF-LAVORO Sentinel AI — Operations Controller
  * ══════════════════════════════════════════════════════════════════════════════ */
 
-// 1. TEMA (SCURO / CHIARO) CON CAMBIO LOGO SVG UFFICIALE
+// 1. TEMA SCURO / CHIARO CON LOGO VETTORIALE UFFICIALE
 const themeToggleBtn = document.getElementById('themeToggle');
 const themeLabel = document.getElementById('themeLabel');
-const themeIcon = document.getElementById('themeIcon');
 const brandLogo = document.getElementById('brandLogo');
 
 function applyTheme(theme) {
@@ -14,80 +13,32 @@ function applyTheme(theme) {
 
   if (theme === 'light') {
     themeLabel.textContent = 'Tema Scuro';
-    themeIcon.textContent = '🌙';
-    brandLogo.src = 'assets/img/conflavoro-ai-acqua-su-scuro.svg';
+    brandLogo.src = 'assets/img/icona-ai-acqua-su-scuro.svg';
   } else {
     themeLabel.textContent = 'Tema Chiaro';
-    themeIcon.textContent = '☀️';
-    brandLogo.src = 'assets/img/conflavoro-ai-viola-su-scuro.svg';
+    brandLogo.src = 'assets/img/icona-ai-viola-su-scuro.svg';
   }
 }
 
 themeToggleBtn.addEventListener('click', () => {
-  const currentTheme = document.documentElement.getAttribute('data-theme');
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-  applyTheme(newTheme);
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'light' ? 'dark' : 'light');
 });
 
-// Inizializzazione tema
 const savedTheme = localStorage.getItem('sentinel_theme') || 'dark';
 applyTheme(savedTheme);
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 2. NAVIGAZIONE TAB LATERALE
-// ──────────────────────────────────────────────────────────────────────────────
-const navItems = document.querySelectorAll('.nav-item');
-const tabContents = {
-  live: document.getElementById('tab-live'),
-  actions: document.getElementById('tab-actions'),
-  events: document.getElementById('tab-events'),
-  plates: document.getElementById('tab-plates'),
-  diagnostics: document.getElementById('tab-diagnostics')
-};
-
-const tabTitles = {
-  live: { title: 'Live Monitor', subtitle: 'Sorveglianza perimetrale 4K attiva sui 3 varchi' },
-  actions: { title: 'Comandi Rapidi', subtitle: 'Controllo manuale immediato relè fari, cancello e audio' },
-  events: { title: 'Registro Eventi', subtitle: 'Storico intrusioni con evidenze e registrazioni del NAS Ugreen' },
-  plates: { title: 'Gestione Targhe LPR', subtitle: 'Elenco autorizzazioni varco carrabile automatico' },
-  diagnostics: { title: 'Diagnostica Sistema', subtitle: 'Monitoraggio hardware, temperatura Jetson e bus Modbus' }
-};
-
-navItems.forEach(item => {
-  item.addEventListener('click', () => {
-    const tab = item.getAttribute('data-tab');
-    
-    navItems.forEach(i => i.classList.remove('active'));
-    item.classList.add('active');
-
-    Object.keys(tabContents).forEach(key => {
-      if (key === tab) {
-        tabContents[key].style.display = 'block';
-      } else {
-        tabContents[key].style.display = 'none';
-      }
-    });
-
-    // Aggiorna titolo pagina
-    if (tabTitles[tab]) {
-      document.getElementById('pageTitle').textContent = tabTitles[tab].title;
-      document.getElementById('pageSubtitle').textContent = tabTitles[tab].subtitle;
-    }
-  });
-});
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 3. GESTIONE ATTUATORI RAPIDI (FARI, CANCELLO, VOCE)
+// 2. COMANDI ATTUATORI FLOATING DOCK (FARI, CANCELLO, VOCE)
 // ──────────────────────────────────────────────────────────────────────────────
 let faroTimer = null;
 function triggerFaro() {
-  const btn = document.getElementById('btnFaro');
-  const status = document.getElementById('faroStatus');
-  const bar = document.getElementById('faroPulseBar');
+  const btn = document.getElementById('dockFaroBtn');
+  const label = document.getElementById('dockFaroLabel');
+  const bar = document.getElementById('dockFaroProgress');
 
-  status.textContent = 'ACCESO (30s rimanenti)';
-  status.style.color = 'var(--oro)';
-  btn.style.borderColor = 'var(--oro)';
+  label.textContent = 'Fari ATTIVI (30s)';
+  btn.style.borderColor = 'var(--cai-gold)';
   bar.style.transition = 'none';
   bar.style.width = '100%';
 
@@ -98,24 +49,21 @@ function triggerFaro() {
 
   if (faroTimer) clearTimeout(faroTimer);
   faroTimer = setTimeout(() => {
-    status.textContent = 'Impulso dissuasione 30 sec';
-    status.style.color = 'var(--ink-500)';
-    btn.style.borderColor = 'var(--sidebar-border)';
+    label.textContent = 'Fari Piazzale (30s)';
+    btn.style.borderColor = 'transparent';
   }, 30000);
 
-  // Invia comando all'API locale se disponibile
   fetch('/api/relay/faretto', { method: 'POST' }).catch(() => {});
 }
 
 let gateTimer = null;
 function triggerGate() {
-  const btn = document.getElementById('btnGate');
-  const status = document.getElementById('gateStatus');
-  const bar = document.getElementById('gatePulseBar');
+  const btn = document.getElementById('dockGateBtn');
+  const label = document.getElementById('dockGateLabel');
+  const bar = document.getElementById('dockGateProgress');
 
-  status.textContent = 'IN APERTURA (Impulso 3s)...';
-  status.style.color = 'var(--primary)';
-  btn.style.borderColor = 'var(--primary)';
+  label.textContent = 'Apertura in corso (3s)...';
+  btn.style.borderColor = 'var(--cai-violet)';
   bar.style.transition = 'none';
   bar.style.width = '100%';
 
@@ -126,34 +74,33 @@ function triggerGate() {
 
   if (gateTimer) clearTimeout(gateTimer);
   gateTimer = setTimeout(() => {
-    status.textContent = 'Impulso varco 3 sec';
-    status.style.color = 'var(--ink-500)';
-    btn.style.borderColor = 'var(--sidebar-border)';
+    label.textContent = 'Apri Cancello (3s)';
+    btn.style.borderColor = 'transparent';
   }, 3500);
 
   fetch('/api/relay/cancello', { method: 'POST' }).catch(() => {});
 }
 
 function triggerVoice() {
-  const status = document.getElementById('voiceStatus');
-  status.textContent = 'Riproduzione avviso in corso...';
-  status.style.color = 'var(--danger)';
+  const label = document.getElementById('dockSirenLabel');
+  label.textContent = 'Voce in riproduzione...';
+  label.style.color = 'var(--accent-red)';
 
   setTimeout(() => {
-    status.textContent = 'Riproduci avviso Carmelo';
-    status.style.color = 'var(--ink-500)';
+    label.textContent = 'Dissuasione Vocale';
+    label.style.color = 'var(--text-main)';
   }, 4000);
 
   fetch('/api/speaker/voice', { method: 'POST' }).catch(() => {});
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 4. GESTIONE TARGHE (WHITELIST CRUD)
+// 3. GESTIONE WHITELIST TARGHE (LPR)
 // ──────────────────────────────────────────────────────────────────────────────
-let defaultPlates = [
-  { plate: 'FG492KS', owner: 'Ing. Rocco Di Tolla', role: 'Direzione Generale', active: true, date: '2026-09-08' },
-  { plate: 'DA812LL', owner: 'Alessio Russo', role: 'Responsabile Impianti', active: true, date: '2026-09-09' },
-  { plate: 'CB551AA', owner: 'Logistica Conflavoro', role: 'Fornitore Corriere', active: true, date: '2026-09-10' }
+const defaultPlates = [
+  { plate: 'FG492KS', owner: 'Rocco Di Tolla', role: 'Direzione Generale', active: true },
+  { plate: 'DA812LL', owner: 'Alessio Russo', role: 'Responsabile Impianti', active: true },
+  { plate: 'CB551AA', owner: 'Corriere Logistica', role: 'Fornitore Accreditato', active: true }
 ];
 
 function getPlates() {
@@ -167,114 +114,115 @@ function savePlates(plates) {
 }
 
 function renderPlates() {
-  const tbody = document.getElementById('platesTableBody');
+  const tbody = document.getElementById('platesTbody');
   const plates = getPlates();
   tbody.innerHTML = '';
 
-  plates.forEach((p, index) => {
+  plates.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><span class="plate-badge">${p.plate}</span></td>
-      <td><strong>${p.owner}</strong></td>
-      <td>${p.role}</td>
-      <td><span class="status-tag ${p.active ? 'active' : ''}">${p.active ? 'Autorizzata' : 'Sospesa'}</span></td>
-      <td>${p.date}</td>
+      <td><span class="plate-pill">${p.plate}</span></td>
       <td>
-        <button class="btn-icon" title="Elimina" onclick="deletePlate(${index})">🗑️</button>
+        <div style="font-weight:600; font-size:12px;">${p.owner}</div>
+        <div style="font-size:10px; color:var(--text-dim);">${p.role}</div>
+      </td>
+      <td><span class="status-beacon">Autorizzata</span></td>
+      <td style="text-align:right;">
+        <button class="icon-action-btn" title="Rimuovi" onclick="deletePlate(${idx})">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-function deletePlate(index) {
+function deletePlate(idx) {
   const plates = getPlates();
-  if (confirm(`Rimuovere la targa ${plates[index].plate} dalla whitelist?`)) {
-    plates.splice(index, 1);
+  if (confirm(`Rimuovere autorizzazione per ${plates[idx].plate}?`)) {
+    plates.splice(idx, 1);
     savePlates(plates);
   }
 }
 
 function openAddPlateModal() {
-  document.getElementById('addPlateModal').classList.add('open');
+  document.getElementById('plateModal').classList.add('open');
 }
 
 function closeAddPlateModal() {
-  document.getElementById('addPlateModal').classList.remove('open');
-  document.getElementById('plateForm').reset();
+  document.getElementById('plateModal').classList.remove('open');
 }
 
 function handleSavePlate(e) {
   e.preventDefault();
-  const plate = document.getElementById('inputPlate').value.trim().toUpperCase();
-  const owner = document.getElementById('inputOwner').value.trim();
-  const role = document.getElementById('inputRole').value.trim();
+  const plate = document.getElementById('inPlate').value.trim().toUpperCase();
+  const owner = document.getElementById('inOwner').value.trim();
+  const role = document.getElementById('inRole').value.trim();
 
   if (!plate || !owner) return;
 
   const plates = getPlates();
-  plates.unshift({
-    plate,
-    owner,
-    role,
-    active: true,
-    date: new Date().toISOString().split('T')[0]
-  });
-
+  plates.unshift({ plate, owner, role, active: true });
   savePlates(plates);
   closeAddPlateModal();
+  e.target.reset();
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 5. REGISTRO EVENTI & PLAYER VIDEO NAS
+// 4. ATTIVITÀ IN TEMPO REALE & MODALE VIDEO
 // ──────────────────────────────────────────────────────────────────────────────
 const mockEvents = [
-  { time: 'Oggi 15:42:10', cam: 'Varco Carrabile', type: 'Targa Riconosciuta', desc: 'FG492KS (Rocco Di Tolla) - Cancello aperto', snapshot: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { time: 'Oggi 15:35:04', cam: 'Varco Pedonale', type: 'Persona Rilevata', desc: 'Rilevamento perimetrale - Dissuasione avviata', snapshot: 'https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { time: 'Oggi 14:18:22', cam: 'Piazzale', type: 'Persona Rilevata', desc: 'Faro acceso per 30s - Clip salvata su NAS', snapshot: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' }
+  { time: '16:38:12', cam: 'Varco Carrabile', subj: 'Targa: FG492KS', conf: '94%', thumb: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+  { time: '16:21:05', cam: 'Varco Pedonale', subj: 'Persona Rilevata', conf: '88%', thumb: 'https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+  { time: '15:45:50', cam: 'Piazzale', subj: 'Persona Rilevata', conf: '91%', thumb: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' }
 ];
 
 function renderEvents() {
-  const tbody = document.getElementById('eventsTableBody');
+  const tbody = document.getElementById('eventsTbody');
   tbody.innerHTML = '';
 
-  mockEvents.forEach(evt => {
+  mockEvents.forEach(ev => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${evt.time}</td>
-      <td><strong>${evt.cam}</strong></td>
-      <td><span class="status-tag ${evt.type.includes('Targa') ? 'active' : ''}">${evt.type}</span></td>
-      <td>${evt.desc}</td>
-      <td><img src="${evt.snapshot}" style="width:48px; height:28px; border-radius:4px; object-fit:cover;"></td>
+      <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">${ev.time}</td>
+      <td style="font-weight:600; font-size:11px;">${ev.cam}</td>
       <td>
-        <button class="primary-btn" style="padding:4px 10px; font-size:11px;" onclick="playEventVideo('${evt.cam} - ${evt.time}', '${evt.video}')">▶ Guarda Video</button>
+        <span class="status-beacon" style="color:var(--text-main); font-weight:500;">${ev.subj}</span>
+        <span style="font-family:var(--font-mono); font-size:10px; color:var(--cai-gold);">(${ev.conf})</span>
+      </td>
+      <td>
+        <div class="event-thumb-wrap">
+          <img src="${ev.thumb}" alt="Snapshot">
+        </div>
+      </td>
+      <td>
+        <button class="play-video-link" onclick="openVideoModal('${ev.cam} // ${ev.time}', '${ev.video}')">
+          <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>Play MP4</span>
+        </button>
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-function playEventVideo(meta, videoUrl) {
-  document.getElementById('videoModalTitle').textContent = `Video Evento: ${meta}`;
-  document.getElementById('videoModalMeta').textContent = meta;
-  const player = document.getElementById('playerVideo');
-  player.src = videoUrl;
-  player.play().catch(() => {});
+function openVideoModal(title, url) {
+  document.getElementById('videoTitle').textContent = title;
+  document.getElementById('videoMeta').textContent = `Evidenza archiviata: ${title}`;
+  const video = document.getElementById('videoPlayer');
+  video.src = url;
+  video.play().catch(() => {});
   document.getElementById('videoModal').classList.add('open');
 }
 
 function closeVideoModal() {
-  const player = document.getElementById('playerVideo');
-  player.pause();
-  player.src = '';
+  const video = document.getElementById('videoPlayer');
+  video.pause();
+  video.src = '';
   document.getElementById('videoModal').classList.remove('open');
 }
 
-function refreshEvents() {
-  renderEvents();
-}
-
-// Inizializzazione iniziale
+// Inizializzazione
 document.addEventListener('DOMContentLoaded', () => {
   renderPlates();
   renderEvents();
