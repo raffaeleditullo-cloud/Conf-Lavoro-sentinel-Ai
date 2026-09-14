@@ -2,7 +2,51 @@
  * CONF-LAVORO Sentinel AI — Operations Controller
  * ══════════════════════════════════════════════════════════════════════════════ */
 
-// 1. TEMA SCURO / CHIARO CON LOGO VETTORIALE UFFICIALE
+// 1. GESTIONE NAVIGAZIONE VISTE (ROUTING INTERNO FLUIDO)
+const views = {
+  wall: { id: 'view-wall', title: 'OPERATIONS // LIVE VIDEO WALL' },
+  events: { id: 'view-events', title: 'ARCHIVIO EVIDENZE // REGISTRO EVENTI' },
+  plates: { id: 'view-plates', title: 'CONTROLLO ACCESSI // WHITELIST LPR' },
+  diagnostics: { id: 'view-diagnostics', title: 'SYSTEM HEALTH // TELEMETRIA EDGE' }
+};
+
+function switchView(viewName) {
+  const target = views[viewName];
+  if (!target) return;
+
+  // Aggiorna stato bottoni nav
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    if (btn.getAttribute('data-view') === viewName) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Nascondi tutte le viste e mostra quella attiva
+  Object.keys(views).forEach(k => {
+    const el = document.getElementById(views[k].id);
+    if (el) {
+      el.style.display = (k === viewName) ? 'block' : 'none';
+    }
+  });
+
+  // Aggiorna titolo nel top HUD
+  const hudTitle = document.getElementById('hudTitleText');
+  if (hudTitle) hudTitle.textContent = target.title;
+}
+
+// Collega i click sui pulsanti della barra laterale
+document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = btn.getAttribute('data-view');
+    switchView(v);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 2. TEMA SCURO / CHIARO CON LOGO VETTORIALE UFFICIALE
+// ──────────────────────────────────────────────────────────────────────────────
 const themeToggleBtn = document.getElementById('themeToggle');
 const themeLabel = document.getElementById('themeLabel');
 const brandLogo = document.getElementById('brandLogo');
@@ -29,7 +73,7 @@ const savedTheme = localStorage.getItem('sentinel_theme') || 'dark';
 applyTheme(savedTheme);
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 2. COMANDI ATTUATORI FLOATING DOCK (FARI, CANCELLO, VOCE)
+// 3. COMANDI ATTUATORI FLOATING DOCK (FARI, CANCELLO, VOCE)
 // ──────────────────────────────────────────────────────────────────────────────
 let faroTimer = null;
 function triggerFaro() {
@@ -95,12 +139,13 @@ function triggerVoice() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 3. GESTIONE WHITELIST TARGHE (LPR)
+// 4. GESTIONE WHITELIST TARGHE (LPR)
 // ──────────────────────────────────────────────────────────────────────────────
 const defaultPlates = [
   { plate: 'FG492KS', owner: 'Rocco Di Tolla', role: 'Direzione Generale', active: true },
   { plate: 'DA812LL', owner: 'Alessio Russo', role: 'Responsabile Impianti', active: true },
-  { plate: 'CB551AA', owner: 'Corriere Logistica', role: 'Fornitore Accreditato', active: true }
+  { plate: 'CB551AA', owner: 'Corriere Logistica', role: 'Fornitore Accreditato', active: true },
+  { plate: 'EZ902BK', owner: 'Dipendente Ufficio', role: 'Amministrazione', active: true }
 ];
 
 function getPlates() {
@@ -114,18 +159,18 @@ function savePlates(plates) {
 }
 
 function renderPlates() {
-  const tbody = document.getElementById('platesTbody');
+  const tbodyFull = document.getElementById('platesFullTbody');
+  if (!tbodyFull) return;
+
   const plates = getPlates();
-  tbody.innerHTML = '';
+  tbodyFull.innerHTML = '';
 
   plates.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="plate-pill">${p.plate}</span></td>
-      <td>
-        <div style="font-weight:600; font-size:12px;">${p.owner}</div>
-        <div style="font-size:10px; color:var(--text-dim);">${p.role}</div>
-      </td>
+      <td><strong style="font-size:13px;">${p.owner}</strong></td>
+      <td style="color:var(--text-muted);">${p.role}</td>
       <td><span class="status-beacon">Autorizzata</span></td>
       <td style="text-align:right;">
         <button class="icon-action-btn" title="Rimuovi" onclick="deletePlate(${idx})">
@@ -133,7 +178,7 @@ function renderPlates() {
         </button>
       </td>
     `;
-    tbody.appendChild(tr);
+    tbodyFull.appendChild(tr);
   });
 }
 
@@ -169,41 +214,70 @@ function handleSavePlate(e) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 4. ATTIVITÀ IN TEMPO REALE & MODALE VIDEO
+// 5. ATTIVITÀ IN TEMPO REALE & MODALE VIDEO
 // ──────────────────────────────────────────────────────────────────────────────
 const mockEvents = [
-  { time: '16:38:12', cam: 'Varco Carrabile', subj: 'Targa: FG492KS', conf: '94%', thumb: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { time: '16:21:05', cam: 'Varco Pedonale', subj: 'Persona Rilevata', conf: '88%', thumb: 'https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { time: '15:45:50', cam: 'Piazzale', subj: 'Persona Rilevata', conf: '91%', thumb: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=120&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' }
+  { time: '16:38:12', cam: 'Varco Carrabile', subj: 'Targa: FG492KS', conf: '94%', thumb: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=160&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+  { time: '16:21:05', cam: 'Varco Pedonale', subj: 'Persona Rilevata', conf: '88%', thumb: 'https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=160&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+  { time: '15:45:50', cam: 'Piazzale', subj: 'Persona Rilevata', conf: '91%', thumb: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=160&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+  { time: '14:12:00', cam: 'Varco Carrabile', subj: 'Veicolo in Transito', conf: '96%', thumb: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=160&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' }
 ];
 
 function renderEvents() {
-  const tbody = document.getElementById('eventsTbody');
-  tbody.innerHTML = '';
+  const wallTbody = document.getElementById('eventsWallTbody');
+  const fullTbody = document.getElementById('eventsFullTbody');
 
-  mockEvents.forEach(ev => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">${ev.time}</td>
-      <td style="font-weight:600; font-size:11px;">${ev.cam}</td>
-      <td>
-        <span class="status-beacon" style="color:var(--text-main); font-weight:500;">${ev.subj}</span>
-        <span style="font-family:var(--font-mono); font-size:10px; color:var(--cai-gold);">(${ev.conf})</span>
-      </td>
-      <td>
-        <div class="event-thumb-wrap">
-          <img src="${ev.thumb}" alt="Snapshot">
-        </div>
-      </td>
-      <td>
-        <button class="play-video-link" onclick="openVideoModal('${ev.cam} // ${ev.time}', '${ev.video}')">
-          <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span>Play MP4</span>
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+  if (wallTbody) {
+    wallTbody.innerHTML = '';
+    mockEvents.slice(0, 3).forEach(ev => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">${ev.time}</td>
+        <td style="font-weight:600; font-size:11px;">${ev.cam}</td>
+        <td>
+          <span class="status-beacon" style="color:var(--text-main); font-weight:500;">${ev.subj}</span>
+          <span style="font-family:var(--font-mono); font-size:10px; color:var(--cai-gold);">(${ev.conf})</span>
+        </td>
+        <td>
+          <div class="event-thumb-wrap">
+            <img src="${ev.thumb}" alt="Snapshot">
+          </div>
+        </td>
+        <td>
+          <button class="play-video-link" onclick="openVideoModal('${ev.cam} // ${ev.time}', '${ev.video}')">
+            <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Play MP4</span>
+          </button>
+        </td>
+      `;
+      wallTbody.appendChild(tr);
+    });
+  }
+
+  if (fullTbody) {
+    fullTbody.innerHTML = '';
+    mockEvents.forEach(ev => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">${ev.time}</td>
+        <td><strong>${ev.cam}</strong></td>
+        <td>${ev.subj}</td>
+        <td><span style="font-family:var(--font-mono); color:var(--cai-gold); font-weight:600;">${ev.conf}</span></td>
+        <td>
+          <div class="event-thumb-wrap" style="width:60px; height:38px;">
+            <img src="${ev.thumb}" alt="Snapshot">
+          </div>
+        </td>
+        <td>
+          <button class="play-video-link" onclick="openVideoModal('${ev.cam} // ${ev.time}', '${ev.video}')">
+            <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Riproduci Video NAS</span>
+          </button>
+        </td>
+      `;
+      fullTbody.appendChild(tr);
+    });
+  }
 }
 
 function openVideoModal(title, url) {
@@ -222,8 +296,9 @@ function closeVideoModal() {
   document.getElementById('videoModal').classList.remove('open');
 }
 
-// Inizializzazione
+// Inizializzazione iniziale
 document.addEventListener('DOMContentLoaded', () => {
   renderPlates();
   renderEvents();
+  switchView('wall');
 });

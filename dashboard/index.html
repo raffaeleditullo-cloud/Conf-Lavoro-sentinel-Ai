@@ -62,7 +62,7 @@
     <header class="top-hud">
       <div class="hud-title-zone">
         <div class="hud-title">
-          <span>OPERATIONS DASHBOARD</span>
+          <span id="hudTitleText">OPERATIONS // LIVE VIDEO WALL</span>
         </div>
         <div class="live-pulse-badge">
           <div class="pulse-dot"></div>
@@ -93,98 +93,91 @@
     <!-- Scrollable Workspace -->
     <div class="stage-content-scroll">
 
-      <!-- SECTION 1: CINEMATIC VIDEO WALL -->
-      <section class="video-wall-grid">
+      <!-- ════════════════════════════════════════════════════════════════════════
+           VISTA 1: LIVE VIDEO WALL
+           ════════════════════════════════════════════════════════════════════════ -->
+      <div id="view-wall" class="view-panel">
         
-        <!-- Camera 1: Varco Carrabile (Hero View) -->
-        <div class="cam-viewport-hero">
-          <img src="https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1200&q=80" alt="Varco Carrabile" class="feed-img-live">
-          
-          <div class="feed-hud-top">
-            <span class="cam-tag-glass">CAM 01 // VARCO CARRABILE</span>
-            <div class="ai-hud-pill plate">
-              <span>LPR: FG492KS</span>
-              <span>94%</span>
+        <section class="video-wall-grid">
+          <!-- Camera 1: Varco Carrabile (Hero View) -->
+          <div class="cam-viewport-hero">
+            <img src="https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1200&q=80" alt="Varco Carrabile" class="feed-img-live">
+            
+            <div class="feed-hud-top">
+              <span class="cam-tag-glass">CAM 01 // VARCO CARRABILE</span>
+              <div class="ai-hud-pill plate">
+                <span>LPR: FG492KS</span>
+                <span>94%</span>
+              </div>
+            </div>
+
+            <div class="feed-hud-bottom">
+              <span>RTSP 4K • 25 FPS • 8192 KBPS</span>
+              <span>HWACCEL: JETSON H.264</span>
             </div>
           </div>
 
-          <div class="feed-hud-bottom">
-            <span>RTSP 4K • 25 FPS • 8192 KBPS</span>
-            <span>HWACCEL: JETSON H.264</span>
-          </div>
-        </div>
+          <!-- Camera 2: Varco Pedonale -->
+          <div class="cam-viewport-secondary">
+            <img src="https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=800&q=80" alt="Varco Pedonale" class="feed-img-live">
+            
+            <div class="feed-hud-top">
+              <span class="cam-tag-glass">CAM 02 // VARCO PEDONALE</span>
+              <div class="ai-hud-pill person">
+                <span>PERSONA RILEVATA</span>
+              </div>
+            </div>
 
-        <!-- Camera 2: Varco Pedonale -->
-        <div class="cam-viewport-secondary">
-          <img src="https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=800&q=80" alt="Varco Pedonale" class="feed-img-live">
-          
-          <div class="feed-hud-top">
-            <span class="cam-tag-glass">CAM 02 // VARCO PEDONALE</span>
-            <div class="ai-hud-pill person">
-              <span>PERSONA RILEVATA</span>
+            <div class="feed-hud-bottom">
+              <span>RTSP 4K • 25 FPS</span>
+              <span>SUBNET .21</span>
             </div>
           </div>
 
-          <div class="feed-hud-bottom">
-            <span>RTSP 4K • 25 FPS</span>
-            <span>SUBNET .21</span>
+          <!-- Camera 3: Piazzale -->
+          <div class="cam-viewport-secondary">
+            <img src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80" alt="Piazzale" class="feed-img-live">
+            
+            <div class="feed-hud-top">
+              <span class="cam-tag-glass">CAM 03 // PIAZZALE CENTRALE</span>
+              <span class="cam-tag-glass" style="font-size:10px; color:var(--accent-green);">MONITORAGGIO NORMALE</span>
+            </div>
+
+            <div class="feed-hud-bottom">
+              <span>RTSP 4K • 25 FPS</span>
+              <span>SUBNET .22</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- FLOATING COMMAND DOCK -->
+        <div class="floating-dock-wrap" style="margin-top:20px; margin-bottom:24px;">
+          <div class="floating-dock">
+            <button id="dockFaroBtn" class="dock-action-btn btn-faro" onclick="triggerFaro()">
+              <svg class="dock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              <span id="dockFaroLabel">Fari Piazzale (30s)</span>
+              <div id="dockFaroProgress" class="dock-progress-line"></div>
+            </button>
+
+            <button id="dockGateBtn" class="dock-action-btn btn-gate" onclick="triggerGate()">
+              <svg class="dock-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span id="dockGateLabel">Apri Cancello (3s)</span>
+              <div id="dockGateProgress" class="dock-progress-line"></div>
+            </button>
+
+            <button id="dockSirenBtn" class="dock-action-btn btn-siren" onclick="triggerVoice()">
+              <svg class="dock-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              <span id="dockSirenLabel">Dissuasione Vocale</span>
+            </button>
           </div>
         </div>
 
-        <!-- Camera 3: Piazzale -->
-        <div class="cam-viewport-secondary">
-          <img src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80" alt="Piazzale" class="feed-img-live">
-          
-          <div class="feed-hud-top">
-            <span class="cam-tag-glass">CAM 03 // PIAZZALE CENTRALE</span>
-            <span class="cam-tag-glass" style="font-size:10px; color:var(--accent-green);">MONITORAGGIO NORMALE</span>
-          </div>
-
-          <div class="feed-hud-bottom">
-            <span>RTSP 4K • 25 FPS</span>
-            <span>SUBNET .22</span>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- FLOATING COMMAND DOCK -->
-      <div class="floating-dock-wrap">
-        <div class="floating-dock">
-          
-          <!-- Pulsante Faro -->
-          <button id="dockFaroBtn" class="dock-action-btn btn-faro" onclick="triggerFaro()">
-            <svg class="dock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            <span id="dockFaroLabel">Fari Piazzale (30s)</span>
-            <div id="dockFaroProgress" class="dock-progress-line"></div>
-          </button>
-
-          <!-- Pulsante Cancello -->
-          <button id="dockGateBtn" class="dock-action-btn btn-gate" onclick="triggerGate()">
-            <svg class="dock-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span id="dockGateLabel">Apri Cancello (3s)</span>
-            <div id="dockGateProgress" class="dock-progress-line"></div>
-          </button>
-
-          <!-- Pulsante Sirena -->
-          <button id="dockSirenBtn" class="dock-action-btn btn-siren" onclick="triggerVoice()">
-            <svg class="dock-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-            <span id="dockSirenLabel">Dissuasione Vocale</span>
-          </button>
-
-        </div>
-      </div>
-
-      <!-- SECTION 2: DATA & CONTROL CENTER -->
-      <div class="data-split-zone">
-        
-        <!-- Live Activity Feed -->
+        <!-- Live Ticker Preview -->
         <div class="glass-panel">
           <div class="panel-header-minimal">
-            <h3>Attività in Tempo Reale (NAS Ugreen)</h3>
-            <span style="font-size:11px; font-family:var(--font-mono); color:var(--accent-green)">● SYNC LIVE</span>
+            <h3>Attività Recente</h3>
+            <button class="ultra-primary-btn" onclick="switchView('events')" style="padding:4px 12px; font-size:11px;">Visualizza Tutto →</button>
           </div>
-
           <table class="data-table-ultra">
             <thead>
               <tr>
@@ -195,34 +188,129 @@
                 <th>Clip MP4</th>
               </tr>
             </thead>
-            <tbody id="eventsTbody">
-              <!-- Render dinamico -->
-            </tbody>
+            <tbody id="eventsWallTbody"></tbody>
           </table>
         </div>
 
-        <!-- Whitelist Targhe LPR -->
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════════════════
+           VISTA 2: REGISTRO EVENTI COMPLETO (NAS)
+           ════════════════════════════════════════════════════════════════════════ -->
+      <div id="view-events" class="view-panel" style="display:none;">
         <div class="glass-panel">
           <div class="panel-header-minimal">
-            <h3>Targhe Autorizzate (Varco Carrabile)</h3>
-            <button class="ultra-primary-btn" onclick="openAddPlateModal()" style="padding:4px 12px; font-size:11px;">+ Aggiungi</button>
+            <h3>Registro Eventi & Registrazioni (NAS Ugreen //sentinel-eventi)</h3>
+            <button class="ultra-primary-btn" onclick="renderEvents()" style="padding:6px 14px; font-size:12px;">Aggiorna</button>
+          </div>
+          
+          <table class="data-table-ultra" style="margin-top:12px;">
+            <thead>
+              <tr>
+                <th>Orario</th>
+                <th>Telecamera</th>
+                <th>Tipo Evento</th>
+                <th>Confidenza</th>
+                <th>Snapshot Evidenza</th>
+                <th>Registrazione Video</th>
+              </tr>
+            </thead>
+            <tbody id="eventsFullTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════════════════
+           VISTA 3: WHITELIST TARGHE LPR
+           ════════════════════════════════════════════════════════════════════════ -->
+      <div id="view-plates" class="view-panel" style="display:none;">
+        <div class="glass-panel">
+          <div class="panel-header-minimal">
+            <div>
+              <h3>Whitelist Targhe Autorizzate</h3>
+              <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">I veicoli registrati aprono automaticamente il cancello carrabile tramite IA (Modbus Relè 2)</p>
+            </div>
+            <button class="ultra-primary-btn" onclick="openAddPlateModal()">+ Aggiungi Nuova Targa</button>
           </div>
 
-          <table class="data-table-ultra">
+          <table class="data-table-ultra" style="margin-top:16px;">
             <thead>
               <tr>
                 <th>Targa</th>
                 <th>Intestatario</th>
+                <th>Ruolo</th>
                 <th>Stato</th>
-                <th style="text-align:right;">Rimuovi</th>
+                <th style="text-align:right;">Elimina</th>
               </tr>
             </thead>
-            <tbody id="platesTbody">
-              <!-- Render dinamico -->
-            </tbody>
+            <tbody id="platesFullTbody"></tbody>
           </table>
         </div>
+      </div>
 
+      <!-- ════════════════════════════════════════════════════════════════════════
+           VISTA 4: TELEMETRIA EDGE JETSON
+           ════════════════════════════════════════════════════════════════════════ -->
+      <div id="view-diagnostics" class="view-panel" style="display:none;">
+        <div class="data-split-zone">
+          
+          <!-- Metriche HW -->
+          <div class="glass-panel">
+            <div class="panel-header-minimal">
+              <h3>Hardware Jetson Orin Nano</h3>
+              <span class="status-beacon">OPERATIVO</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                <span style="color:var(--text-muted); font-size:13px;">Temperatura SoC (GPU/CPU)</span>
+                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--cai-gold);">54.8 °C</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                <span style="color:var(--text-muted); font-size:13px;">Memoria Swap NVMe</span>
+                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">180 MB / 3.8 GB (swappiness=10)</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                <span style="color:var(--text-muted); font-size:13px;">RAM Fisica Libera</span>
+                <strong style="font-family:var(--font-mono); font-size:16px;">2.480 MB</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--text-muted); font-size:13px;">Uptime Sistema</span>
+                <strong style="font-family:var(--font-mono); font-size:16px;">5h 42m</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nodi di Rete -->
+          <div class="glass-panel">
+            <div class="panel-header-minimal">
+              <h3>Nodi e Periferiche di Campo</h3>
+              <span class="status-beacon">ALL LINKED</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                <span style="color:var(--text-muted); font-size:13px;">Telecamera Carrabile</span>
+                <span style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.20 (4K LIVE)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                <span style="color:var(--text-muted); font-size:13px;">Telecamera Pedonale</span>
+                <span style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.21 (4K LIVE)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                <span style="color:var(--text-muted); font-size:13px;">Telecamera Piazzale</span>
+                <span style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.22 (4K LIVE)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                <span style="color:var(--text-muted); font-size:13px;">Scheda Relè Waveshare</span>
+                <span style="font-family:var(--font-mono); font-size:12px; color:var(--cai-gold);">192.168.1.30:4196 (ONLINE)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:var(--text-muted); font-size:13px;">NAS Ugreen (SMB)</span>
+                <span style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.11 (STREAMING OK)</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
 
     </div>
