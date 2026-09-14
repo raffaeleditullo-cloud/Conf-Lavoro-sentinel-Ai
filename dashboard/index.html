@@ -46,6 +46,12 @@
         <svg class="nav-btn-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         <span class="nav-btn-label">Telemetria Edge</span>
       </button>
+
+      <!-- Impostazioni & Audio -->
+      <button class="nav-btn" data-view="settings" title="Impostazioni & Audio">
+        <svg class="nav-btn-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="nav-btn-label">Impostazioni & Audio</span>
+      </button>
     </div>
 
     <div class="nav-bottom-actions">
@@ -319,7 +325,165 @@
         </div>
       </div>
 
-    </div>
+      <!-- ════════════════════════════════════════════════════════════════════════
+           VISTA 5: CONFIGURAZIONE & SINTESI VOCALE AI
+           ════════════════════════════════════════════════════════════════════════ -->
+      <div id="view-settings" class="view-panel" style="display:none;">
+        <div class="data-split-zone">
+
+          <!-- Colonna 1: Profilo Voce & TTS Dissuasione -->
+          <div class="glass-panel">
+            <div class="panel-header-minimal">
+              <div>
+                <h3>Sintesi Vocale AI // Motore TTS</h3>
+                <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Configura la voce per la dissuasione automatica e manuale</p>
+              </div>
+              <span class="status-beacon">TTS ENGINE ONLINE</span>
+            </div>
+
+            <!-- Selezione Genere Voce (Cards Radio Tattiche) -->
+            <div style="margin-top:18px;">
+              <label class="setting-section-label">GENERE & PROFILO VOCE</label>
+              <div class="voice-selector-grid">
+                
+                <label class="voice-card-option active" id="cardVoiceMale">
+                  <input type="radio" name="voiceGender" value="male" checked onchange="handleVoiceChange('male')">
+                  <div class="voice-card-body">
+                    <div class="voice-card-header">
+                      <div class="voice-icon-badge">
+                        <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v5a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                      </div>
+                      <div>
+                        <strong class="voice-title">Voce Maschile</strong>
+                        <span class="voice-sub">Marco // Tattico Deciso</span>
+                      </div>
+                    </div>
+                    <p class="voice-desc">Timbro profondo e perentorio, ottimizzato per allontanare intrusioni con massima autorevolezza.</p>
+                  </div>
+                </label>
+
+                <label class="voice-card-option" id="cardVoiceFemale">
+                  <input type="radio" name="voiceGender" value="female" onchange="handleVoiceChange('female')">
+                  <div class="voice-card-body">
+                    <div class="voice-card-header">
+                      <div class="voice-icon-badge">
+                        <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v5a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                      </div>
+                      <div>
+                        <strong class="voice-title">Voce Femminile</strong>
+                        <span class="voice-sub">Elena // Sintetico SOC</span>
+                      </div>
+                    </div>
+                    <p class="voice-desc">Dizione chiara, cristallina e metallica in stile centrale operativa di difesa e sicurezza AI.</p>
+                  </div>
+                </label>
+
+              </div>
+            </div>
+
+            <!-- Preset Messaggio o Personalizzato -->
+            <div style="margin-top:22px;">
+              <label class="setting-section-label">MESSAGGIO DI DISSUASIONE PREDEFINITO</label>
+              <select id="selVoicePreset" class="ultra-input" onchange="handlePresetChange()" style="margin-bottom:12px; font-weight:600;">
+                <option value="preset1">Preset 1: "Attenzione: Area sotto sorveglianza video con tracciamento biometrico. Allontanarsi immediatamente."</option>
+                <option value="preset2">Preset 2: "Avviso di sicurezza: Rilevata violazione perimetrale. Registrazione forense in corso."</option>
+                <option value="preset3">Preset 3: "Proprietà privata sorvegliata da intelligenza artificiale. Allarme attivo."</option>
+                <option value="custom">Messaggio Personalizzato (scrivi sotto)...</option>
+              </select>
+
+              <textarea id="txtCustomMessage" class="ultra-input" rows="3" placeholder="Scrivi il messaggio vocale che l'AI pronuncerà..." style="resize:vertical; font-family:var(--font-tech); font-size:13.5px;"></textarea>
+            </div>
+
+            <!-- Pulsanti di Test Voce -->
+            <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap;">
+              <button type="button" class="ultra-primary-btn" onclick="testVoicePreview()" style="display:inline-flex; align-items:center; gap:8px;">
+                <svg style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Ascolta Anteprima Voce</span>
+              </button>
+              <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:12px; padding:8px 16px;">
+                <span>Invia Test a Diffusore Fanvil (.35)</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Colonna 2: Parametri Audio Altoparlante & Temporizzazioni -->
+          <div class="glass-panel">
+            <div class="panel-header-minimal">
+              <div>
+                <h3>Parametri Audio & Attuatori</h3>
+                <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Regolazione hardware Fanvil (.35) e Modbus Relè (.30)</p>
+              </div>
+              <span class="status-beacon">HARDWARE LINKED</span>
+            </div>
+
+            <!-- Volume Altoparlante -->
+            <div style="margin-top:18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <label class="setting-section-label" style="margin-bottom:0;">VOLUME ALTOPARLANTE FANVIL</label>
+                <strong id="valVolume" style="font-family:var(--font-mono); font-size:14px; color:var(--cai-gold);">85%</strong>
+              </div>
+              <input type="range" id="rngVolume" min="10" max="100" value="85" class="tactical-slider" oninput="updateVolumeLabel(this.value)">
+              <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10px; color:var(--text-dim); margin-top:4px;">
+                <span>10% (Basso)</span>
+                <span>50% (Medio)</span>
+                <span>100% (Dissuasione Max)</span>
+              </div>
+            </div>
+
+            <!-- Sirena Introduttiva -->
+            <div style="margin-top:22px; padding:14px 16px; background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:var(--radius-xs);">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <strong style="font-size:13.5px; font-weight:700;">Sirena Allarme Pre-Messaggio</strong>
+                  <p style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Emette un bitonale acustico per 3s prima del messaggio vocale</p>
+                </div>
+                <label class="tactical-switch">
+                  <input type="checkbox" id="chkSiren" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Temporizzazione Relè -->
+            <div style="margin-top:22px;">
+              <label class="setting-section-label">TEMPORIZZAZIONE ATTUATORI HARDWARE</label>
+              
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+                  <div>
+                    <span style="font-size:13px; font-weight:600;">Accensione Fari Piazzale</span>
+                    <p style="font-size:11px; color:var(--text-muted);">Relè 1 Modbus TCP // 192.168.1.30:4196</p>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="number" id="numFaroSec" value="30" min="5" max="300" class="ultra-input" style="width:64px; text-align:center; font-family:var(--font-mono); font-weight:700;">
+                    <span style="font-family:var(--font-mono); font-size:12px; color:var(--text-dim);">sec</span>
+                  </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <span style="font-size:13px; font-weight:600;">Impulso Cancello Carraio</span>
+                    <p style="font-size:11px; color:var(--text-muted);">Relè 2 Modbus TCP (Apertura Automatica LPR)</p>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="number" id="numGateSec" value="3" min="1" max="15" class="ultra-input" style="width:64px; text-align:center; font-family:var(--font-mono); font-weight:700;">
+                    <span style="font-family:var(--font-mono); font-size:12px; color:var(--text-dim);">sec</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Salva Configurazione -->
+            <div style="margin-top:26px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
+              <span id="saveStatus" style="font-family:var(--font-mono); font-size:11px; color:var(--accent-green); display:none;">CONFIGURAZIONE SALVATA</span>
+              <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:10px 24px; font-size:13px;">Salva Impostazioni</button>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
   </main>
 
   <!-- ──────────────────────────────────────────────────────────────────────────

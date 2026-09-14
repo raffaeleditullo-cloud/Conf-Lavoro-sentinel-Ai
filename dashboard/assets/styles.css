@@ -1184,3 +1184,213 @@ body {
   border-color: rgba(0, 31, 30, 0.15);
   color: #001f1e;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * SETTINGS & AUDIO CONTROLS (HIGH-TECH TACTICAL COMPONENTS)
+ * ────────────────────────────────────────────────────────────────────────────── */
+.setting-section-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+[data-theme="light"] .setting-section-label {
+  color: #557574;
+}
+
+.voice-selector-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .voice-selector-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.voice-card-option {
+  position: relative;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.22s var(--ease-spring);
+  display: flex;
+}
+
+.voice-card-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.voice-card-option:hover {
+  border-color: var(--border-active);
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+}
+
+.voice-card-option.active {
+  border-color: var(--cai-gold);
+  background: rgba(212, 175, 55, 0.05);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+}
+
+[data-theme="light"] .voice-card-option {
+  background: rgba(0, 31, 30, 0.02);
+  border-color: rgba(0, 31, 30, 0.1);
+}
+
+[data-theme="light"] .voice-card-option.active {
+  border-color: #b38f2a;
+  background: rgba(179, 143, 42, 0.06);
+  box-shadow: 0 0 16px rgba(179, 143, 42, 0.15);
+}
+
+.voice-card-body {
+  width: 100%;
+}
+
+.voice-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.voice-icon-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-xs);
+  background: rgba(138, 84, 234, 0.12);
+  border: 1px solid var(--border-tactical);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.voice-card-option.active .voice-icon-badge {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--cai-gold);
+}
+
+.voice-icon-badge svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--cai-gold);
+  stroke-width: 1.8;
+  fill: none;
+}
+
+.voice-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-main);
+}
+
+.voice-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--cai-violet);
+  text-transform: uppercase;
+}
+
+.voice-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* Tactical Range Slider */
+.tactical-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+  transition: background 0.2s;
+}
+
+[data-theme="light"] .tactical-slider {
+  background: rgba(0, 31, 30, 0.12);
+}
+
+.tactical-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--cai-gold);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--cai-gold-glow);
+  border: 2px solid #fff;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.tactical-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 16px var(--cai-gold);
+}
+
+/* Tactical Toggle Switch */
+.tactical-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.tactical-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  transition: 0.25s var(--ease-spring);
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: 0.25s var(--ease-spring);
+}
+
+.tactical-switch input:checked + .switch-slider {
+  background-color: var(--accent-green);
+  border-color: var(--accent-green);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+}
+
+.tactical-switch input:checked + .switch-slider:before {
+  transform: translateX(20px);
+}
