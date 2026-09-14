@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CONF-LAVORO // Sentinel AI Operations</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       SIDEBAR LATERALE (LAYOUT BUSINESS CALL)
+       ────────────────────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-logo-wrap">
+        <!-- Logo SVG Ufficiale Conflavoro AI -->
+        <img id="brandLogo" src="assets/img/conflavoro-ai-viola-su-scuro.svg" alt="Conflavoro AI" class="brand-logo-img">
+      </div>
+      <div class="brand-title">
+        <span>SENTINEL AI</span>
+        <span class="brand-badge">SOC 4K</span>
+      </div>
+    </div>
+
+    <!-- Voci di Navigazione con Pastiglia Attiva Business Call -->
+    <nav class="nav-menu">
+      <button class="nav-item active" data-tab="live">
+        <span class="nav-icon">📹</span>
+        <span>Live Monitor</span>
+      </button>
+
+      <button class="nav-item" data-tab="actions">
+        <span class="nav-icon">⚡</span>
+        <span>Comandi Rapidi</span>
+      </button>
+
+      <button class="nav-item" data-tab="events">
+        <span class="nav-icon">📁</span>
+        <span>Registro Eventi</span>
+      </button>
+
+      <button class="nav-item" data-tab="plates">
+        <span class="nav-icon">🚗</span>
+        <span>Gestione Targhe</span>
+      </button>
+
+      <button class="nav-item" data-tab="diagnostics">
+        <span class="nav-icon">📊</span>
+        <span>Diagnostica</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="system-status-chip">
+        <div class="status-dot"></div>
+        <span id="systemStatusText">Jetson Orin: Operativo</span>
+      </div>
+
+      <button id="themeToggle" class="theme-toggle-btn">
+        <span id="themeLabel">Tema Chiaro</span>
+        <span id="themeIcon">☀️</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       AREA CONTENUTI PRINCIPALE
+       ────────────────────────────────────────────────────────────────────────── -->
+  <main class="main-wrapper">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="page-title-group">
+        <h1 id="pageTitle">Live Monitor</h1>
+        <p id="pageSubtitle">Sorveglianza perimetrale 4K attiva sui 3 varchi</p>
+      </div>
+
+      <div class="quick-meta">
+        <div class="metric-pill">
+          <span>🌡️ Temp: <strong id="jetsonTemp">54.8°C</strong></span>
+        </div>
+        <div class="metric-pill">
+          <span>🧠 RAM: <strong id="jetsonRam">4.8 GB</strong></span>
+        </div>
+        <div class="metric-pill">
+          <span>💾 NAS: <strong style="color:var(--success)">Connesso</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="content-area">
+
+      <!-- SEZIONE 1: LIVE MONITOR (TELECAMERE) -->
+      <section id="tab-live" class="tab-content active">
+        <div class="cameras-grid">
+          
+          <!-- Telecamera 1: Varco Carrabile -->
+          <div class="camera-card">
+            <div class="camera-header">
+              <div class="cam-name-wrap">
+                <span class="cam-name">Varco Carrabile (LPR)</span>
+              </div>
+              <div class="cam-live-badge">
+                <div class="status-dot"></div>
+                <span>4K LIVE</span>
+              </div>
+            </div>
+            <div class="cam-feed-container">
+              <img src="https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=800&q=80" alt="Varco Carrabile">
+              <div class="cam-overlay-badges">
+                <div class="ai-detect-badge plate">🚗 Targa: FG492KS (94%)</div>
+              </div>
+            </div>
+            <div class="cam-footer">
+              <span>IP: 192.168.1.20</span>
+              <span>H.264 // 25 FPS</span>
+            </div>
+          </div>
+
+          <!-- Telecamera 2: Varco Pedonale -->
+          <div class="camera-card">
+            <div class="camera-header">
+              <div class="cam-name-wrap">
+                <span class="cam-name">Varco Pedonale</span>
+              </div>
+              <div class="cam-live-badge">
+                <div class="status-dot"></div>
+                <span>4K LIVE</span>
+              </div>
+            </div>
+            <div class="cam-feed-container">
+              <img src="https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=800&q=80" alt="Varco Pedonale">
+              <div class="cam-overlay-badges">
+                <div class="ai-detect-badge">🚶 Persona Rilevata</div>
+              </div>
+            </div>
+            <div class="cam-footer">
+              <span>IP: 192.168.1.21</span>
+              <span>H.264 // 25 FPS</span>
+            </div>
+          </div>
+
+          <!-- Telecamera 3: Piazzale -->
+          <div class="camera-card">
+            <div class="camera-header">
+              <div class="cam-name-wrap">
+                <span class="cam-name">Piazzale Principale</span>
+              </div>
+              <div class="cam-live-badge">
+                <div class="status-dot"></div>
+                <span>4K LIVE</span>
+              </div>
+            </div>
+            <div class="cam-feed-container">
+              <img src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80" alt="Piazzale">
+            </div>
+            <div class="cam-footer">
+              <span>IP: 192.168.1.22</span>
+              <span>H.264 // 25 FPS</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SEZIONE 2: COMANDI RAPIDI ATTUATORI -->
+      <section id="tab-actions" class="tab-content" style="display:none">
+        <div class="actions-panel">
+          <div class="section-head">
+            <h2>⚡ Attuatori e Comandi Immediati</h2>
+            <span style="font-size:12px; color:var(--ink-500)">Scheda Relè Waveshare 192.168.1.30</span>
+          </div>
+
+          <div class="buttons-row">
+            <!-- Tasto Faretto Piazzale -->
+            <button id="btnFaro" class="action-btn faro-btn" onclick="triggerFaro()">
+              <div class="action-icon-circle">💡</div>
+              <div class="action-btn-texts">
+                <h3>Accendi Fari Piazzale</h3>
+                <p id="faroStatus">Impulso dissuasione 30 sec</p>
+              </div>
+              <div id="faroPulseBar" class="active-pulse-bar"></div>
+            </button>
+
+            <!-- Tasto Cancello -->
+            <button id="btnGate" class="action-btn gate-btn" onclick="triggerGate()">
+              <div class="action-icon-circle">🚧</div>
+              <div class="action-btn-texts">
+                <h3>Apri Cancello</h3>
+                <p id="gateStatus">Impulso varco 3 sec</p>
+              </div>
+              <div id="gatePulseBar" class="active-pulse-bar"></div>
+            </button>
+
+            <!-- Tasto Dissuasione Vocale -->
+            <button id="btnVoice" class="action-btn voice-btn" onclick="triggerVoice()">
+              <div class="action-icon-circle">📢</div>
+              <div class="action-btn-texts">
+                <h3>Dissuasione Vocale</h3>
+                <p id="voiceStatus">Riproduci avviso Carmelo</p>
+              </div>
+              <div id="voicePulseBar" class="active-pulse-bar"></div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEZIONE 3: REGISTRO EVENTI & VIDEO NAS -->
+      <section id="tab-events" class="tab-content" style="display:none">
+        <div class="table-card">
+          <div class="section-head">
+            <h2>📁 Ultime Rilevazioni Archiviate (NAS Ugreen)</h2>
+            <button class="primary-btn" onclick="refreshEvents()">🔄 Aggiorna</button>
+          </div>
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Orario</th>
+                  <th>Telecamera</th>
+                  <th>Tipo Evento</th>
+                  <th>Dettaglio</th>
+                  <th>Evidenza</th>
+                  <th>Azione</th>
+                </tr>
+              </thead>
+              <tbody id="eventsTableBody">
+                <!-- Popolato dinamicamente da app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEZIONE 4: GESTIONE TARGHE LPR -->
+      <section id="tab-plates" class="tab-content" style="display:none">
+        <div class="table-card">
+          <div class="section-head">
+            <h2>🚗 Whitelist Targhe Autorizzate (Apertura Automatica)</h2>
+            <button class="primary-btn" onclick="openAddPlateModal()">+ Nuova Targa</button>
+          </div>
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Targa</th>
+                  <th>Intestatario</th>
+                  <th>Ruolo</th>
+                  <th>Stato</th>
+                  <th>Data Inserimento</th>
+                  <th>Azioni</th>
+                </tr>
+              </thead>
+              <tbody id="platesTableBody">
+                <!-- Popolato dinamicamente da app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEZIONE 5: DIAGNOSTICA JETSON -->
+      <section id="tab-diagnostics" class="tab-content" style="display:none">
+        <div class="table-card">
+          <div class="section-head">
+            <h2>📊 Telemetria Jetson Orin Nano & Dispositivi</h2>
+            <span class="status-tag active">Tutti i nodi ONLINE</span>
+          </div>
+
+          <div class="buttons-row" style="margin-top:16px;">
+            <div class="system-status-chip" style="padding:16px; flex-direction:column; align-items:flex-start;">
+              <span style="color:var(--ink-500)">Temperatura CPU/GPU</span>
+              <strong style="font-size:24px; color:var(--ink-900)">54.8 °C</strong>
+              <span style="font-size:11px; color:var(--success)">Soglia sicura (< 65°C)</span>
+            </div>
+
+            <div class="system-status-chip" style="padding:16px; flex-direction:column; align-items:flex-start;">
+              <span style="color:var(--ink-500)">Memoria Swap NVMe</span>
+              <strong style="font-size:24px; color:var(--ink-900)">180 MB / 3.8 GB</strong>
+              <span style="font-size:11px; color:var(--success)">Curva stabile (swappiness=10)</span>
+            </div>
+
+            <div class="system-status-chip" style="padding:16px; flex-direction:column; align-items:flex-start;">
+              <span style="color:var(--ink-500)">RAM Fisica Libera</span>
+              <strong style="font-size:24px; color:var(--ink-900)">2.480 MB</strong>
+              <span style="font-size:11px; color:var(--success)">Disponibilità ottimale</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       MODALE AGGIUNGI TARGA
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div id="addPlateModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Registra Nuova Targa Autorizzata</h3>
+        <button class="modal-close" onclick="closeAddPlateModal()">&times;</button>
+      </div>
+      <form id="plateForm" onsubmit="handleSavePlate(event)">
+        <div class="form-group">
+          <label for="inputPlate">Targa (Formato Italiano, es. AB123CD)</label>
+          <input type="text" id="inputPlate" class="form-control" placeholder="AB123CD" required style="text-transform:uppercase; font-weight:700; letter-spacing:1px;">
+        </div>
+        <div class="form-group">
+          <label for="inputOwner">Intestatario / Dipendente</label>
+          <input type="text" id="inputOwner" class="form-control" placeholder="es. Ing. Mario Rossi" required>
+        </div>
+        <div class="form-group">
+          <label for="inputRole">Ruolo / Reparto</label>
+          <input type="text" id="inputRole" class="form-control" placeholder="es. Direzione, Logistica, Fornitore" required>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
+          <button type="button" class="action-btn" style="padding:10px 18px;" onclick="closeAddPlateModal()">Annulla</button>
+          <button type="submit" class="primary-btn">Salva Targa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       MODALE PLAYER VIDEO NAS
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div id="videoModal" class="modal-backdrop">
+    <div class="modal-box" style="max-width:760px;">
+      <div class="modal-header">
+        <h3 id="videoModalTitle">Registrazione Video Evento (NAS Ugreen)</h3>
+        <button class="modal-close" onclick="closeVideoModal()">&times;</button>
+      </div>
+      <div style="width:100%; aspect-ratio:16/9; background:#000; border-radius:var(--radius); overflow:hidden;">
+        <video id="playerVideo" controls style="width:100%; height:100%; object-fit:cover;">
+          <source src="" type="video/mp4">
+          Il tuo browser non supporta il tag video.
+        </video>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:16px; font-size:12px; color:var(--ink-500);">
+        <span id="videoModalMeta">Data e ora</span>
+        <span style="color:var(--success)">Archiviato su //192.168.1.11/sentinel-eventi</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>

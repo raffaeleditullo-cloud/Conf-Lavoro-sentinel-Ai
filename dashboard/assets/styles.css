@@ -1,0 +1,758 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ * CONF-LAVORO Sentinel AI — Dashboard Design System
+ * Allineato fedelmente alle specifiche e ai token di Business Call AI (PMI)
+ * Direzione Rocco Di Tolla
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* TEMA SCURO (Predefinito: Viola + Nero Grafite + Oro Luxury) */
+  --surface-0: #0d0b14;               /* Sfondo pagina con velatura violacea */
+  --surface-1: #171322;               /* Card e pannelli principali */
+  --surface-2: #201a2e;               /* Superfici in rilievo e campi */
+  --surface-3: #2a223c;               /* Hover e stati attivi */
+  
+  --sidebar-bg: #120e1c;             /* Barra laterale scura */
+  --sidebar-border: rgba(138, 84, 234, 0.15);
+  
+  --ink-900: #fbf9ff;                 /* Testo primario ad alto contrasto */
+  --ink-700: #d6cee8;                 /* Testo secondario */
+  --ink-500: #9f96b8;                 /* Testo tenue / didascalie */
+  --ink-400: #73698c;                 /* Disabilitato / bordi tenui */
+  
+  --primary: #8a54ea;                 /* Viola firma Conflavoro AI */
+  --primary-hover: #9d6df3;
+  --primary-glow: rgba(138, 84, 234, 0.35);
+  --primary-subtle: rgba(138, 84, 234, 0.12);
+  
+  --oro: #D4AF37;                     /* Oro Conflavoro Luxury */
+  --oro-glow: rgba(212, 175, 55, 0.28);
+  --oro-border: rgba(212, 175, 55, 0.55);
+  --oro-text: #e6c86e;
+  
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.25);
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --danger-glow: rgba(239, 68, 68, 0.3);
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius: 14px;                     /* Raggio standard card Business Call */
+  --radius-lg: 18px;
+  --radius-full: 9999px;
+  
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-brand: 'Archivo', 'Inter', sans-serif;
+  
+  --shadow-card: 0 8px 32px -4px rgba(0, 0, 0, 0.5), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 24px var(--primary-glow);
+  --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* TEMA CHIARO (Petrolio #006666 + Verde Acqua + Oro) */
+[data-theme="light"] {
+  --surface-0: #f6f8f7;
+  --surface-1: #ffffff;
+  --surface-2: #edf2f0;
+  --surface-3: #e2ebe7;
+  
+  --sidebar-bg: #004d4d;             /* Petrolio scuro approvato */
+  --sidebar-border: rgba(0, 170, 166, 0.25);
+  
+  --ink-900: #001f1e;                 /* Nero marchio Conflavoro */
+  --ink-700: #1b3d3b;
+  --ink-500: #4a6866;
+  --ink-400: #7d9694;
+  
+  --primary: #00aaa6;                 /* Verde acqua firma */
+  --primary-hover: #00c2bd;
+  --primary-glow: rgba(0, 170, 166, 0.3);
+  --primary-subtle: rgba(0, 170, 166, 0.1);
+  
+  --oro: #b38f2a;
+  --oro-glow: rgba(179, 143, 42, 0.2);
+  --oro-border: rgba(179, 143, 42, 0.5);
+  --oro-text: #8c6d1a;
+  
+  --shadow-card: 0 6px 24px -4px rgba(0, 31, 30, 0.08), 0 2px 6px -1px rgba(0, 31, 30, 0.04);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--surface-0);
+  color: var(--ink-900);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * SIDEBAR LATERALE (Layout Business Call)
+ * ────────────────────────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 280px;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  flex-shrink: 0;
+  z-index: 50;
+  transition: var(--transition);
+}
+
+.sidebar-header {
+  padding: 0 8px 24px 8px;
+  border-bottom: 1px solid var(--sidebar-border);
+  margin-bottom: 24px;
+}
+
+.brand-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.brand-logo-img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.brand-title {
+  font-family: var(--font-brand);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--oro-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brand-badge {
+  font-size: 10px;
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  color: var(--ink-700);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: var(--transition);
+}
+
+.nav-item:hover {
+  background: var(--surface-2);
+  color: var(--ink-900);
+}
+
+/* Pastiglia attiva stile Business Call con bordo Oro */
+.nav-item.active {
+  background: var(--surface-0);
+  color: var(--ink-900);
+  border-color: var(--oro-border);
+  box-shadow: 0 0 16px var(--oro-glow);
+  font-weight: 600;
+}
+
+.nav-item.active .nav-icon {
+  color: var(--oro);
+  filter: drop-shadow(0 0 6px var(--oro-glow));
+}
+
+.nav-icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-500);
+  transition: var(--transition);
+}
+
+.sidebar-footer {
+  padding-top: 16px;
+  border-top: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.system-status-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--ink-700);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-2);
+  border: 1px solid var(--sidebar-border);
+  color: var(--ink-700);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--surface-3);
+  color: var(--ink-900);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * AREA PRINCIPALE (MAIN CONTENT)
+ * ────────────────────────────────────────────────────────────────────────────── */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.top-bar {
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(138, 84, 234, 0.1);
+  background: rgba(13, 11, 20, 0.6);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.page-title-group h1 {
+  font-family: var(--font-brand);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.page-title-group p {
+  font-size: 13px;
+  color: var(--ink-500);
+}
+
+.quick-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.metric-pill {
+  background: var(--surface-1);
+  border: 1px solid var(--sidebar-border);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-700);
+}
+
+.content-area {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * MODULO 1: LIVE CAMERAS GRID
+ * ────────────────────────────────────────────────────────────────────────────── */
+.cameras-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1200px) {
+  .cameras-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.camera-card {
+  background: var(--surface-1);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.camera-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px -4px var(--primary-glow);
+}
+
+.camera-header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.cam-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cam-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.cam-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.12);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.cam-feed-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-feed-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cam-overlay-badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-detect-badge {
+  background: rgba(138, 84, 234, 0.88);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulse 2s infinite;
+}
+
+.ai-detect-badge.plate {
+  background: rgba(212, 175, 55, 0.92);
+  color: #0d0b14;
+}
+
+.cam-footer {
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ink-500);
+  background: var(--surface-1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * MODULO 2: PULSANTIERA ATTUATORI RAPIDI
+ * ────────────────────────────────────────────────────────────────────────────── */
+.actions-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.section-head h2 {
+  font-family: var(--font-brand);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-900);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.buttons-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .buttons-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.action-btn {
+  padding: 20px 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--sidebar-border);
+  background: var(--surface-2);
+  color: var(--ink-900);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: var(--transition);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn:hover {
+  background: var(--surface-3);
+  transform: translateY(-2px);
+}
+
+.action-btn.faro-btn:hover {
+  border-color: var(--oro);
+  box-shadow: 0 0 20px var(--oro-glow);
+}
+
+.action-btn.gate-btn:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.action-btn.voice-btn:hover {
+  border-color: var(--danger);
+  box-shadow: 0 0 20px var(--danger-glow);
+}
+
+.action-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.faro-btn .action-icon-circle {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--oro);
+}
+
+.gate-btn .action-icon-circle {
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.voice-btn .action-icon-circle {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.action-btn-texts h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.action-btn-texts p {
+  font-size: 12px;
+  color: var(--ink-500);
+}
+
+.active-pulse-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--primary);
+  width: 0%;
+  transition: width linear;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * MODULO 3 & 4: TABELLE & REGISTRI (Targhe ed Eventi)
+ * ────────────────────────────────────────────────────────────────────────────── */
+.split-sections {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1100px) {
+  .split-sections {
+    grid-template-columns: 1fr;
+  }
+}
+
+.table-card {
+  background: var(--surface-1);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+th {
+  padding: 12px 14px;
+  color: var(--ink-500);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+td {
+  padding: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--ink-700);
+}
+
+tr:hover td {
+  background: var(--surface-2);
+  color: var(--ink-900);
+}
+
+.plate-badge {
+  font-family: var(--font-brand);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: var(--surface-0);
+  border: 1px solid var(--oro-border);
+  color: var(--oro-text);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+.status-tag {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+.status-tag.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+}
+
+.primary-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+}
+
+.primary-btn:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 0 16px var(--primary-glow);
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--ink-500);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.btn-icon:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * MODAL VIDEO PLAYER & FORM TARGHE
+ * ────────────────────────────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-box {
+  background: var(--surface-1);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 640px;
+  padding: 28px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  font-family: var(--font-brand);
+  font-size: 18px;
+  color: var(--ink-900);
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: var(--ink-500);
+  cursor: pointer;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-700);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  outline: none;
+  transition: var(--transition);
+}
+
+.form-control:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+
+@keyframes pulse {
+  0% { opacity: 0.9; }
+  50% { opacity: 1; }
+  100% { opacity: 0.9; }
+}

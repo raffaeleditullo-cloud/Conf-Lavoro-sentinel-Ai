@@ -65,8 +65,24 @@ services:
       # Pacchetti audio ufficiali (carmelo e sami) residenti a bordo
       - ./orchestrator/audio:/app/audio:ro
     env_file:
-
       - .env
     depends_on:
       - mosquitto
+
+  dashboard:
+    container_name: sentinel_dashboard
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      # Interfaccia Web Commerciale Conflavoro Sentinel AI (accessibile da LAN)
+      - "8080:8080"
+    volumes:
+      - ./config:/config
+      - ./storage/logs:/app/logs:ro
+    env_file:
+      - .env
+    depends_on:
+      - orchestrator
 
