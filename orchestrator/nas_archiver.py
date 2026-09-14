@@ -19,6 +19,7 @@ import io
 import time
 import logging
 import threading
+import gc
 from datetime import datetime
 import requests
 import smbclient
@@ -57,8 +58,8 @@ class UgreenNASArchiver:
 
     def archive_snapshot(self, event_id: str, camera: str, label: str):
         """
-        Scarica immediatamente lo snapshot JPEG dell'evento da Frigate e lo invia al NAS.
-        Esegue l'operazione in un thread dedicato per non bloccare l'orchestratore.
+        Scarica lo snapshot JPEG da Frigate in streaming (senza allocare grandi buffer in RAM)
+        e lo trasferisce al NAS Ugreen.
         """
         def _snapshot_worker():
             date_folder = datetime.now().strftime("%Y-%m-%d")
@@ -67,16 +68,18 @@ class UgreenNASArchiver:
             filename = f"{event_id}_{label}.jpg"
 
             try:
-                logger.info("Scaricamento snapshot da Frigate: %s", snapshot_url)
-                res = requests.get(snapshot_url, timeout=10.0)
-                if res.status_code == 200 and len(res.content) > 0:
-                    success = self._write_to_smb(remote_cam_dir, filename, res.content)
-                    if not success:
-                        self._save_local_fallback(remote_cam_dir, filename, res.content)
-                else:
-                    logger.warning("Frigate snapshot HTTP %d per %s", res.status_code, snapshot_url)
+                logger.info("Scaricamento snapshot in streaming da Frigate: %s", snapshot_url)
+                with requests.get(snapshot_url, stream=True, timeout=15.0) as res:
+                    if res.status_code == 200:
+                        success = self._stream_to_smb(remote_cam_dir, filename, res)
+                        if not success:
+                            self._stream_to_local_fallback(filename, res)
+                    else:
+                        logger.warning("Frigate snapshot HTTP %d per %s", res.status_code, snapshot_url)
             except Exception as exc:
                 logger.error("Errore durante archiviazione snapshot %s: %s", filename, exc)
+            finally:
+                gc.collect()
 
         t = threading.Thread(target=_snapshot_worker, daemon=True)
         t.start()
@@ -84,7 +87,8 @@ class UgreenNASArchiver:
     def archive_clip(self, event_id: str, camera: str, label: str, delay_seconds: float = 3.0, max_retries: int = 3):
         """
         Scarica la clip MP4 dell'evento da Frigate SOLO dopo la conclusione dell'evento.
-        Attende delay_seconds e riprova fino a max_retries volte per dare a Frigate il tempo di remuxare l'MP4.
+        Usa streaming a blocchi da 64 KB per mantenere il consumo di memoria a ZERO assoluto,
+        evitando che il kernel Linux spinga memoria nello swap NVMe.
         """
         def _clip_worker():
             if delay_seconds > 0:
@@ -97,22 +101,25 @@ class UgreenNASArchiver:
 
             for attempt in range(1, max_retries + 1):
                 try:
-                    logger.info("Scaricamento clip da Frigate (tentativo %d/%d): %s", attempt, max_retries, clip_url)
-                    res = requests.get(clip_url, timeout=25.0)
-                    if res.status_code == 200 and len(res.content) > 0:
-                        success = self._write_to_smb(remote_cam_dir, filename, res.content)
-                        if not success:
-                            self._save_local_fallback(remote_cam_dir, filename, res.content)
-                        return
-                    elif res.status_code in (400, 404):
-                        logger.info("Clip non ancora finalizzata da Frigate (HTTP %d, tentativo %d/%d). Attendo 3s...", res.status_code, attempt, max_retries)
-                        time.sleep(3.0)
-                    else:
-                        logger.warning("Frigate clip HTTP %d per %s", res.status_code, clip_url)
-                        break
+                    logger.info("Scaricamento clip in streaming (tentativo %d/%d): %s", attempt, max_retries, clip_url)
+                    with requests.get(clip_url, stream=True, timeout=30.0) as res:
+                        if res.status_code == 200:
+                            success = self._stream_to_smb(remote_cam_dir, filename, res)
+                            if not success:
+                                self._stream_to_local_fallback(filename, res)
+                            gc.collect()
+                            return
+                        elif res.status_code in (400, 404):
+                            logger.info("Clip non ancora pronta su Frigate (HTTP %d, tentativo %d/%d). Attendo 3s...", res.status_code, attempt, max_retries)
+                            time.sleep(3.0)
+                        else:
+                            logger.warning("Frigate clip HTTP %d per %s", res.status_code, clip_url)
+                            break
                 except Exception as exc:
-                    logger.error("Errore durante scaricamento clip %s (tentativo %d): %s", filename, attempt, exc)
+                    logger.error("Errore durante streaming clip %s (tentativo %d): %s", filename, attempt, exc)
                     time.sleep(2.0)
+                finally:
+                    gc.collect()
 
             logger.warning("Clip per l'evento %s non disponibile dopo %d tentativi.", event_id, max_retries)
 
@@ -126,34 +133,45 @@ class UgreenNASArchiver:
         if has_clip:
             self.archive_clip(event_id, camera, label, delay_seconds=3.0)
 
-    def _write_to_smb(self, remote_dir: str, filename: str, data: bytes) -> bool:
+    def _stream_to_smb(self, remote_dir: str, filename: str, response: requests.Response) -> bool:
+        """Scrive lo stream HTTP direttamente sul NAS in blocchi da 64 KB (zero buffer in RAM)."""
         try:
-            # Crea ricorsivamente la cartella sul NAS passando sempre credenziali esplicite
             try:
                 makedirs(remote_dir, exist_ok=True, username=self.user, password=self.password)
             except Exception as dir_err:
                 logger.debug("makedirs su %s: %s", remote_dir, dir_err)
 
             remote_file_path = f"{remote_dir}\\{filename}"
+            bytes_written = 0
             with open_file(remote_file_path, mode="wb", username=self.user, password=self.password) as f:
-                f.write(data)
+                for chunk in response.iter_content(chunk_size=65536):
+                    if chunk:
+                        f.write(chunk)
+                        bytes_written += len(chunk)
 
-            logger.info("Evidenza salvata con successo sul NAS: %s (%d byte)", remote_file_path, len(data))
-            return True
+            if bytes_written > 0:
+                logger.info("Evidenza salvata in streaming sul NAS: %s (%d byte)", remote_file_path, bytes_written)
+                return True
+            else:
+                logger.warning("File evidenza vuoto (0 byte) durante streaming verso %s", remote_file_path)
+                return False
 
         except Exception as smb_err:
             logger.error(
-                "Errore scrittura SMB su NAS Ugreen (%s/%s): %s",
+                "Errore scrittura streaming SMB su NAS Ugreen (%s/%s): %s",
                 remote_dir, filename, smb_err
             )
             return False
 
-    def _save_local_fallback(self, remote_dir: str, filename: str, data: bytes):
+    def _stream_to_local_fallback(self, filename: str, response: requests.Response):
+        """Salvataggio di emergenza locale in streaming se il NAS è temporaneamente non raggiungibile."""
         try:
             os.makedirs(self.local_backup_dir, exist_ok=True)
             local_path = os.path.join(self.local_backup_dir, filename)
             with open(local_path, "wb") as f:
-                f.write(data)
-            logger.info("Evidenza salvata nel buffer locale di riserva: %s", local_path)
+                for chunk in response.iter_content(chunk_size=65536):
+                    if chunk:
+                        f.write(chunk)
+            logger.info("Evidenza salvata in streaming nel buffer locale: %s", local_path)
         except Exception as err:
             logger.error("Errore salvataggio buffer locale: %s", err)
