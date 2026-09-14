@@ -81,7 +81,7 @@ function triggerFaro() {
   const label = document.getElementById('dockFaroLabel');
   const bar = document.getElementById('dockFaroProgress');
 
-  label.textContent = 'Fari ATTIVI (30s)';
+  label.textContent = 'FARI ATTIVI // 30s';
   btn.style.borderColor = 'var(--cai-gold)';
   bar.style.transition = 'none';
   bar.style.width = '100%';
@@ -93,7 +93,7 @@ function triggerFaro() {
 
   if (faroTimer) clearTimeout(faroTimer);
   faroTimer = setTimeout(() => {
-    label.textContent = 'Fari Piazzale (30s)';
+    label.textContent = 'Fari Piazzale // 30s';
     btn.style.borderColor = 'transparent';
   }, 30000);
 
@@ -106,7 +106,7 @@ function triggerGate() {
   const label = document.getElementById('dockGateLabel');
   const bar = document.getElementById('dockGateProgress');
 
-  label.textContent = 'Apertura in corso (3s)...';
+  label.textContent = 'Apertura Relè 2 (3s)...';
   btn.style.borderColor = 'var(--cai-violet)';
   bar.style.transition = 'none';
   bar.style.width = '100%';
@@ -118,7 +118,7 @@ function triggerGate() {
 
   if (gateTimer) clearTimeout(gateTimer);
   gateTimer = setTimeout(() => {
-    label.textContent = 'Apri Cancello (3s)';
+    label.textContent = 'Apri Cancello // 3s';
     btn.style.borderColor = 'transparent';
   }, 3500);
 
@@ -127,11 +127,11 @@ function triggerGate() {
 
 function triggerVoice() {
   const label = document.getElementById('dockSirenLabel');
-  label.textContent = 'Voce in riproduzione...';
+  label.textContent = 'Broadcasting Audio...';
   label.style.color = 'var(--accent-red)';
 
   setTimeout(() => {
-    label.textContent = 'Dissuasione Vocale';
+    label.textContent = 'Dissuasione Audio IP';
     label.style.color = 'var(--text-main)';
   }, 4000);
 

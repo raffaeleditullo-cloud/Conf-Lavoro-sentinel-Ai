@@ -1,68 +1,81 @@
 /* ══════════════════════════════════════════════════════════════════════════════
- * CONF-LAVORO Sentinel AI — Plus Ultra SOC Command Center
- * Style Language: Verkada Command + Linear Dark + Conflavoro AI Palette
+ * CONF-LAVORO Sentinel AI — Military-Grade SOC & Perimeter Defense Platform
+ * Visual Language: Futuristic Defense Telemetry + Conflavoro AI Palette
+ * Typography: Oxanium (Brand & Displays) + Rajdhani (UI) + JetBrains Mono (Telemetry)
  * ══════════════════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Oxanium:wght@400;500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap');
 
 :root {
-  /* TEMA SCURO (Default - Dark Cockpit / SOC) */
-  --bg-deep: #0a0910;
-  --bg-surface: #110e19;
-  --bg-panel: rgba(22, 18, 32, 0.7);
-  --bg-glass: rgba(18, 14, 28, 0.65);
-  --bg-hover: rgba(138, 84, 234, 0.08);
+  /* ──────────────────────────────────────────────────────────────────────────
+   * TEMA SCURO: CYBERNETIC DEFENSE MATRIX (Default)
+   * ────────────────────────────────────────────────────────────────────────── */
+  --bg-deep: #08070d;
+  --bg-surface: #0f0c18;
+  --bg-panel: rgba(18, 14, 28, 0.78);
+  --bg-glass: rgba(15, 12, 24, 0.72);
+  --bg-hover: rgba(138, 84, 234, 0.12);
 
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-active: rgba(138, 84, 234, 0.35);
-  --border-gold: rgba(212, 175, 55, 0.4);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(138, 84, 234, 0.45);
+  --border-gold: rgba(212, 175, 55, 0.5);
+  --border-tactical: rgba(138, 84, 234, 0.25);
 
-  --text-main: #fbf9ff;
-  --text-muted: #958ea5;
-  --text-dim: #605971;
+  --text-main: #fbfaff;
+  --text-muted: #9f96b2;
+  --text-dim: #675f78;
 
   --cai-violet: #8a54ea;
-  --cai-violet-glow: rgba(138, 84, 234, 0.45);
+  --cai-violet-glow: rgba(138, 84, 234, 0.55);
   --cai-gold: #D4AF37;
-  --cai-gold-glow: rgba(212, 175, 55, 0.3);
+  --cai-gold-glow: rgba(212, 175, 55, 0.4);
 
   --accent-green: #10b981;
+  --accent-green-glow: rgba(16, 185, 129, 0.4);
   --accent-red: #f43f5e;
+  --accent-red-glow: rgba(244, 63, 94, 0.45);
   --accent-amber: #f59e0b;
 
-  --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
   --radius-pill: 9999px;
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Typography Stack for Futuristic Security System */
+  --font-display: 'Oxanium', 'Rajdhani', -apple-system, sans-serif;
+  --font-brand: 'Oxanium', 'Rajdhani', sans-serif;
+  --font-tech: 'Rajdhani', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  --font-brand: 'Archivo', sans-serif;
+  --font-sans: 'Rajdhani', system-ui, sans-serif;
 
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
-  --blur-glass: blur(20px);
+  --blur-glass: blur(24px);
 }
 
 [data-theme="light"] {
-  --bg-deep: #f5f7f6;
+  /* ──────────────────────────────────────────────────────────────────────────
+   * TEMA CHIARO: HIGH-SPEC CLEAN TELEMETRY (Petrolio & Oro Conflavoro AI)
+   * ────────────────────────────────────────────────────────────────────────── */
+  --bg-deep: #f2f5f4;
   --bg-surface: #ffffff;
-  --bg-panel: rgba(255, 255, 255, 0.85);
-  --bg-glass: rgba(255, 255, 255, 0.75);
-  --bg-hover: rgba(0, 170, 166, 0.08);
+  --bg-panel: rgba(255, 255, 255, 0.88);
+  --bg-glass: rgba(255, 255, 255, 0.8);
+  --bg-hover: rgba(0, 170, 166, 0.1);
 
-  --border-subtle: rgba(0, 31, 30, 0.08);
-  --border-active: rgba(0, 170, 166, 0.35);
-  --border-gold: rgba(179, 143, 42, 0.4);
+  --border-subtle: rgba(0, 31, 30, 0.1);
+  --border-active: rgba(0, 170, 166, 0.4);
+  --border-gold: rgba(179, 143, 42, 0.45);
+  --border-tactical: rgba(0, 170, 166, 0.2);
 
-  --text-main: #001f1e;
-  --text-muted: #3a5554;
-  --text-dim: #7a9493;
+  --text-main: #001e1d;
+  --text-muted: #385554;
+  --text-dim: #718d8c;
 
   --cai-violet: #00aaa6;
-  --cai-violet-glow: rgba(0, 170, 166, 0.35);
+  --cai-violet-glow: rgba(0, 170, 166, 0.4);
   --cai-gold: #b38f2a;
-  --cai-gold-glow: rgba(179, 143, 42, 0.25);
+  --cai-gold-glow: rgba(179, 143, 42, 0.3);
 }
 
 * {
@@ -72,17 +85,34 @@
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-tech);
   background-color: var(--bg-deep);
   color: var(--text-main);
   display: flex;
   height: 100vh;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  background-image: 
+    radial-gradient(circle at 12% 18%, rgba(138, 84, 234, 0.04) 0%, transparent 45%),
+    radial-gradient(circle at 88% 82%, rgba(212, 175, 55, 0.035) 0%, transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
- * SLIM MODERN NAVIGATION BAR (Verkada / Linear Style)
+ * TACTICAL RETICLE & CORNERS SYSTEM
+ * ────────────────────────────────────────────────────────────────────────────── */
+.tactical-corner-tl, .tactical-corner-br {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * SLIM MODERN NAVIGATION BAR (HIGH-TECH COMMAND DOCK)
  * ────────────────────────────────────────────────────────────────────────────── */
 .soc-nav {
   width: 76px;
@@ -95,45 +125,78 @@ body {
   padding: 20px 0;
   flex-shrink: 0;
   z-index: 50;
-  transition: width 0.25s var(--ease-spring);
+  transition: width 0.28s var(--ease-spring);
+  position: relative;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
 }
 
 .soc-nav:hover {
-  width: 230px;
+  width: 240px;
 }
 
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  padding: 0 20px;
-  margin-bottom: 32px;
+  padding: 0 18px;
+  margin-bottom: 34px;
   overflow: hidden;
 }
 
 .nav-brand-icon {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  background: rgba(138, 84, 234, 0.08);
+  border: 1px solid var(--border-tactical);
+  border-radius: var(--radius-xs);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.soc-nav:hover .nav-brand-icon {
+  border-color: var(--cai-gold);
+  box-shadow: 0 0 14px var(--cai-gold-glow);
+}
+
+.nav-brand-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-spring);
+  white-space: nowrap;
+}
+
+.soc-nav:hover .nav-brand-text-block {
+  opacity: 1;
 }
 
 .nav-brand-text {
-  font-family: var(--font-brand);
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--cai-gold);
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.2s var(--ease-spring);
+  letter-spacing: 0.16em;
+  color: #fff;
+  text-shadow: 0 0 16px rgba(212, 175, 55, 0.35);
 }
 
-.soc-nav:hover .nav-brand-text {
-  opacity: 1;
+.brand-accent {
+  color: var(--cai-gold);
+  text-shadow: 0 0 10px var(--cai-gold);
+}
+
+.nav-brand-sub {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--cai-violet);
+  text-transform: uppercase;
 }
 
 .nav-items-group {
@@ -141,7 +204,7 @@ body {
   flex-direction: column;
   gap: 8px;
   width: 100%;
-  padding: 0 12px;
+  padding: 0 10px;
   flex: 1;
 }
 
@@ -151,8 +214,8 @@ body {
   gap: 14px;
   width: 100%;
   height: 48px;
-  padding: 0 16px;
-  border-radius: var(--radius-sm);
+  padding: 0 14px;
+  border-radius: var(--radius-xs);
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
@@ -160,29 +223,32 @@ body {
   transition: all 0.2s var(--ease-spring);
   position: relative;
   overflow: hidden;
+  font-family: var(--font-tech);
 }
 
 .nav-btn:hover {
   background: var(--bg-hover);
   color: var(--text-main);
+  border-color: var(--border-tactical);
 }
 
 .nav-btn.active {
-  background: rgba(138, 84, 234, 0.1);
+  background: rgba(138, 84, 234, 0.12);
   color: var(--text-main);
   border-color: var(--border-gold);
+  box-shadow: inset 0 0 14px rgba(138, 84, 234, 0.2);
 }
 
 .nav-btn.active::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 10px;
-  bottom: 10px;
+  top: 8px;
+  bottom: 8px;
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--cai-gold);
-  box-shadow: 0 0 10px var(--cai-gold);
+  box-shadow: 0 0 12px var(--cai-gold);
 }
 
 .nav-btn-icon {
@@ -195,8 +261,11 @@ body {
 }
 
 .nav-btn-label {
-  font-size: 13px;
-  font-weight: 500;
+  font-family: var(--font-tech);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   white-space: nowrap;
   opacity: 0;
   transition: opacity 0.2s var(--ease-spring);
@@ -212,13 +281,13 @@ body {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 0 12px;
+  padding: 0 10px;
 }
 
 .theme-pill-btn {
   width: 100%;
   height: 40px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   background: var(--bg-glass);
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
@@ -226,8 +295,9 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px;
+  padding: 0 14px;
   transition: all 0.2s var(--ease-spring);
+  font-family: var(--font-tech);
 }
 
 .theme-pill-btn:hover {
@@ -236,7 +306,7 @@ body {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
- * MAIN STAGE (EDGE-TO-EDGE BORDERLESS COMMAND CENTER)
+ * MAIN STAGE (EDGE-TO-EDGE COMMAND MATRIX)
  * ────────────────────────────────────────────────────────────────────────────── */
 .main-stage {
   flex: 1;
@@ -247,9 +317,9 @@ body {
   position: relative;
 }
 
-/* Top HUD Glass Header */
+/* Top Tactical HUD Header */
 .top-hud {
-  height: 56px;
+  height: 58px;
   padding: 0 28px;
   display: flex;
   align-items: center;
@@ -258,36 +328,51 @@ body {
   background: var(--bg-glass);
   backdrop-filter: var(--blur-glass);
   z-index: 30;
+  position: relative;
+}
+
+.top-hud::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-tactical), var(--border-gold), transparent);
 }
 
 .hud-title-zone {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
 .hud-title {
-  font-family: var(--font-brand);
+  font-family: var(--font-display);
   font-size: 15px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   display: flex;
   align-items: center;
   gap: 10px;
+  color: #ffffff;
 }
 
 .live-pulse-badge {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
+  letter-spacing: 0.08em;
   color: var(--accent-green);
-  background: rgba(16, 185, 129, 0.1);
-  padding: 3px 8px;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.08);
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
 }
 
 .pulse-dot {
@@ -302,16 +387,26 @@ body {
 .hud-telemetry-zone {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
 }
 
 .telemetry-chip {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+}
+
+.telemetry-chip span {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
 }
 
 .telemetry-chip strong {
@@ -320,7 +415,7 @@ body {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
- * CINEMATIC VIDEO WALL (IMMERSIVE, SEAMLESS)
+ * CINEMATIC VIDEO WALL (TACTICAL HUD & TARGET RETICLES)
  * ────────────────────────────────────────────────────────────────────────────── */
 .stage-content-scroll {
   flex: 1;
@@ -348,27 +443,51 @@ body {
   }
 }
 
-/* Primary Hero Camera (Varco Carrabile) */
-.cam-viewport-hero {
-  grid-row: 1 / span 2;
+/* Common Camera Viewport Style */
+.cam-viewport-hero, .cam-viewport-secondary {
   position: relative;
   background: #000;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  transition: border-color 0.25s var(--ease-spring);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  transition: border-color 0.25s var(--ease-spring), box-shadow 0.25s var(--ease-spring);
 }
 
-.cam-viewport-secondary {
-  position: relative;
-  background: #000;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
+/* High-Tech Tactical Reticles on 4 Corners */
+.cam-viewport-hero::before, .cam-viewport-secondary::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 16px;
+  height: 16px;
+  border-top: 2px solid var(--cai-gold);
+  border-left: 2px solid var(--cai-gold);
+  z-index: 12;
+  pointer-events: none;
+}
+
+.cam-viewport-hero::after, .cam-viewport-secondary::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 16px;
+  height: 16px;
+  border-bottom: 2px solid var(--cai-gold);
+  border-right: 2px solid var(--cai-gold);
+  z-index: 12;
+  pointer-events: none;
 }
 
 .cam-viewport-hero:hover, .cam-viewport-secondary:hover {
   border-color: var(--border-active);
+  box-shadow: 0 12px 40px rgba(138, 84, 234, 0.25);
+}
+
+.cam-viewport-hero {
+  grid-row: 1 / span 2;
 }
 
 .feed-img-live {
@@ -376,9 +495,54 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+  filter: contrast(1.04) brightness(0.96);
 }
 
-/* Fighter-Jet HUD Overlay on feeds */
+/* Subtle Tactical Scanlines */
+.cam-scanlines {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0.55;
+}
+
+/* Target Crosshair in Hero Viewport */
+.cam-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 8;
+  opacity: 0.4;
+}
+
+.cam-crosshair::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--cai-gold);
+}
+
+.cam-crosshair::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--cai-gold);
+}
+
+/* HUD Top Overlays */
 .feed-hud-top {
   position: absolute;
   top: 14px;
@@ -388,45 +552,51 @@ body {
   align-items: center;
   justify-content: space-between;
   pointer-events: none;
+  z-index: 15;
 }
 
 .cam-tag-glass {
-  background: rgba(10, 9, 16, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 4px 10px;
+  background: rgba(10, 8, 16, 0.85);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 3px solid var(--cai-gold);
+  padding: 5px 12px;
   border-radius: var(--radius-xs);
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .ai-hud-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: 7px;
+  padding: 5px 12px;
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
   animation: hud-flicker 3s infinite;
+  letter-spacing: 0.06em;
 }
 
 .ai-hud-pill.plate {
-  background: rgba(212, 175, 55, 0.85);
-  color: #0a0910;
+  background: rgba(212, 175, 55, 0.9);
+  color: #08070d;
   border: 1px solid #D4AF37;
+  box-shadow: 0 0 16px var(--cai-gold-glow);
 }
 
 .ai-hud-pill.person {
-  background: rgba(138, 84, 234, 0.85);
+  background: rgba(138, 84, 234, 0.9);
   color: #fff;
   border: 1px solid #8a54ea;
+  box-shadow: 0 0 16px var(--cai-violet-glow);
 }
 
 .feed-hud-bottom {
@@ -439,44 +609,60 @@ body {
   justify-content: space-between;
   font-family: var(--font-mono);
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.8);
   pointer-events: none;
+  z-index: 15;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
- * FLOATING COMMAND DOCK (Ultra-sleek Cockpit Controls)
+ * FLOATING COMMAND DOCK (TACTICAL ACTUATOR OVERRIDE CONSOLE)
  * ────────────────────────────────────────────────────────────────────────────── */
 .floating-dock-wrap {
   display: flex;
   justify-content: center;
   position: relative;
-  margin-top: -8px;
+  margin-top: -6px;
 }
 
 .floating-dock {
   background: var(--bg-glass);
   backdrop-filter: var(--blur-glass);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: 8px 12px;
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 24px rgba(138, 84, 234, 0.12);
+  position: relative;
+}
+
+.floating-dock::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cai-violet), var(--cai-gold), transparent);
 }
 
 .dock-action-btn {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 18px;
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.04);
+  padding: 11px 20px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-main);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-tech);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   transition: all 0.2s var(--ease-spring);
   position: relative;
   overflow: hidden;
@@ -499,7 +685,7 @@ body {
 
 .dock-action-btn.btn-siren:hover {
   border-color: var(--accent-red);
-  box-shadow: 0 0 20px rgba(244, 63, 94, 0.3);
+  box-shadow: 0 0 20px var(--accent-red-glow);
 }
 
 .dock-icon {
@@ -524,7 +710,7 @@ body {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
- * ACTIVITY & DATA CENTER (TICKER & WHITELIST TILES)
+ * PANELS & DATA CENTER
  * ────────────────────────────────────────────────────────────────────────────── */
 .data-split-zone {
   display: grid;
@@ -542,74 +728,98 @@ body {
   background: var(--bg-glass);
   backdrop-filter: var(--blur-glass);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 20px 24px;
+  border-radius: var(--radius-sm);
+  padding: 22px 26px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24px;
+  width: 48px;
+  height: 2px;
+  background: var(--cai-violet);
 }
 
 .panel-header-minimal {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .panel-header-minimal h3 {
-  font-family: var(--font-brand);
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 14.5px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-main);
 }
 
-/* Streamlined Modern Table */
+/* ──────────────────────────────────────────────────────────────────────────────
+ * STREAMLINED HIGH-TECH TABLES
+ * ────────────────────────────────────────────────────────────────────────────── */
 .data-table-ultra {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .data-table-ultra th {
-  padding: 8px 12px;
+  padding: 10px 14px;
   color: var(--text-dim);
+  font-family: var(--font-mono);
   font-weight: 600;
   text-transform: uppercase;
   font-size: 10px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   border-bottom: 1px solid var(--border-subtle);
   text-align: left;
 }
 
 .data-table-ultra td {
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   color: var(--text-main);
   vertical-align: middle;
+  font-family: var(--font-tech);
 }
 
 .data-table-ultra tr:hover td {
   background: var(--bg-hover);
 }
 
+/* Real Tactical Italian License Plate */
 .plate-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 3px;
   font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--border-gold);
-  color: var(--cai-gold);
-  padding: 3px 8px;
-  border-radius: var(--radius-xs);
-  display: inline-block;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  padding: 0 8px;
+  border-left: 5px solid #003399;
+  border-right: 5px solid #003399;
 }
 
 .status-beacon {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
   color: var(--accent-green);
 }
 
@@ -619,6 +829,7 @@ body {
   height: 6px;
   border-radius: 50%;
   background: currentColor;
+  box-shadow: 0 0 8px currentColor;
 }
 
 .icon-action-btn {
@@ -633,12 +844,12 @@ body {
 
 .icon-action-btn:hover {
   color: var(--accent-red);
-  background: rgba(244, 63, 94, 0.1);
+  background: rgba(244, 63, 94, 0.12);
 }
 
 .icon-action-btn svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   stroke: currentColor;
   fill: none;
   stroke-width: 2;
@@ -646,9 +857,9 @@ body {
 
 /* Event mini thumbnail */
 .event-thumb-wrap {
-  width: 44px;
-  height: 28px;
-  border-radius: 4px;
+  width: 48px;
+  height: 30px;
+  border-radius: 3px;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   background: #000;
@@ -665,30 +876,33 @@ body {
   align-items: center;
   gap: 6px;
   color: var(--cai-violet);
-  background: rgba(138, 84, 234, 0.1);
-  border: 1px solid rgba(138, 84, 234, 0.25);
-  padding: 4px 10px;
+  background: rgba(138, 84, 234, 0.12);
+  border: 1px solid rgba(138, 84, 234, 0.3);
+  padding: 5px 12px;
   border-radius: var(--radius-xs);
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
+  font-family: var(--font-tech);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   transition: all 0.2s var(--ease-spring);
 }
 
 .play-video-link:hover {
   background: var(--cai-violet);
   color: #fff;
-  box-shadow: 0 0 12px var(--cai-violet-glow);
+  box-shadow: 0 0 16px var(--cai-violet-glow);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
- * MODALS (MINIMAL GLASS)
+ * MODALS (MINIMAL GLASS HUD)
  * ────────────────────────────────────────────────────────────────────────────── */
 .ultra-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(5, 4, 8, 0.82);
-  backdrop-filter: blur(16px);
+  background: rgba(5, 4, 8, 0.85);
+  backdrop-filter: blur(18px);
   display: none;
   align-items: center;
   justify-content: center;
@@ -701,12 +915,23 @@ body {
 
 .ultra-modal-card {
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-tactical);
+  border-radius: var(--radius-sm);
   width: 90%;
   max-width: 580px;
   padding: 28px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.85), 0 0 30px rgba(138, 84, 234, 0.15);
+  position: relative;
+}
+
+.ultra-modal-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--cai-gold);
 }
 
 .ultra-modal-header {
@@ -717,9 +942,11 @@ body {
 }
 
 .ultra-modal-header h3 {
-  font-family: var(--font-brand);
+  font-family: var(--font-display);
   font-size: 16px;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .btn-close-modal {
@@ -745,39 +972,42 @@ body {
   padding: 10px 14px;
   background: var(--bg-deep);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   color: var(--text-main);
-  font-family: var(--font-sans);
-  font-size: 13px;
+  font-family: var(--font-tech);
+  font-size: 14px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .ultra-input:focus {
   border-color: var(--cai-violet);
-  box-shadow: 0 0 12px var(--cai-violet-glow);
+  box-shadow: 0 0 14px var(--cai-violet-glow);
 }
 
 .ultra-primary-btn {
   background: var(--cai-violet);
   color: #fff;
-  border: none;
-  padding: 9px 18px;
-  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 18px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-tech);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .ultra-primary-btn:hover {
   filter: brightness(1.15);
-  box-shadow: 0 0 16px var(--cai-violet-glow);
+  box-shadow: 0 0 18px var(--cai-violet-glow);
 }
 
 @keyframes pulse-ring {
   0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(0.95); opacity: 0.8; }
 }
 
