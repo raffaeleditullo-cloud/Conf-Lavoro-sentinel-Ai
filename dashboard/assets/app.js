@@ -15,8 +15,8 @@ function switchView(viewName) {
   const target = views[viewName];
   if (!target) return;
 
-  // Aggiorna stato bottoni nav
-  document.querySelectorAll('.nav-btn').forEach(btn => {
+  // Aggiorna stato bottoni nav (sia sidebar desktop/tablet che bottom nav mobile)
+  document.querySelectorAll('.nav-btn, .bottom-nav-btn').forEach(btn => {
     if (btn.getAttribute('data-view') === viewName) {
       btn.classList.add('active');
     } else {
@@ -37,8 +37,8 @@ function switchView(viewName) {
   if (hudTitle) hudTitle.textContent = target.title;
 }
 
-// Collega i click sui pulsanti della barra laterale
-document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+// Collega i click sui pulsanti della barra laterale e bottom nav mobile
+document.querySelectorAll('.nav-btn[data-view], .bottom-nav-btn[data-view]').forEach(btn => {
   btn.addEventListener('click', () => {
     const v = btn.getAttribute('data-view');
     switchView(v);
@@ -49,8 +49,10 @@ document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
 // 2. TEMA SCURO / CHIARO CON LOGO VETTORIALE ED ICONA SOLE/LUNA
 // ──────────────────────────────────────────────────────────────────────────────
 const themeToggleBtn = document.getElementById('themeToggle');
+const mobileThemeToggle = document.getElementById('mobileThemeToggle');
 const themeSvg = document.getElementById('themeSvg');
 const brandLogo = document.getElementById('brandLogo');
+const mobileBrandLogo = document.getElementById('mobileBrandLogo');
 
 const SUN_ICON = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 const MOON_ICON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
@@ -59,26 +61,64 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('sentinel_theme', theme);
 
-  if (theme === 'light') {
-    if (themeToggleBtn) themeToggleBtn.title = 'Passa a Tema Scuro';
-    if (themeSvg) themeSvg.innerHTML = MOON_ICON;
-    if (brandLogo) brandLogo.src = 'assets/img/icona-ai-acqua-su-scuro.svg';
-  } else {
-    if (themeToggleBtn) themeToggleBtn.title = 'Passa a Tema Chiaro';
-    if (themeSvg) themeSvg.innerHTML = SUN_ICON;
-    if (brandLogo) brandLogo.src = 'assets/img/icona-ai-viola-su-scuro.svg';
+  const isLight = (theme === 'light');
+  if (themeToggleBtn) themeToggleBtn.title = isLight ? 'Passa a Tema Scuro' : 'Passa a Tema Chiaro';
+  if (themeSvg) themeSvg.innerHTML = isLight ? MOON_ICON : SUN_ICON;
+  if (mobileThemeToggle) {
+    const mSvg = mobileThemeToggle.querySelector('svg');
+    if (mSvg) mSvg.innerHTML = isLight ? MOON_ICON : SUN_ICON;
   }
+  if (brandLogo) brandLogo.src = isLight ? 'assets/img/icona-ai-acqua-su-scuro.svg' : 'assets/img/icona-ai-viola-su-scuro.svg';
+  if (mobileBrandLogo) mobileBrandLogo.src = isLight ? 'assets/img/icona-ai-acqua-su-scuro.svg' : 'assets/img/icona-ai-viola-su-scuro.svg';
 }
 
-if (themeToggleBtn) {
-  themeToggleBtn.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme');
-    applyTheme(current === 'light' ? 'dark' : 'light');
-  });
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'light' ? 'dark' : 'light');
 }
+
+if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
 
 const savedTheme = localStorage.getItem('sentinel_theme') || 'dark';
 applyTheme(savedTheme);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 3. COLLAPSE / EXPAND SIDEBAR (BUSINESS CALL COMPRESSIONE DESKTOP)
+// ──────────────────────────────────────────────────────────────────────────────
+const sidebar = document.querySelector('.soc-nav');
+const collapseBtn = document.getElementById('sidebarCollapseBtn');
+const collapseSvg = document.getElementById('collapseSvg');
+
+const ICON_EXPAND = '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="m11 9 3 3-3 3"/>';
+const ICON_COLLAPSE = '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="m14 9-3 3 3 3"/>';
+
+function setSidebarCollapsed(collapsed) {
+  if (!sidebar) return;
+  if (collapsed) {
+    sidebar.classList.add('collapsed');
+    if (collapseSvg) collapseSvg.innerHTML = ICON_EXPAND;
+    if (collapseBtn) collapseBtn.title = 'Espandi Barra Laterale';
+    localStorage.setItem('sentinel_sidebar_collapsed', '1');
+  } else {
+    sidebar.classList.remove('collapsed');
+    if (collapseSvg) collapseSvg.innerHTML = ICON_COLLAPSE;
+    if (collapseBtn) collapseBtn.title = 'Comprimi Barra Laterale';
+    localStorage.setItem('sentinel_sidebar_collapsed', '0');
+  }
+}
+
+if (collapseBtn) {
+  collapseBtn.addEventListener('click', () => {
+    const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+    setSidebarCollapsed(!isCollapsed);
+  });
+}
+
+// Ripristina preferenza barra salvata
+if (localStorage.getItem('sentinel_sidebar_collapsed') === '1') {
+  setSidebarCollapsed(true);
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 3. COMANDI ATTUATORI FLOATING DOCK (FARI, CANCELLO, VOCE)
