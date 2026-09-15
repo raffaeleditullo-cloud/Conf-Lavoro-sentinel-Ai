@@ -378,9 +378,28 @@ async function handleSavePlate(e) {
   }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// 5. GESTIONE STREAM VIDEO REALI & STATI STANDBY HARDWARE
-// ──────────────────────────────────────────────────────────────────────────────
+// Intervalli di polling per ogni cam (ID -> intervalId)
+const camPollIntervals = {};
+const CAM_NAMES = { 1: 'varco_carrabile', 2: 'varco_pedonale', 3: 'piazzale' };
+const CAM_POLL_MS = 1000; // refresh frame ogni 1 secondo
+
+function startCamPolling(camId) {
+  if (camPollIntervals[camId]) return; // già attivo
+  camPollIntervals[camId] = setInterval(() => {
+    const stream = document.getElementById(`streamCam${camId}`);
+    if (!stream) return;
+    const camName = CAM_NAMES[camId];
+    stream.src = `/api/camera/${camName}/latest.jpg?_t=${Date.now()}`;
+  }, CAM_POLL_MS);
+}
+
+function stopCamPolling(camId) {
+  if (camPollIntervals[camId]) {
+    clearInterval(camPollIntervals[camId]);
+    delete camPollIntervals[camId];
+  }
+}
+
 function handleStreamLoaded(camId) {
   const standby = document.getElementById(`standbyCam${camId}`);
   const stream = document.getElementById(`streamCam${camId}`);
@@ -391,6 +410,8 @@ function handleStreamLoaded(camId) {
     badge.className = 'cam-status-pill live';
     badge.textContent = '● LIVE 4K';
   }
+  // Avvia il polling periodico per aggiornare il frame
+  startCamPolling(camId);
 }
 
 function handleStreamError(camId) {
@@ -403,11 +424,12 @@ function handleStreamError(camId) {
     badge.className = 'cam-status-pill offline';
     badge.textContent = '● OFFLINE';
   }
-  // Riprova il collegamento dello stream ogni 10 secondi (senza sovraccaricare la rete)
+  // Ferma il polling e riprova il collegamento ogni 10 secondi
+  stopCamPolling(camId);
   setTimeout(() => {
     if (stream) {
-      const baseSrc = stream.src.split('?')[0];
-      stream.src = `${baseSrc}?_retry=${Date.now()}`;
+      const camName = CAM_NAMES[camId];
+      stream.src = `/api/camera/${camName}/latest.jpg?_retry=${Date.now()}`;
     }
   }, 10000);
 }

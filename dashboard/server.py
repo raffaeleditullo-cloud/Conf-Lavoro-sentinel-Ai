@@ -340,27 +340,35 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 return
 
-        # API Proxy Stream Telecamere da Frigate (localhost:5000/api/<camera>)
+        # API Proxy Singolo Frame Telecamere da Frigate (localhost:5000/api/<camera>/latest.jpg)
+        # Usa latest.jpg invece dello stream MJPEG continuo per evitare BrokenPipeError:
+        # lo stream MJPEG non termina mai, blocca il thread HTTP e causa timeout + ciclo di ricaricamento.
+        # Il frontend effettua il polling periodico di latest.jpg simulando il video.
         elif parsed.path.startswith("/api/camera/"):
-            cam_name = parsed.path.replace("/api/camera/", "").strip()
+            # Supporta sia /api/camera/{cam} che /api/camera/{cam}/latest.jpg
+            cam_path = parsed.path.replace("/api/camera/", "").strip().rstrip("/")
+            if cam_path.endswith("/latest.jpg"):
+                cam_name = cam_path.replace("/latest.jpg", "")
+            else:
+                cam_name = cam_path
             import urllib.request
-            frigate_url = f"http://127.0.0.1:5000/api/{cam_name}"
+            # Richiede sempre il singolo fotogramma latest.jpg da Frigate
+            frigate_url = f"http://127.0.0.1:5000/api/{cam_name}/latest.jpg"
             try:
                 req = urllib.request.Request(frigate_url)
-                with urllib.request.urlopen(req, timeout=1.5) as response:
-                    content_type = response.headers.get("Content-Type", "image/jpeg")
+                # Timeout elevato: su Jetson Orin Nano Frigate puo' impiegare fino a 10s per il primo frame
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    data = response.read()
                     self.send_response(200)
-                    self.send_header("Content-Type", content_type)
+                    self.send_header("Content-Type", "image/jpeg")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
                     self.send_header("Access-Control-Allow-Origin", "*")
                     self.end_headers()
-                    while True:
-                        chunk = response.read(65536)
-                        if not chunk:
-                            break
-                        self.wfile.write(chunk)
+                    self.wfile.write(data)
                 return
             except Exception:
-                # Telecamera o Frigate disconnessi: 503 con fallback standby
+                # Frigate non raggiungibile o telecamera offline: restituisce 503
                 self._send_json({"connected": False, "status": "offline", "camera": cam_name}, status=503)
                 return
 

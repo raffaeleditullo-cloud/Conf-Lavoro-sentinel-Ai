@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SENTINEL AI // Mission Control</title>
-  <link rel="stylesheet" href="assets/styles.css?v=5.4">
+  <link rel="stylesheet" href="assets/styles.css?v=4.0">
 </head>
 <body>
 
@@ -160,7 +160,7 @@
             </div>
 
             <!-- Live Stream Feed from Frigate proxy -->
-            <img id="streamCam1" class="camera-stream-feed" src="/api/camera/varco_carrabile" alt="Varco Carrabile Live" onerror="handleStreamError(1)" onload="handleStreamLoaded(1)">
+            <img id="streamCam1" class="camera-stream-feed" src="/api/camera/varco_carrabile/latest.jpg" alt="Varco Carrabile Live" onerror="handleStreamError(1)" onload="handleStreamLoaded(1)">
 
             <div class="cam-scanlines"></div>
             <div class="cam-crosshair"></div>
@@ -190,7 +190,7 @@
               </div>
             </div>
 
-            <img id="streamCam2" class="camera-stream-feed" src="/api/camera/varco_pedonale" alt="Varco Pedonale Live" onerror="handleStreamError(2)" onload="handleStreamLoaded(2)">
+            <img id="streamCam2" class="camera-stream-feed" src="/api/camera/varco_pedonale/latest.jpg" alt="Varco Pedonale Live" onerror="handleStreamError(2)" onload="handleStreamLoaded(2)">
 
             <div class="cam-scanlines"></div>
             
@@ -219,7 +219,7 @@
               </div>
             </div>
 
-            <img id="streamCam3" class="camera-stream-feed" src="/api/camera/piazzale" alt="Piazzale Live" onerror="handleStreamError(3)" onload="handleStreamLoaded(3)">
+            <img id="streamCam3" class="camera-stream-feed" src="/api/camera/piazzale/latest.jpg" alt="Piazzale Live" onerror="handleStreamError(3)" onload="handleStreamLoaded(3)">
 
             <div class="cam-scanlines"></div>
             
@@ -765,6 +765,6 @@
     </div>
   </div>
 
-  <script src="assets/app.js?v=5.4"></script>
+  <script src="assets/app.js?v=4.0"></script>
 </body>
 </html>
