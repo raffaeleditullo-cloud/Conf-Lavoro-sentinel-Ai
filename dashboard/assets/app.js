@@ -191,41 +191,53 @@ function triggerVoice() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 4. GESTIONE WHITELIST TARGHE (LPR)
+// 4. GESTIONE WHITELIST TARGHE (LPR) — PERSISTENZA NVME SU config/known_plates.json
 // ──────────────────────────────────────────────────────────────────────────────
-const defaultPlates = [
-  { plate: 'FG492KS', owner: 'Rocco Di Tolla', role: 'Direzione Generale', active: true },
-  { plate: 'DA812LL', owner: 'Alessio Russo', role: 'Responsabile Impianti', active: true },
-  { plate: 'CB551AA', owner: 'Corriere Logistica', role: 'Fornitore Accreditato', active: true },
-  { plate: 'EZ902BK', owner: 'Dipendente Ufficio', role: 'Amministrazione', active: true }
-];
+let currentPlates = [];
 
-function getPlates() {
-  const stored = localStorage.getItem('sentinel_plates');
-  return stored ? JSON.parse(stored) : defaultPlates;
-}
-
-function savePlates(plates) {
-  localStorage.setItem('sentinel_plates', JSON.stringify(plates));
-  renderPlates();
+async function loadPlates() {
+  try {
+    const res = await fetch('/api/plates');
+    if (res.ok) {
+      currentPlates = await res.json();
+      renderPlates();
+    }
+  } catch (err) {
+    console.warn('[Sentinel Dashboard] Errore caricamento whitelist targhe:', err);
+  }
 }
 
 function renderPlates() {
   const tbodyFull = document.getElementById('platesFullTbody');
   if (!tbodyFull) return;
 
-  const plates = getPlates();
   tbodyFull.innerHTML = '';
+  if (!currentPlates || currentPlates.length === 0) {
+    tbodyFull.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align:center; padding: 36px 12px; color:var(--text-muted); font-family:var(--font-mono); font-size:12px;">
+          NESSUNA TARGA AUTORIZZATA // UTILIZZA IL PULSANTE "+ AGGIUNGI NUOVA TARGA" PER REGISTRARE UN VEICOLO
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
-  plates.forEach((p, idx) => {
+  currentPlates.forEach((p) => {
+    const isAct = p.active !== false;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="plate-pill">${p.plate}</span></td>
       <td><strong style="font-size:13px;">${p.owner}</strong></td>
-      <td style="color:var(--text-muted);">${p.role}</td>
-      <td><span class="status-beacon">Autorizzata</span></td>
+      <td style="color:var(--text-muted);">${p.role || 'Personale Autorizzato'}</td>
+      <td>
+        <button class="status-beacon ${isAct ? 'active' : 'inactive'}" style="cursor:pointer; background:none; border:none; padding:0; display:inline-flex; align-items:center;" onclick="togglePlate('${p.plate}')" title="Clicca per abilitare/sospendere autorizzazione">
+          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:${isAct ? 'var(--accent-green)' : 'var(--accent-red)'}; margin-right:6px;"></span>
+          <span style="color:${isAct ? 'var(--text-main)' : 'var(--text-dim)'};">${isAct ? 'Autorizzata' : 'Sospesa'}</span>
+        </button>
+      </td>
       <td style="text-align:right;">
-        <button class="icon-action-btn" title="Rimuovi" onclick="deletePlate(${idx})">
+        <button class="icon-action-btn" title="Rimuovi definitivamente da NVMe" onclick="deletePlate('${p.plate}')">
           <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </button>
       </td>
@@ -234,11 +246,34 @@ function renderPlates() {
   });
 }
 
-function deletePlate(idx) {
-  const plates = getPlates();
-  if (confirm(`Rimuovere autorizzazione per ${plates[idx].plate}?`)) {
-    plates.splice(idx, 1);
-    savePlates(plates);
+async function deletePlate(plateStr) {
+  if (!confirm(`Rimuovere la targa ${plateStr} dalla memoria del sistema?`)) return;
+  try {
+    const res = await fetch('/api/plates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', plate: plateStr })
+    });
+    if (res.ok) {
+      await loadPlates();
+    }
+  } catch (err) {
+    alert("Errore rimozione targa: " + err.message);
+  }
+}
+
+async function togglePlate(plateStr) {
+  try {
+    const res = await fetch('/api/plates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'toggle', plate: plateStr })
+    });
+    if (res.ok) {
+      await loadPlates();
+    }
+  } catch (err) {
+    console.warn("Errore toggle stato targa:", err);
   }
 }
 
@@ -250,7 +285,7 @@ function closeAddPlateModal() {
   document.getElementById('plateModal').classList.remove('open');
 }
 
-function handleSavePlate(e) {
+async function handleSavePlate(e) {
   e.preventDefault();
   const plate = document.getElementById('inPlate').value.trim().toUpperCase();
   const owner = document.getElementById('inOwner').value.trim();
@@ -258,11 +293,30 @@ function handleSavePlate(e) {
 
   if (!plate || !owner) return;
 
-  const plates = getPlates();
-  plates.unshift({ plate, owner, role, active: true });
-  savePlates(plates);
-  closeAddPlateModal();
-  e.target.reset();
+  try {
+    const res = await fetch('/api/plates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plate,
+        owner,
+        role: role || 'Personale Autorizzato',
+        active: true,
+        date: new Date().toISOString().split('T')[0]
+      })
+    });
+
+    if (res.ok) {
+      closeAddPlateModal();
+      e.target.reset();
+      await loadPlates();
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      alert("Errore salvataggio targa: " + (errData.error || "Risposta server non valida"));
+    }
+  } catch (err) {
+    alert("Errore comunicazione server per salvataggio targa: " + err.message);
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -827,7 +881,7 @@ window.addEventListener('keydown', (e) => {
 
 // Inizializzazione iniziale
 document.addEventListener('DOMContentLoaded', () => {
-  renderPlates();
+  loadPlates();
   loadRealEvents();
   // Aggiornamento periodico eventi reali ogni 5 secondi
   setInterval(loadRealEvents, 5000);

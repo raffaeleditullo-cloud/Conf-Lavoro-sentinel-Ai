@@ -49,6 +49,29 @@ if not os.path.exists(SETTINGS_FILE):
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(DEFAULT_SETTINGS, f, indent=2)
 
+# Inizializzazione Attuatori Hardware (Relè Modbus Waveshare & Speaker Fanvil)
+relay_controller = None
+speaker_controller = None
+
+try:
+    sys.path.insert(0, os.path.join(BASE_DIR, "..", "orchestrator"))
+    from relay_controller import WaveshareRelayController
+    relay_host = os.environ.get("RELAY_HOST", "192.168.1.30")
+    relay_port = int(os.environ.get("RELAY_PORT", "4196"))
+    relay_controller = WaveshareRelayController(host=relay_host, port=relay_port)
+    print(f"[HARDWARE] WaveshareRelayController collegato: {relay_host}:{relay_port}")
+except Exception as _re_err:
+    print(f"[HARDWARE WARN] Relè Modbus non caricato (modalità offline): {_re_err}")
+
+try:
+    from speaker_controller import FanvilSpeakerController
+    speaker_host = os.environ.get("SPEAKER_HOST", "192.168.1.31")
+    speaker_port = int(os.environ.get("SPEAKER_PORT", "80"))
+    speaker_controller = FanvilSpeakerController(host=speaker_host, http_port=speaker_port)
+    print(f"[HARDWARE] FanvilSpeakerController collegato: {speaker_host}:{speaker_port}")
+except Exception as _sp_err:
+    print(f"[HARDWARE WARN] Speaker Fanvil non caricato (modalità offline): {_sp_err}")
+
 class SentinelDashboardHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=BASE_DIR, **kwargs)
@@ -253,28 +276,86 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         body = self.rfile.read(content_len) if content_len > 0 else b""
 
         if parsed.path == "/api/relay/faretto":
-            print(">>> [DASHBOARD] Comando manuale: Accensione Faretto Piazzale")
-            self._send_json({"success": True, "action": "faretto"})
+            duration = 30.0
+            if os.path.exists(SETTINGS_FILE):
+                try:
+                    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+                        duration = float(cfg.get("faro_sec", 30))
+                except Exception:
+                    pass
+            print(f">>> [DASHBOARD] Comando Relè: Accensione Faretto Piazzale per {duration}s")
+            if relay_controller:
+                relay_controller.accendi_faretto(channel=0, durata_secondi=duration)
+            self._send_json({"success": True, "action": "faretto", "duration": duration, "relay": "192.168.1.30:4196/CH1"})
             return
 
         elif parsed.path == "/api/relay/cancello":
-            print(">>> [DASHBOARD] Comando manuale: Impulso Apertura Cancello")
-            self._send_json({"success": True, "action": "cancello"})
+            duration = 3.0
+            if os.path.exists(SETTINGS_FILE):
+                try:
+                    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+                        duration = float(cfg.get("gate_sec", 3))
+                except Exception:
+                    pass
+            print(f">>> [DASHBOARD] Comando Relè: Impulso Apertura Cancello per {duration}s")
+            if relay_controller:
+                relay_controller.apri_cancello(channel=1, impulso_secondi=duration)
+            self._send_json({"success": True, "action": "cancello", "duration": duration, "relay": "192.168.1.30:4196/CH2"})
             return
 
         elif parsed.path == "/api/speaker/voice":
-            print(">>> [DASHBOARD] Comando manuale: Dissuasione Vocale")
-            self._send_json({"success": True, "action": "voice"})
+            pack = "carmelo"
+            track = "03_avviso_dissuasione"
+            if os.path.exists(SETTINGS_FILE):
+                try:
+                    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+                        pack = cfg.get("voice_pack", cfg.get("voice_gender", "carmelo"))
+                        track = cfg.get("active_track", "03_avviso_dissuasione")
+                except Exception:
+                    pass
+            audio_path = os.path.join(BASE_DIR, "..", "orchestrator", "audio", pack, f"{track}.mp3")
+            print(f">>> [DASHBOARD] Comando Altoparlante: Dissuasione Vocale '{pack}/{track}.mp3'")
+            if speaker_controller and os.path.exists(audio_path):
+                speaker_controller.play_audio_file(audio_path)
+            self._send_json({"success": True, "action": "voice", "pack": pack, "track": track})
             return
 
         elif parsed.path == "/api/plates":
             try:
-                new_plate = json.loads(body.decode("utf-8"))
+                payload = json.loads(body.decode("utf-8")) if body else {}
+                action = payload.get("action")
                 plates = []
                 if os.path.exists(PLATES_FILE):
-                    with open(PLATES_FILE, "r", encoding="utf-8") as f:
-                        plates = json.load(f)
-                plates.insert(0, new_plate)
+                    try:
+                        with open(PLATES_FILE, "r", encoding="utf-8") as f:
+                            plates = json.load(f)
+                    except Exception:
+                        plates = []
+
+                if action == "delete":
+                    target_plate = str(payload.get("plate", "")).strip().upper()
+                    plates = [p for p in plates if p.get("plate", "").upper() != target_plate]
+                    print(f">>> [DASHBOARD] Targa rimossa da NVMe: {target_plate}")
+                elif action == "toggle":
+                    target_plate = str(payload.get("plate", "")).strip().upper()
+                    for p in plates:
+                        if p.get("plate", "").upper() == target_plate:
+                            p["active"] = not p.get("active", True)
+                            print(f">>> [DASHBOARD] Targa {target_plate} stato attivo: {p['active']}")
+                            break
+                else:
+                    target_plate = str(payload.get("plate", "")).strip().upper()
+                    if target_plate:
+                        plates = [p for p in plates if p.get("plate", "").upper() != target_plate]
+                        payload["plate"] = target_plate
+                        if "active" not in payload:
+                            payload["active"] = True
+                        plates.insert(0, payload)
+                        print(f">>> [DASHBOARD] Nuova targa salvata su NVMe: {target_plate} ({payload.get('owner')})")
+
                 with open(PLATES_FILE, "w", encoding="utf-8") as f:
                     json.dump(plates, f, indent=2)
                 self._send_json({"success": True, "plates": plates})
