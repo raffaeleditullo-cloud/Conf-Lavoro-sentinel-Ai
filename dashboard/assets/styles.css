@@ -1341,26 +1341,67 @@ body {
   box-shadow: 0 0 14px rgba(179, 143, 42, 0.3);
 }
 
-[data-theme="light"] .nav-btn {
-  color: #385554;
+/* Sidebar Nav Buttons: Pure White Text & Icons on Crimson Red in Light Theme */
+[data-theme="light"] .soc-nav .nav-btn {
+  color: #ffffff !important;
 }
 
-[data-theme="light"] .nav-btn:hover {
-  background: rgba(0, 170, 166, 0.08);
-  color: #001f1e;
-  border-color: rgba(0, 170, 166, 0.25);
+[data-theme="light"] .soc-nav .nav-btn .nav-btn-icon {
+  stroke: #ffffff !important;
 }
 
-[data-theme="light"] .nav-btn.active {
-  background: rgba(0, 170, 166, 0.12);
-  color: #001f1e;
-  border-color: rgba(179, 143, 42, 0.55);
-  box-shadow: inset 0 0 12px rgba(0, 170, 166, 0.1);
+[data-theme="light"] .soc-nav .nav-btn .nav-btn-label {
+  color: #ffffff !important;
 }
 
-[data-theme="light"] .nav-btn.active::before {
-  background: #b38f2a;
-  box-shadow: 0 0 10px rgba(179, 143, 42, 0.5);
+[data-theme="light"] .soc-nav .nav-btn:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .soc-nav .nav-btn:hover .nav-btn-icon,
+[data-theme="light"] .soc-nav .nav-btn:hover .nav-btn-label {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .soc-nav .nav-btn.active {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-theme="light"] .soc-nav .nav-btn.active .nav-btn-icon,
+[data-theme="light"] .soc-nav .nav-btn.active .nav-btn-label {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .soc-nav .nav-btn.active::before {
+  background: #ffffff !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="light"] .soc-nav .theme-icon-btn,
+[data-theme="light"] .soc-nav .collapse-icon-btn {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .soc-nav .theme-icon-btn svg,
+[data-theme="light"] .soc-nav .collapse-icon-btn svg {
+  stroke: #ffffff !important;
+}
+
+[data-theme="light"] .soc-nav .theme-icon-btn:hover,
+[data-theme="light"] .soc-nav .collapse-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.3) !important;
 }
 
 [data-theme="light"] .live-pulse-badge {
