@@ -1,0 +1,9 @@
+﻿{
+  "healthy": true,
+  "status": "standby",
+  "detection_fps": 0.0,
+  "inference_speed_ms": 0.0,
+  "cameras_active": false,
+  "alert": null,
+  "updated_at": "2026-09-15T10:00:00Z"
+}

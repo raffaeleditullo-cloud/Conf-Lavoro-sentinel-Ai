@@ -17,6 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.environ.get("CONFIG_DIR", "/config" if os.path.exists("/config") else os.path.abspath(os.path.join(BASE_DIR, "..", "config")))
 PLATES_FILE = os.path.join(CONFIG_DIR, "known_plates.json")
 SETTINGS_FILE = os.path.join(CONFIG_DIR, "system_settings.json")
+DETECTOR_STATUS_FILE = os.path.join(CONFIG_DIR, "detector_status.json")
 
 DEFAULT_SETTINGS = {
     "voice_gender": "male",
@@ -80,6 +81,64 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 }
             }
             self._send_json(status_data)
+            return
+
+        # API Vitality Heartbeat TensorRT Detector (Watchdog Segnalazione Alessio)
+        elif parsed.path == "/api/detector/vitality":
+            vitality = {
+                "healthy": True,
+                "status": "standby",
+                "detection_fps": 0.0,
+                "inference_speed_ms": 0.0,
+                "cameras_active": False,
+                "alert": None
+            }
+            # 1. Prova prima a interrogare Frigate direttamente se attivo in locale
+            try:
+                import urllib.request
+                req = urllib.request.Request("http://127.0.0.1:5000/api/stats")
+                with urllib.request.urlopen(req, timeout=1.2) as resp:
+                    fstats = json.loads(resp.read().decode("utf-8"))
+                    detectors = fstats.get("detectors", {})
+                    trt = detectors.get("tensorrt", {})
+                    d_fps = float(fstats.get("detection_fps", trt.get("detection_fps", 0.0)))
+                    inf_spd = float(trt.get("inference_speed", 0.0))
+                    cams = fstats.get("cameras", {})
+                    c_active = any(float(c.get("camera_fps", 0.0)) > 0.5 for c in cams.values())
+                    vitality["detection_fps"] = round(d_fps, 1)
+                    vitality["inference_speed_ms"] = round(inf_spd, 1)
+                    vitality["cameras_active"] = c_active
+                    if d_fps > 0:
+                        vitality["status"] = "healthy"
+                    elif c_active:
+                        if os.path.exists(DETECTOR_STATUS_FILE):
+                            try:
+                                with open(DETECTOR_STATUS_FILE, "r", encoding="utf-8") as f:
+                                    sdata = json.load(f)
+                                    if sdata.get("status") == "frozen":
+                                        vitality["status"] = "frozen"
+                                        vitality["healthy"] = False
+                                        vitality["alert"] = "RILEVAMENTO BLOCCATO"
+                            except Exception:
+                                pass
+                        if vitality["status"] != "frozen":
+                            vitality["status"] = "waiting"
+                    else:
+                        vitality["status"] = "standby"
+                    self._send_json(vitality)
+                    return
+            except Exception:
+                pass
+
+            # 2. Fallback: leggi da detector_status.json scritto da observer.py
+            if os.path.exists(DETECTOR_STATUS_FILE):
+                try:
+                    with open(DETECTOR_STATUS_FILE, "r", encoding="utf-8") as f:
+                        vitality = json.load(f)
+                except Exception:
+                    pass
+
+            self._send_json(vitality)
             return
 
         # API Lettura Targhe

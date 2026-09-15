@@ -2133,3 +2133,88 @@ body[data-role="client"] .hud-telemetry-zone {
   color: var(--text-main);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────────
+ * VITALITY HEARTBEAT BADGE (IA VIGILANTE / ALESSIO WATCHDOG)
+ * ────────────────────────────────────────────────────────────────────────────── */
+.vitality-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-brand);
+  font-variation-settings: "wdth" 120, "wght" 700;
+  font-stretch: 120%;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  transition: all 0.25s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.vitality-badge .vitality-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Stato: Normale (IA Attiva e vigilante con FPS) */
+.vitality-badge.healthy {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: var(--accent-green);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.vitality-badge.healthy .vitality-dot {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+  animation: pulse-vitality-green 2s infinite ease-in-out;
+}
+
+@keyframes pulse-vitality-green {
+  0%, 100% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Stato: Bloccato / Silently Frozen (Allarme Watchdog Alessio) */
+.vitality-badge.frozen {
+  background: rgba(239, 68, 68, 0.22);
+  border: 1px solid rgba(239, 68, 68, 0.85);
+  color: #ff4d6d;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.5);
+  animation: badge-alarm-flash 1s infinite alternate;
+}
+
+.vitality-badge.frozen .vitality-dot {
+  background: #ff4d6d;
+  box-shadow: 0 0 10px #ff4d6d;
+  animation: blink-dot 0.5s infinite;
+}
+
+@keyframes badge-alarm-flash {
+  from { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+  to { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 22px rgba(239, 68, 68, 0.7); }
+}
+
+@keyframes blink-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.1; }
+}
+
+/* Stato: Standby (Al banco o telecamere spente) */
+.vitality-badge.standby {
+  background: rgba(138, 84, 234, 0.1);
+  border: 1px solid rgba(138, 84, 234, 0.3);
+  color: var(--cai-violet);
+}
+
+.vitality-badge.standby .vitality-dot {
+  background: var(--cai-violet);
+  box-shadow: 0 0 6px var(--cai-violet);
+}
+

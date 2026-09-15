@@ -81,6 +81,12 @@ NAS_SHARE = os.environ.get("NAS_SHARE", "sentinel-eventi")
 NAS_USER = os.environ.get("NAS_USER", "jetson")
 NAS_PASSWORD = os.environ.get("NAS_PASSWORD", "Confprov33")
 
+# File di stato Watchdog TensorRT (Segnalazione Alessio anti-freeze)
+DETECTOR_STATUS_FILE = os.environ.get(
+    "DETECTOR_STATUS_FILE",
+    "/config/detector_status.json" if os.path.exists("/config") else os.path.join(os.path.dirname(__file__), "..", "config", "detector_status.json")
+)
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 2. LOGGERS
 # ──────────────────────────────────────────────────────────────────────────────
@@ -258,6 +264,98 @@ def handle_audio_alarm(topic: str, value: str):
         speaker.play_audio_file(get_audio_path("04_allarme_intrusione"))
 
 # ──────────────────────────────────────────────────────────────────────────────
+# 4B. WATCHDOG ANTI-FREEZE TENSORRT (SEGNALAZIONE CRITICA ALESSIO)
+# ──────────────────────────────────────────────────────────────────────────────
+watchdog_state = {
+    "last_detection_time": time.time(),
+    "last_stats_time": time.time(),
+    "status": "standby",
+    "detection_fps": 0.0,
+    "cameras_active": False,
+    "frozen_alert_sent": False
+}
+
+def save_detector_status(data: dict):
+    """Scrive atomicamente lo stato del watchdog su disco per la dashboard."""
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(DETECTOR_STATUS_FILE)), exist_ok=True)
+        tmp_file = f"{DETECTOR_STATUS_FILE}.tmp"
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp_file, DETECTOR_STATUS_FILE)
+    except Exception as e:
+        logger.warning("Impossibile salvare %s: %s", DETECTOR_STATUS_FILE, e)
+
+def handle_frigate_stats(stats: dict):
+    """
+    Watchdog Anti-Freeze TensorRT (Segnalazione di Alessio):
+    Monitora i metrici di Frigate pubblicati su 'frigate/stats'.
+    Se i flussi video sono attivi (camera_fps > 0) ma il detector non elabora
+    frame (detection_fps == 0.0) per oltre 60 secondi, rileva il blocco
+    silenzioso di TensorRT e notifica lo stato di ALLARME CRITICO.
+    """
+    now = time.time()
+    watchdog_state["last_stats_time"] = now
+
+    detectors = stats.get("detectors", {})
+    tensorrt_stat = detectors.get("tensorrt", {})
+    detection_fps = float(stats.get("detection_fps", tensorrt_stat.get("detection_fps", 0.0)))
+    inference_speed = float(tensorrt_stat.get("inference_speed", 0.0))
+
+    cameras = stats.get("cameras", {})
+    cameras_active = any(float(c.get("camera_fps", 0.0)) > 0.5 for c in cameras.values())
+    watchdog_state["cameras_active"] = cameras_active
+
+    if detection_fps > 0.0:
+        watchdog_state["last_detection_time"] = now
+        watchdog_state["status"] = "healthy"
+        watchdog_state["detection_fps"] = detection_fps
+        watchdog_state["frozen_alert_sent"] = False
+        save_detector_status({
+            "healthy": True,
+            "status": "healthy",
+            "detection_fps": round(detection_fps, 1),
+            "inference_speed_ms": round(inference_speed, 1),
+            "cameras_active": cameras_active,
+            "alert": None,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        })
+    else:
+        elapsed = now - watchdog_state["last_detection_time"]
+        if cameras_active and elapsed > 60.0:
+            watchdog_state["status"] = "frozen"
+            if not watchdog_state["frozen_alert_sent"]:
+                logger.critical(
+                    ">>> [CRITICAL WATCHDOG] RILEVATORE TENSORRT CONGELATO! "
+                    "Flussi video attivi ma nessun frame elaborato da %.1f secondi! Container Docker healthy ma inferenza bloccata.",
+                    elapsed
+                )
+                watchdog_state["frozen_alert_sent"] = True
+
+            save_detector_status({
+                "healthy": False,
+                "status": "frozen",
+                "detection_fps": 0.0,
+                "inference_speed_ms": 0.0,
+                "cameras_active": True,
+                "frozen_seconds": round(elapsed),
+                "alert": "RILEVAMENTO BLOCCATO",
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            })
+        else:
+            status_text = "waiting" if cameras_active else "standby"
+            watchdog_state["status"] = status_text
+            save_detector_status({
+                "healthy": True,
+                "status": status_text,
+                "detection_fps": 0.0,
+                "inference_speed_ms": round(inference_speed, 1),
+                "cameras_active": cameras_active,
+                "alert": None,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            })
+
+# ──────────────────────────────────────────────────────────────────────────────
 # 5. CALLBACK MQTT
 # ──────────────────────────────────────────────────────────────────────────────
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -312,6 +410,8 @@ def on_message(client, userdata, msg):
                 handle_frigate_event(parsed_json, topic)
             elif topic == "frigate/tracked_object_update":
                 handle_lpr_update(parsed_json)
+            elif topic == "frigate/stats":
+                handle_frigate_stats(parsed_json)
 
         else:
             record["type"] = "text"

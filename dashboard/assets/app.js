@@ -444,6 +444,36 @@ function closeVideoModal() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 5C. VITALITY HEARTBEAT & WATCHDOG ANTI-FREEZE TENSORRT (SEGNALAZIONE ALESSIO)
+// ──────────────────────────────────────────────────────────────────────────────
+async function pollDetectorVitality() {
+  try {
+    const res = await fetch('/api/detector/vitality');
+    if (!res.ok) return;
+    const data = await res.json();
+    const badge = document.getElementById('detectorVitalityBadge');
+    const textEl = document.getElementById('vitalityText');
+    if (!badge || !textEl) return;
+
+    if (data.status === 'frozen') {
+      badge.className = 'vitality-badge frozen';
+      textEl.textContent = 'ALLARME: RILEVAMENTO BLOCCATO';
+    } else if (data.status === 'healthy' && data.detection_fps > 0) {
+      badge.className = 'vitality-badge healthy';
+      textEl.innerHTML = `IA VIGILANTE: <strong>${data.detection_fps.toFixed(1)}</strong> FPS`;
+    } else if (data.status === 'waiting') {
+      badge.className = 'vitality-badge healthy';
+      textEl.innerHTML = `IA VIGILANTE: <strong>IN ATTESA FLUSSI</strong>`;
+    } else {
+      badge.className = 'vitality-badge standby';
+      textEl.textContent = 'IA: IN ATTESA SEGNALE';
+    }
+  } catch (err) {
+    // standby
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // 6. GESTIONE PACCHETTI AUDIO UFFICIALI (CARMELO & SAMI) & HARDWARE
 // ──────────────────────────────────────────────────────────────────────────────
 let currentAudioPlayer = null;
@@ -801,6 +831,11 @@ document.addEventListener('DOMContentLoaded', () => {
   loadRealEvents();
   // Aggiornamento periodico eventi reali ogni 5 secondi
   setInterval(loadRealEvents, 5000);
+
+  // Monitoraggio Vitality Detector TensorRT (Watchdog Alessio)
+  pollDetectorVitality();
+  setInterval(pollDetectorVitality, 3000);
+
   loadSettings();
 
   // Controllo sessione PIN attiva
