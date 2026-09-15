@@ -1,0 +1,15 @@
+{
+  "voice_gender": "male",
+  "voice_profile": "carmelo",
+  "voice_pack": "carmelo",
+  "active_track": "03_avviso_dissuasione",
+  "voice_volume": 85,
+  "siren_enabled": true,
+  "faro_sec": 30,
+  "gate_sec": 3,
+  "client_pin": "1111",
+  "admin_pin": "9999",
+  "audio_target": "cameras",
+  "preset": "preset1",
+  "custom_message": "Attenzione: Area sotto videosorveglianza con tracciamento biometrico. Allontanarsi immediatamente."
+}

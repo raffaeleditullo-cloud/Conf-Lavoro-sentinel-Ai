@@ -20,11 +20,16 @@ SETTINGS_FILE = os.path.join(CONFIG_DIR, "system_settings.json")
 
 DEFAULT_SETTINGS = {
     "voice_gender": "male",
-    "voice_profile": "marco_tactical",
+    "voice_profile": "carmelo",
+    "voice_pack": "carmelo",
+    "active_track": "03_avviso_dissuasione",
     "voice_volume": 85,
     "siren_enabled": True,
     "faro_sec": 30,
     "gate_sec": 3,
+    "client_pin": "1111",
+    "admin_pin": "9999",
+    "audio_target": "cameras",
     "preset": "preset1",
     "custom_message": "Attenzione: Area sotto videosorveglianza con tracciamento biometrico. Allontanarsi immediatamente."
 }
@@ -159,6 +164,58 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=400)
             return
+
+        elif parsed.path == "/api/auth/pin":
+            try:
+                data = json.loads(body.decode("utf-8")) if body else {}
+                pin = str(data.get("pin", "")).strip()
+                settings = dict(DEFAULT_SETTINGS)
+                if os.path.exists(SETTINGS_FILE):
+                    try:
+                        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                            settings.update(json.load(f))
+                    except Exception:
+                        pass
+                
+                admin_pin = str(settings.get("admin_pin", "9999")).strip()
+                client_pin = str(settings.get("client_pin", "1111")).strip()
+
+                if pin == admin_pin:
+                    self._send_json({"success": True, "role": "maintainer", "label": "Manutentore Tecnico"})
+                    return
+                elif pin == client_pin:
+                    self._send_json({"success": True, "role": "client", "label": "Cliente Utente"})
+                    return
+                else:
+                    self._send_json({"success": False, "error": "PIN non valido"}, status=401)
+                    return
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=400)
+                return
+
+        elif parsed.path == "/api/settings/pins":
+            try:
+                data = json.loads(body.decode("utf-8")) if body else {}
+                new_client = str(data.get("client_pin", "")).strip()
+                new_admin = str(data.get("admin_pin", "")).strip()
+                settings = dict(DEFAULT_SETTINGS)
+                if os.path.exists(SETTINGS_FILE):
+                    try:
+                        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                            settings.update(json.load(f))
+                    except Exception:
+                        pass
+                if new_client:
+                    settings["client_pin"] = new_client
+                if new_admin:
+                    settings["admin_pin"] = new_admin
+                with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(settings, f, indent=2)
+                self._send_json({"success": True, "message": "PIN aggiornati con successo"})
+                return
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=400)
+                return
 
         self.send_error(404, "Endpoint non trovato")
 

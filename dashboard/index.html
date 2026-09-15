@@ -41,8 +41,8 @@
         <span class="nav-btn-label">Whitelist LPR</span>
       </button>
 
-      <!-- Diagnostica -->
-      <button class="nav-btn" data-view="diagnostics" title="Telemetria Jetson">
+      <!-- Diagnostica (Solo Manutentore) -->
+      <button class="nav-btn maintainer-only-nav" data-view="diagnostics" title="Telemetria Jetson">
         <svg class="nav-btn-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         <span class="nav-btn-label">Telemetria Edge</span>
       </button>
@@ -109,6 +109,17 @@
           <span>RELÈ:</span>
           <strong style="color:var(--accent-green)">.30:4196</strong>
         </div>
+      </div>
+
+      <!-- Controllo Ruolo & Blocco PIN -->
+      <div class="hud-role-zone">
+        <div id="roleBadge" class="role-pill client">
+          <span class="role-indicator-dot"></span>
+          <span id="roleLabel">CLIENTE</span>
+        </div>
+        <button id="btnRoleLock" class="role-lock-btn" title="Blocca / Cambia PIN" onclick="lockSession()">
+          <svg class="role-lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </button>
       </div>
     </header>
 
@@ -449,9 +460,9 @@
               <span class="status-beacon">HARDWARE LINKED</span>
             </div>
 
-            <!-- Destinazione Output Audio (Reolink vs Fanvil) -->
-            <div style="margin-top:18px;">
-              <label class="setting-section-label">DESTINAZIONE OUTPUT AUDIO</label>
+            <!-- Destinazione Output Audio (Reolink vs Fanvil - Solo Manutentore) -->
+            <div class="maintainer-only-block" style="margin-top:18px;">
+              <label class="setting-section-label">DESTINAZIONE OUTPUT AUDIO (HARDWARE)</label>
               <select id="selAudioTarget" class="ultra-input" style="margin-bottom:14px; font-weight:600;">
                 <option value="cameras" selected>Altoparlanti Integrati Telecamere Reolink (Banco Collaudo)</option>
                 <option value="fanvil">Diffusore IP Fanvil A233 // 192.168.1.35 (Esterno)</option>
@@ -486,8 +497,8 @@
               </div>
             </div>
 
-            <!-- Temporizzazione Relè -->
-            <div style="margin-top:22px;">
+            <!-- Temporizzazione Relè (Solo Manutentore) -->
+            <div class="maintainer-only-block" style="margin-top:22px;">
               <label class="setting-section-label">TEMPORIZZAZIONE ATTUATORI HARDWARE</label>
               
               <div style="display:flex; flex-direction:column; gap:14px;">
@@ -521,6 +532,42 @@
               <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:10px 24px; font-size:13px;">Salva Impostazioni</button>
             </div>
 
+          </div>
+
+          <!-- Riquadro 3: Gestione Credenziali & Codici PIN (Solo Manutentore) -->
+          <div class="glass-panel maintainer-only-block" style="grid-column: 1 / -1; margin-top: 18px;">
+            <div class="panel-header-minimal">
+              <div>
+                <h3>Gestione Credenziali & Codici di Accesso</h3>
+                <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Configurazione del doppio PIN per accesso Cliente e Manutentore (salvataggio locale Jetson)</p>
+              </div>
+              <span class="status-beacon" style="color:var(--cai-gold);">AREA RISERVATA TECNICO</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
+              <div style="background:rgba(255,255,255,0.02); padding:16px; border:1px solid var(--border-subtle); border-radius:var(--radius-xs);">
+                <label style="display:block; font-size:11px; font-family:var(--font-mono); color:var(--text-muted); margin-bottom:6px;">PIN CLIENTE (USO ORDINARIO)</label>
+                <div style="display:flex; gap:10px;">
+                  <input type="password" id="inputClientPin" class="ultra-input" maxlength="6" value="1111" style="font-family:var(--font-mono); letter-spacing:0.2em; font-weight:700;">
+                  <button type="button" class="dock-action-btn" onclick="togglePinVisibility('inputClientPin')" style="width:40px; padding:0;" title="Mostra/Nascondi">👁</button>
+                </div>
+                <span style="font-size:11px; color:var(--text-dim); margin-top:4px; display:block;">Accesso a telecamere, allarmi, targhe e voce/volume</span>
+              </div>
+
+              <div style="background:rgba(255,255,255,0.02); padding:16px; border:1px solid var(--border-subtle); border-radius:var(--radius-xs);">
+                <label style="display:block; font-size:11px; font-family:var(--font-mono); color:var(--text-muted); margin-bottom:6px;">PIN MANUTENTORE (ACCESSO TOTALE)</label>
+                <div style="display:flex; gap:10px;">
+                  <input type="password" id="inputAdminPin" class="ultra-input" maxlength="6" value="9999" style="font-family:var(--font-mono); letter-spacing:0.2em; font-weight:700;">
+                  <button type="button" class="dock-action-btn" onclick="togglePinVisibility('inputAdminPin')" style="width:40px; padding:0;" title="Mostra/Nascondi">👁</button>
+                </div>
+                <span style="font-size:11px; color:var(--text-dim); margin-top:4px; display:block;">Accesso a telemetria, relè, rete e gestione codici</span>
+              </div>
+            </div>
+
+            <div style="margin-top:18px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
+              <span id="pinSaveStatus" style="font-family:var(--font-mono); font-size:11px; color:var(--accent-green); display:none;">PIN AGGIORNATI CON SUCCESSO</span>
+              <button type="button" class="ultra-primary-btn" onclick="saveNewPins()" style="padding:8px 20px; font-size:12px;">Aggiorna Codici PIN</button>
+            </div>
           </div>
 
         </div>
@@ -597,7 +644,7 @@
       <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="12" r="2"/></svg>
       <span>Targhe</span>
     </button>
-    <button class="bottom-nav-btn" data-view="diagnostics" title="Telemetria Edge">
+    <button class="bottom-nav-btn maintainer-only-nav" data-view="diagnostics" title="Telemetria Edge">
       <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       <span>Salute</span>
     </button>
@@ -606,6 +653,63 @@
       <span>Audio</span>
     </button>
   </nav>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       MODALE AUTENTICAZIONE DOPPIO PIN (CLIENTE VS MANUTENTORE)
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div id="authModal" class="auth-modal-backdrop">
+    <div class="auth-card">
+      <div class="tactical-corner-tl">
+        <svg viewBox="0 0 12 12"><path d="M0,12 L0,0 L12,0" stroke="var(--cai-gold)" stroke-width="2" fill="none"/></svg>
+      </div>
+      <div class="tactical-corner-br">
+        <svg viewBox="0 0 12 12"><path d="M12,0 L12,12 L0,12" stroke="var(--cai-gold)" stroke-width="2" fill="none"/></svg>
+      </div>
+
+      <div class="auth-header">
+        <div class="auth-brand-icon">
+          <img src="assets/img/icona-ai-viola-su-scuro.svg" alt="Conflavoro AI" style="width:28px; height:28px; object-fit:contain;">
+        </div>
+        <h2 class="auth-title">SENTINEL<span style="color:var(--cai-gold);">.AI</span></h2>
+        <p class="auth-sub">AUTENTICAZIONE DI SICUREZZA // RETE LOCALE</p>
+      </div>
+
+      <div class="auth-body" style="width:100%;">
+        <p class="auth-instruction">Inserire PIN Cliente o PIN Manutentore:</p>
+        
+        <!-- Indicatori 4 Cifre -->
+        <div class="pin-display-row" id="pinDots">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+        </div>
+
+        <div id="authErrorMsg" class="auth-error-msg" style="display:none;">PIN NON VALIDO</div>
+
+        <!-- Tastierino Numerico Touch & Mouse -->
+        <div class="keypad-grid">
+          <button type="button" class="keypad-btn" onclick="pressKeypad('1')">1</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('2')">2</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('3')">3</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('4')">4</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('5')">5</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('6')">6</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('7')">7</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('8')">8</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('9')">9</button>
+          <button type="button" class="keypad-btn action-clear" onclick="clearKeypad()" title="Cancella">C</button>
+          <button type="button" class="keypad-btn" onclick="pressKeypad('0')">0</button>
+          <button type="button" class="keypad-btn action-submit" onclick="submitKeypad()" title="Invio">↵</button>
+        </div>
+
+        <div class="auth-hint">
+          <span>PIN Cliente: <strong>1111</strong></span>
+          <span>PIN Manutentore: <strong>9999</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="assets/app.js"></script>
 </body>

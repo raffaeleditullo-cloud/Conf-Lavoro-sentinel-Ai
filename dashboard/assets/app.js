@@ -12,6 +12,10 @@ const views = {
 };
 
 function switchView(viewName) {
+  if (currentRole === 'client' && viewName === 'diagnostics') {
+    viewName = 'wall';
+  }
+
   const target = views[viewName];
   if (!target) return;
 
@@ -513,10 +517,203 @@ function loadSettings() {
   updateTrackLabel();
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// 7. SISTEMA DI AUTENTICAZIONE DOPPIO PIN (CLIENTE VS MANUTENTORE)
+// ──────────────────────────────────────────────────────────────────────────────
+let currentEnteredPin = '';
+let currentRole = null; // 'client' | 'maintainer'
+
+function updatePinDots() {
+  const dots = document.querySelectorAll('#pinDots .pin-dot');
+  dots.forEach((dot, index) => {
+    if (index < currentEnteredPin.length) {
+      dot.classList.add('filled');
+    } else {
+      dot.classList.remove('filled');
+    }
+  });
+}
+
+function pressKeypad(digit) {
+  const errorMsg = document.getElementById('authErrorMsg');
+  if (errorMsg) errorMsg.style.display = 'none';
+
+  if (currentEnteredPin.length < 4) {
+    currentEnteredPin += digit;
+    updatePinDots();
+  }
+
+  if (currentEnteredPin.length === 4) {
+    setTimeout(submitKeypad, 100);
+  }
+}
+
+function clearKeypad() {
+  currentEnteredPin = '';
+  updatePinDots();
+  const errorMsg = document.getElementById('authErrorMsg');
+  if (errorMsg) errorMsg.style.display = 'none';
+}
+
+function applyRole(role) {
+  currentRole = role;
+  document.body.setAttribute('data-role', role);
+  sessionStorage.setItem('sentinel_role', role);
+
+  const roleBadge = document.getElementById('roleBadge');
+  const roleLabel = document.getElementById('roleLabel');
+
+  if (role === 'maintainer') {
+    if (roleBadge) {
+      roleBadge.className = 'role-pill maintainer';
+    }
+    if (roleLabel) roleLabel.textContent = 'MANUTENTORE';
+  } else {
+    if (roleBadge) {
+      roleBadge.className = 'role-pill client';
+    }
+    if (roleLabel) roleLabel.textContent = 'CLIENTE';
+
+    // Se l'utente era nella pagina diagnostica, reindirizza al wall
+    const currentActiveBtn = document.querySelector('.nav-btn.active, .bottom-nav-btn.active');
+    if (currentActiveBtn && currentActiveBtn.getAttribute('data-view') === 'diagnostics') {
+      switchView('wall');
+    }
+  }
+}
+
+async function submitKeypad() {
+  if (currentEnteredPin.length === 0) return;
+
+  const pinToTest = currentEnteredPin;
+  const errorMsg = document.getElementById('authErrorMsg');
+
+  try {
+    const res = await fetch('/api/auth/pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: pinToTest })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.role) {
+        applyRole(data.role);
+        closeAuthModal();
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn("Autenticazione via server non disponibile, verifica locale:", e);
+  }
+
+  // Fallback se server offline o standalone
+  if (pinToTest === '9999') {
+    applyRole('maintainer');
+    closeAuthModal();
+    return;
+  } else if (pinToTest === '1111') {
+    applyRole('client');
+    closeAuthModal();
+    return;
+  }
+
+  // Se errato
+  if (errorMsg) {
+    errorMsg.style.display = 'block';
+    errorMsg.textContent = 'PIN NON VALIDO';
+  }
+  const dotsRow = document.getElementById('pinDots');
+  if (dotsRow) {
+    dotsRow.style.animation = 'shake 0.3s ease';
+    setTimeout(() => { dotsRow.style.animation = ''; }, 350);
+  }
+
+  setTimeout(() => {
+    clearKeypad();
+  }, 500);
+}
+
+function openAuthModal() {
+  clearKeypad();
+  const modal = document.getElementById('authModal');
+  if (modal) modal.classList.add('open');
+}
+
+function closeAuthModal() {
+  clearKeypad();
+  const modal = document.getElementById('authModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function lockSession() {
+  sessionStorage.removeItem('sentinel_role');
+  openAuthModal();
+}
+
+function togglePinVisibility(inputId) {
+  const inp = document.getElementById(inputId);
+  if (inp) {
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+}
+
+async function saveNewPins() {
+  const clientPin = document.getElementById('inputClientPin').value.trim();
+  const adminPin = document.getElementById('inputAdminPin').value.trim();
+  const statusMsg = document.getElementById('pinSaveStatus');
+
+  if (clientPin.length < 4 || adminPin.length < 4) {
+    alert("I codici PIN devono avere almeno 4 cifre.");
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/settings/pins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_pin: clientPin, admin_pin: adminPin })
+    });
+
+    if (res.ok) {
+      if (statusMsg) {
+        statusMsg.style.display = 'inline';
+        setTimeout(() => { statusMsg.style.display = 'none'; }, 3000);
+      }
+    }
+  } catch (err) {
+    alert("Errore salvataggio PIN: " + err.message);
+  }
+}
+
+// Supporto tastiera fisica per digitare il PIN
+window.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('authModal');
+  if (!modal || !modal.classList.contains('open')) return;
+
+  if (e.key >= '0' && e.key <= '9') {
+    pressKeypad(e.key);
+  } else if (e.key === 'Backspace') {
+    clearKeypad();
+  } else if (e.key === 'Enter') {
+    submitKeypad();
+  }
+});
+
 // Inizializzazione iniziale
 document.addEventListener('DOMContentLoaded', () => {
   renderPlates();
   renderEvents();
   loadSettings();
+
+  // Controllo sessione PIN attiva
+  const savedRole = sessionStorage.getItem('sentinel_role');
+  if (savedRole) {
+    applyRole(savedRole);
+  } else {
+    // Apri subito il tastierino all'avvio
+    openAuthModal();
+  }
+
   switchView('wall');
 });
