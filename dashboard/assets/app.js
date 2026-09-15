@@ -58,6 +58,12 @@ document.querySelectorAll('.nav-btn[data-view], .bottom-nav-btn[data-view]').for
 // ──────────────────────────────────────────────────────────────────────────────
 // 2. TEMA SCURO / CHIARO CON LOGO VETTORIALE ED ICONA SOLE/LUNA
 // ──────────────────────────────────────────────────────────────────────────────
+// 2. SELETTORI GLOBALI & TEMA SCURO / CHIARO CON LOGO VETTORIALE
+// ──────────────────────────────────────────────────────────────────────────────
+const sidebar = document.querySelector('.soc-nav');
+const collapseBtn = document.getElementById('sidebarCollapseBtn');
+const collapseSvg = document.getElementById('collapseSvg');
+
 const themeToggleBtn = document.getElementById('themeToggle');
 const mobileThemeToggle = document.getElementById('mobileThemeToggle');
 const themeSvg = document.getElementById('themeSvg');
@@ -128,10 +134,6 @@ applyTheme(savedTheme);
 // ──────────────────────────────────────────────────────────────────────────────
 // 3. COLLAPSE / EXPAND SIDEBAR (BUSINESS CALL COMPRESSIONE DESKTOP)
 // ──────────────────────────────────────────────────────────────────────────────
-const sidebar = document.querySelector('.soc-nav');
-const collapseBtn = document.getElementById('sidebarCollapseBtn');
-const collapseSvg = document.getElementById('collapseSvg');
-
 const ICON_EXPAND = '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="m11 9 3 3-3 3"/>';
 const ICON_COLLAPSE = '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="m14 9-3 3 3 3"/>';
 
