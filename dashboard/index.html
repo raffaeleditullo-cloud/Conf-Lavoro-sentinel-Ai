@@ -347,23 +347,23 @@
             <div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
                 <span style="color:var(--text-muted); font-size:13px;">Temperatura SoC (GPU/CPU)</span>
-                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--cai-gold);">61.0 °C (Ottimale)</strong>
+                <strong id="diagTemp" style="font-family:var(--font-mono); font-size:16px; color:var(--cai-gold);">61.0 °C (Ottimale)</strong>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
                 <span style="color:var(--text-muted); font-size:13px;">Memoria Swap NVMe</span>
-                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">4 MB / 3.8 GB (swappiness=10, Validato)</strong>
+                <strong id="diagSwap" style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">4 MB / 3.8 GB (swappiness=10)</strong>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
                 <span style="color:var(--text-muted); font-size:13px;">RAM Fisica in Uso</span>
-                <strong style="font-family:var(--font-mono); font-size:16px;">4.566 MB / 7.6 GB (~3 GB liberi)</strong>
+                <strong id="diagRam" style="font-family:var(--font-mono); font-size:16px;">4.56 GB / 7.6 GB</strong>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Potenza Assorbita & Clock EMC</span>
-                <strong style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">16 W (Profilo 25W) // 3199 MHz</strong>
+                <span style="color:var(--text-muted); font-size:13px;">Potenza Assorbita (INA3221)</span>
+                <strong id="diagPower" style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">16.0 W (Profilo 25W)</strong>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--text-muted); font-size:13px;">Uptime Banco di Collaudo</span>
-                <strong style="font-family:var(--font-mono); font-size:16px;">1h 35m (Zero Leak)</strong>
+                <span style="color:var(--text-muted); font-size:13px;">Uptime Sistema Jetson</span>
+                <strong id="diagUptime" style="font-family:var(--font-mono); font-size:16px;">--</strong>
               </div>
             </div>
           </div>
@@ -372,28 +372,28 @@
           <div class="glass-panel">
             <div class="panel-header-minimal">
               <h3>Nodi e Periferiche di Campo</h3>
-              <span class="status-beacon">ALL LINKED</span>
+              <span id="diagNetworkStatus" class="status-beacon">ALL LINKED</span>
             </div>
             <div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
                 <span style="color:var(--text-muted); font-size:13px;">Telecamera Carrabile</span>
-                <span style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.20 (4K LIVE)</span>
+                <span id="diagCam1Node" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.20.11:554</span>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
                 <span style="color:var(--text-muted); font-size:13px;">Telecamera Pedonale</span>
-                <span style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.21 (4K LIVE)</span>
+                <span id="diagCam2Node" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.20.12:554</span>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
                 <span style="color:var(--text-muted); font-size:13px;">Telecamera Piazzale</span>
-                <span style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.22 (4K LIVE)</span>
+                <span id="diagCam3Node" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.20.13:554</span>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Scheda Relè Waveshare</span>
-                <span style="font-family:var(--font-mono); font-size:12px; color:var(--cai-gold);">192.168.1.30:4196 (ONLINE)</span>
+                <span style="color:var(--text-muted); font-size:13px;">Scheda Relè Waveshare Modbus</span>
+                <span id="diagRelayNode" style="font-family:var(--font-mono); font-size:12px; color:var(--cai-gold);">192.168.1.30:4196</span>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--text-muted); font-size:13px;">NAS Ugreen (SMB)</span>
-                <span style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.11 (STREAMING OK)</span>
+                <span style="color:var(--text-muted); font-size:13px;">NAS Ugreen Storage (SMB)</span>
+                <span id="diagNasNode" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.11 (sentinel-eventi)</span>
               </div>
             </div>
           </div>

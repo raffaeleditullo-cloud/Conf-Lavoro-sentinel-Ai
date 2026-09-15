@@ -528,6 +528,112 @@ async function pollDetectorVitality() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 5D. TELEMETRIA EDGE JETSON ORIN NANO IN TEMPO REALE (/api/status)
+// ──────────────────────────────────────────────────────────────────────────────
+async function pollJetsonTelemetry() {
+  try {
+    const res = await fetch('/api/status');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // 1. Aggiornamento Top HUD Chips
+    const hudTemp = document.getElementById('hudTemp');
+    const hudSwap = document.getElementById('hudSwap');
+    const hudRam = document.getElementById('hudRam');
+    const hudPwr = document.getElementById('hudPwr');
+    const hudRelay = document.getElementById('hudRelay');
+
+    if (hudTemp && data.temperature !== undefined) {
+      hudTemp.textContent = `${data.temperature.toFixed(1)}°C`;
+      hudTemp.style.color = data.temperature > 75 ? 'var(--accent-red)' : (data.temperature > 65 ? 'var(--cai-gold)' : 'var(--text-main)');
+    }
+
+    if (hudSwap && data.swap_used_mb !== undefined) {
+      hudSwap.textContent = `${data.swap_used_mb} MB`;
+      hudSwap.style.color = data.swap_used_mb > 500 ? 'var(--accent-red)' : 'var(--accent-green)';
+    }
+
+    if (hudRam && data.ram_used_mb !== undefined) {
+      const ramGb = (data.ram_used_mb / 1024).toFixed(2);
+      hudRam.textContent = `${ramGb} GB`;
+    }
+
+    if (hudPwr && data.power_watts !== undefined) {
+      hudPwr.textContent = `${Math.round(data.power_watts)} W`;
+    }
+
+    if (hudRelay && data.devices) {
+      hudRelay.style.color = data.devices.relay_modbus ? 'var(--accent-green)' : 'var(--text-dim)';
+    }
+
+    // 2. Aggiornamento Pannello Diagnostica Completa (Vista 4)
+    const diagTemp = document.getElementById('diagTemp');
+    const diagSwap = document.getElementById('diagSwap');
+    const diagRam = document.getElementById('diagRam');
+    const diagPower = document.getElementById('diagPower');
+    const diagUptime = document.getElementById('diagUptime');
+
+    if (diagTemp && data.temperature !== undefined) {
+      const tempLabel = data.temperature < 65 ? 'Ottimale' : (data.temperature < 78 ? 'Nominale' : 'Alto');
+      diagTemp.textContent = `${data.temperature.toFixed(1)} °C (${tempLabel})`;
+    }
+
+    if (diagSwap && data.swap_used_mb !== undefined) {
+      const swapTot = (data.swap_total_mb / 1024).toFixed(1);
+      diagSwap.textContent = `${data.swap_used_mb} MB / ${swapTot} GB (swappiness=10)`;
+    }
+
+    if (diagRam && data.ram_used_mb !== undefined) {
+      const ramGb = (data.ram_used_mb / 1024).toFixed(2);
+      const totGb = (data.ram_total_mb / 1024).toFixed(1);
+      const freeGb = (data.ram_free_mb / 1024).toFixed(1);
+      diagRam.textContent = `${ramGb} GB / ${totGb} GB (~${freeGb} GB liberi)`;
+    }
+
+    if (diagPower && data.power_watts !== undefined) {
+      diagPower.textContent = `${data.power_watts.toFixed(1)} W (Profilo 25W)`;
+    }
+
+    if (diagUptime && data.uptime) {
+      diagUptime.textContent = `${data.uptime} (Attivo)`;
+    }
+
+    // Nodi di Rete
+    if (data.devices) {
+      const c1 = document.getElementById('diagCam1Node');
+      const c2 = document.getElementById('diagCam2Node');
+      const c3 = document.getElementById('diagCam3Node');
+      const rel = document.getElementById('diagRelayNode');
+      const nas = document.getElementById('diagNasNode');
+
+      if (c1) {
+        c1.textContent = `192.168.20.11:554 ${data.devices.cam1 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c1.style.color = data.devices.cam1 ? 'var(--accent-green)' : 'var(--text-dim)';
+      }
+      if (c2) {
+        c2.textContent = `192.168.20.12:554 ${data.devices.cam2 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c2.style.color = data.devices.cam2 ? 'var(--accent-green)' : 'var(--text-dim)';
+      }
+      if (c3) {
+        c3.textContent = `192.168.20.13:554 ${data.devices.cam3 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c3.style.color = data.devices.cam3 ? 'var(--accent-green)' : 'var(--text-dim)';
+      }
+      if (rel) {
+        rel.textContent = `192.168.1.30:4196 ${data.devices.relay_modbus ? '(ONLINE)' : '(STANDBY)'}`;
+        rel.style.color = data.devices.relay_modbus ? 'var(--cai-gold)' : 'var(--text-dim)';
+      }
+      if (nas) {
+        nas.textContent = `192.168.1.11 ${data.devices.nas_ugreen ? '(SMB OK)' : '(STANDBY)'}`;
+        nas.style.color = data.devices.nas_ugreen ? 'var(--accent-green)' : 'var(--text-dim)';
+      }
+    }
+
+  } catch (err) {
+    // fallback
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // 6. GESTIONE PACCHETTI AUDIO UFFICIALI (CARMELO & SAMI) & HARDWARE
 // ──────────────────────────────────────────────────────────────────────────────
 let currentAudioPlayer = null;
@@ -889,6 +995,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Monitoraggio Vitality Detector TensorRT (Watchdog Alessio)
   pollDetectorVitality();
   setInterval(pollDetectorVitality, 3000);
+
+  // Telemetria Edge Jetson Orin Nano in Tempo Reale
+  pollJetsonTelemetry();
+  setInterval(pollJetsonTelemetry, 2500);
 
   loadSettings();
 
