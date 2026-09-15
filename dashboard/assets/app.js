@@ -74,34 +74,48 @@ const authModalLogo = document.getElementById('authModalLogo');
 const SUN_ICON = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 const MOON_ICON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
 
+// Sotto i 1024px (tablet e smartphone) il marchio si riduce alla sola AI
+const brandIconOnlyQuery = window.matchMedia('(max-width: 1023.98px)');
+
 function updateBrandLogos(theme, isCollapsed) {
   const isLight = (theme === 'light');
+  const iconOnly = isCollapsed || brandIconOnlyQuery.matches;
 
   if (brandLogo) {
-    if (isCollapsed) {
-      // Quando la barra è chiusa: SOLO icona AI (oro in chiaro, viola in scuro)
-      brandLogo.src = isLight 
-        ? 'assets/img/conflavoro-ai-icon-oro.svg' 
+    if (iconOnly) {
+      // Barra chiusa, tablet o smartphone: SOLO icona AI (verde acqua in chiaro, viola in scuro)
+      brandLogo.src = isLight
+        ? 'assets/img/icona-ai-acqua-su-scuro.svg'
         : 'assets/img/conflavoro-ai-icon-viola.svg';
     } else {
-      // Quando la barra è aperta: logo completo CONFLAVORO AI (AI oro in chiaro, AI viola in scuro)
-      brandLogo.src = isLight 
-        ? 'assets/img/conflavoro-ai-oro.svg' 
+      // Barra aperta su desktop: marchio completo CONFLAVORO AI
+      brandLogo.src = isLight
+        ? 'assets/img/conflavoro-ai-acqua-su-scuro.svg'
         : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
     }
   }
 
+  // Marchio dell'header compatto: compare solo sotto i 768px, quindi sempre sola AI
   if (mobileBrandLogo) {
-    mobileBrandLogo.src = isLight 
-      ? 'assets/img/conflavoro-ai-oro.svg' 
-      : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
+    mobileBrandLogo.src = isLight
+      ? 'assets/img/icona-ai-acqua-su-scuro.svg'
+      : 'assets/img/icona-ai-viola-su-scuro.svg';
   }
 
+  // Finestra di accesso: ha fondo chiaro nel tema chiaro, quindi variante su chiaro
   if (authModalLogo) {
-    authModalLogo.src = isLight 
-      ? 'assets/img/conflavoro-ai-oro.svg' 
+    authModalLogo.src = isLight
+      ? 'assets/img/conflavoro-ai-acqua-su-chiaro.svg'
       : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
   }
+}
+
+// Il marchio segue il cambio di formato senza ricaricare la pagina
+if (brandIconOnlyQuery.addEventListener) {
+  brandIconOnlyQuery.addEventListener('change', () => {
+    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+    updateBrandLogos(theme, !!(sidebar && sidebar.classList.contains('collapsed')));
+  });
 }
 
 function applyTheme(theme) {
@@ -176,7 +190,7 @@ function triggerFaro() {
   const bar = document.getElementById('dockFaroProgress');
 
   label.textContent = 'FARI ATTIVI // 30s';
-  btn.style.borderColor = 'var(--cai-gold)';
+  btn.classList.add('is-running');
   bar.style.transition = 'none';
   bar.style.width = '100%';
 
@@ -188,7 +202,7 @@ function triggerFaro() {
   if (faroTimer) clearTimeout(faroTimer);
   faroTimer = setTimeout(() => {
     label.textContent = 'Fari Piazzale // 30s';
-    btn.style.borderColor = 'transparent';
+    btn.classList.remove('is-running');
   }, 30000);
 
   fetch('/api/relay/faretto', { method: 'POST' }).catch(() => {});
@@ -201,7 +215,7 @@ function triggerGate() {
   const bar = document.getElementById('dockGateProgress');
 
   label.textContent = 'Apertura Relè 2 (3s)...';
-  btn.style.borderColor = 'var(--cai-violet)';
+  btn.classList.add('is-running');
   bar.style.transition = 'none';
   bar.style.width = '100%';
 
@@ -213,20 +227,21 @@ function triggerGate() {
   if (gateTimer) clearTimeout(gateTimer);
   gateTimer = setTimeout(() => {
     label.textContent = 'Apri Cancello // 3s';
-    btn.style.borderColor = 'transparent';
+    btn.classList.remove('is-running');
   }, 3500);
 
   fetch('/api/relay/cancello', { method: 'POST' }).catch(() => {});
 }
 
 function triggerVoice() {
+  const btn = document.getElementById('dockSirenBtn');
   const label = document.getElementById('dockSirenLabel');
   label.textContent = 'Broadcasting Audio...';
-  label.style.color = 'var(--accent-red)';
+  if (btn) btn.classList.add('is-running');
 
   setTimeout(() => {
     label.textContent = 'Dissuasione Audio IP';
-    label.style.color = 'var(--text-main)';
+    if (btn) btn.classList.remove('is-running');
   }, 4000);
 
   fetch('/api/speaker/voice', { method: 'POST' }).catch(() => {});
@@ -257,8 +272,11 @@ function renderPlates() {
   if (!currentPlates || currentPlates.length === 0) {
     tbodyFull.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align:center; padding: 36px 12px; color:var(--text-muted); font-family:var(--font-mono); font-size:12px;">
-          NESSUNA TARGA AUTORIZZATA // UTILIZZA IL PULSANTE "+ AGGIUNGI NUOVA TARGA" PER REGISTRARE UN VEICOLO
+        <td colspan="5" class="ev-empty-cell">
+          <div class="ev-empty">
+            <span class="ev-empty-title">NESSUNA TARGA AUTORIZZATA</span>
+            <span class="ev-empty-sub">Usa il pulsante "Aggiungi Nuova Targa" per registrare un veicolo: il cancello carrabile si aprira' al riconoscimento.</span>
+          </div>
         </td>
       </tr>
     `;
@@ -270,12 +288,11 @@ function renderPlates() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="plate-pill">${p.plate}</span></td>
-      <td><strong style="font-size:13px;">${p.owner}</strong></td>
-      <td style="color:var(--text-muted);">${p.role || 'Personale Autorizzato'}</td>
+      <td class="ev-cam">${p.owner}</td>
+      <td class="ev-role">${p.role || 'Personale Autorizzato'}</td>
       <td>
-        <button class="status-beacon ${isAct ? 'active' : 'inactive'}" style="cursor:pointer; background:none; border:none; padding:0; display:inline-flex; align-items:center;" onclick="togglePlate('${p.plate}')" title="Clicca per abilitare/sospendere autorizzazione">
-          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:${isAct ? 'var(--accent-green)' : 'var(--accent-red)'}; margin-right:6px;"></span>
-          <span style="color:${isAct ? 'var(--text-main)' : 'var(--text-dim)'};">${isAct ? 'Autorizzata' : 'Sospesa'}</span>
+        <button class="plate-state ${isAct ? 'is-active' : 'is-suspended'}" onclick="togglePlate('${p.plate}')" title="Clicca per abilitare o sospendere l'autorizzazione">
+          ${isAct ? 'Autorizzata' : 'Sospesa'}
         </button>
       </td>
       <td style="text-align:right;">
@@ -439,10 +456,9 @@ function renderEvents() {
     if (currentEvents.length === 0) {
       wallTbody.innerHTML = `
         <tr>
-          <td colspan="5" style="text-align:center; padding: 26px 12px; color:var(--text-muted); font-family:var(--font-mono); font-size:11px;">
-            <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
-              <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--cai-gold);"></span>
-              <span>NESSUN EVENTO REGISTRATO // NVR PRONTO AL RILEVAMENTO</span>
+          <td colspan="5" class="ev-empty-cell is-compact">
+            <div class="ev-empty">
+              <span class="ev-empty-title">NESSUN EVENTO REGISTRATO // NVR PRONTO AL RILEVAMENTO</span>
             </div>
           </td>
         </tr>
@@ -457,15 +473,15 @@ function renderEvents() {
             <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             <span>Play MP4</span>
           </button>
-        ` : `<span style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim);">No Clip</span>`;
+        ` : `<span class="ev-noclip">No Clip</span>`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">${ev.time}</td>
-          <td style="font-weight:600; font-size:11px;">${camLabel}</td>
+          <td class="ev-time">${ev.time}</td>
+          <td class="ev-cam">${camLabel}</td>
           <td>
-            <span class="status-beacon" style="color:var(--text-main); font-weight:500;">${subjLabel}</span>
-            <span style="font-family:var(--font-mono); font-size:10px; color:var(--cai-gold);">(${ev.conf || '90%'})</span>
+            <span class="ev-type">${subjLabel}</span>
+            <span class="ev-conf">(${ev.conf || '90%'})</span>
           </td>
           <td>
             <div class="event-thumb-wrap">
@@ -484,10 +500,10 @@ function renderEvents() {
     if (currentEvents.length === 0) {
       fullTbody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align:center; padding: 48px 16px; color:var(--text-muted); font-family:var(--font-mono); font-size:12px;">
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
-              <span style="color:var(--cai-gold); font-weight:700; letter-spacing:0.08em; font-family:var(--font-brand);">REGISTRO EVENTI VUOTO // HARDWARE IN ATTESA</span>
-              <span style="font-size:11px; color:var(--text-dim);">Gli snapshot e le registrazioni appariranno in tempo reale ai primi passaggi rilevati dai sensori ottici.</span>
+          <td colspan="6" class="ev-empty-cell">
+            <div class="ev-empty">
+              <span class="ev-empty-title">REGISTRO EVENTI VUOTO // HARDWARE IN ATTESA</span>
+              <span class="ev-empty-sub">Gli snapshot e le registrazioni appariranno in tempo reale ai primi passaggi rilevati dai sensori ottici.</span>
             </div>
           </td>
         </tr>
@@ -502,14 +518,14 @@ function renderEvents() {
             <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             <span>Riproduci Video NVR</span>
           </button>
-        ` : `<span style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim);">Solo Snapshot</span>`;
+        ` : `<span class="ev-noclip">Solo Snapshot</span>`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">${ev.time}</td>
-          <td><strong>${camLabel}</strong></td>
-          <td>${subjLabel}</td>
-          <td><span style="font-family:var(--font-mono); color:var(--cai-gold); font-weight:600;">${ev.conf || '90%'}</span></td>
+          <td class="ev-time">${ev.time}</td>
+          <td class="ev-cam">${camLabel}</td>
+          <td><span class="ev-type">${subjLabel}</span></td>
+          <td><span class="ev-conf">${ev.conf || '90%'}</span></td>
           <td>
             <div class="event-thumb-wrap" style="width:60px; height:38px;">
               <img src="${thumbUrl}" alt="Snapshot" onerror="this.src='assets/img/icona-ai-viola-su-scuro.svg'">
@@ -564,6 +580,8 @@ async function pollDetectorVitality() {
       badge.className = 'vitality-badge standby';
       textEl.textContent = 'IA: IN ATTESA SEGNALE';
     }
+    // Il testo resta leggibile anche con etichetta collassata
+    badge.title = textEl.textContent;
   } catch (err) {
     // standby
   }
@@ -650,23 +668,23 @@ async function pollJetsonTelemetry() {
 
       if (c1) {
         c1.textContent = `192.168.20.11:554 ${data.devices.cam1 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
-        c1.style.color = data.devices.cam1 ? 'var(--accent-green)' : 'var(--text-dim)';
+        c1.classList.toggle('is-online', !!data.devices.cam1);
       }
       if (c2) {
         c2.textContent = `192.168.20.12:554 ${data.devices.cam2 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
-        c2.style.color = data.devices.cam2 ? 'var(--accent-green)' : 'var(--text-dim)';
+        c2.classList.toggle('is-online', !!data.devices.cam2);
       }
       if (c3) {
         c3.textContent = `192.168.20.13:554 ${data.devices.cam3 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
-        c3.style.color = data.devices.cam3 ? 'var(--accent-green)' : 'var(--text-dim)';
+        c3.classList.toggle('is-online', !!data.devices.cam3);
       }
       if (rel) {
         rel.textContent = `192.168.1.30:4196 ${data.devices.relay_modbus ? '(ONLINE)' : '(STANDBY)'}`;
-        rel.style.color = data.devices.relay_modbus ? 'var(--cai-gold)' : 'var(--text-dim)';
+        rel.classList.toggle('is-online', !!data.devices.relay_modbus);
       }
       if (nas) {
         nas.textContent = `192.168.1.11 ${data.devices.nas_ugreen ? '(SMB OK)' : '(STANDBY)'}`;
-        nas.style.color = data.devices.nas_ugreen ? 'var(--accent-green)' : 'var(--text-dim)';
+        nas.classList.toggle('is-online', !!data.devices.nas_ugreen);
       }
     }
 
@@ -978,10 +996,18 @@ function lockSession() {
   openAuthModal();
 }
 
-function togglePinVisibility(inputId) {
+function togglePinVisibility(inputId, btn) {
   const inp = document.getElementById(inputId);
-  if (inp) {
-    inp.type = inp.type === 'password' ? 'text' : 'password';
+  if (!inp) return;
+
+  const reveal = inp.type === 'password';
+  inp.type = reveal ? 'text' : 'password';
+
+  // L'icona passa a occhio sbarrato quando il codice e' in chiaro
+  if (btn) {
+    btn.classList.toggle('is-revealed', reveal);
+    btn.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+    btn.title = reveal ? 'Nascondi il codice' : 'Mostra il codice';
   }
 }
 

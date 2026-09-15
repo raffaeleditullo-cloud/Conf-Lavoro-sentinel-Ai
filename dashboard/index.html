@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SENTINEL AI // Mission Control</title>
-  <link rel="stylesheet" href="assets/styles.css?v=3.4">
+  <link rel="stylesheet" href="assets/styles.css?v=5.4">
 </head>
 <body>
 
@@ -113,9 +113,10 @@
       <!-- Zona Destra: Vitality Watchdog IA + Ruolo & Blocco PIN -->
       <div class="hud-right-zone">
         <!-- Vitality Heartbeat Watchdog Badge (Alessio Anti-Freeze Watchdog) -->
-        <div id="detectorVitalityBadge" class="vitality-badge standby" title="Stato Rilevatore IA TensorRT">
+        <div id="detectorVitalityBadge" class="vitality-badge standby" title="IA: IN ATTESA SEGNALE">
+          <svg class="vitality-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l2.5-7 4 14 2.5-7h7"/></svg>
           <span class="vitality-dot"></span>
-          <span id="vitalityText">IA: IN ATTESA SEGNALE</span>
+          <span id="vitalityText" class="vitality-label">IA: IN ATTESA SEGNALE</span>
         </div>
 
         <!-- Controllo Ruolo & Blocco PIN -->
@@ -141,7 +142,7 @@
       <!-- ════════════════════════════════════════════════════════════════════════
            VISTA 1: LIVE VIDEO WALL
            ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-wall" class="view-panel">
+      <div id="view-wall" class="view-panel view-data">
         
         <section class="video-wall-grid">
           <!-- Camera 1: Varco Carrabile (Hero View) -->
@@ -238,19 +239,19 @@
         <div class="floating-dock-wrap" style="margin-top:20px; margin-bottom:24px;">
           <div class="floating-dock">
             <button id="dockFaroBtn" class="dock-action-btn btn-faro" onclick="triggerFaro()">
-              <svg class="dock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="11" height="8" rx="1.5"/><path d="M13.5 8.2 20 5.5v8l-6.5-2.7"/><path d="M8 13.5v3.5"/><path d="M4.5 20.5 8 17l3.5 3.5"/></svg>
               <span id="dockFaroLabel">Fari Piazzale // 30s</span>
               <div id="dockFaroProgress" class="dock-progress-line"></div>
             </button>
 
             <button id="dockGateBtn" class="dock-action-btn btn-gate" onclick="triggerGate()">
-              <svg class="dock-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 7.5h11v12h-11z"/><path d="M6.2 7.5v12M9.8 7.5v12"/><path d="M2.5 13.5h11"/><path d="M16.5 13.5H21"/><path d="m18.8 11.2 2.3 2.3-2.3 2.3"/></svg>
               <span id="dockGateLabel">Apri Cancello // 3s</span>
               <div id="dockGateProgress" class="dock-progress-line"></div>
             </button>
 
             <button id="dockSirenBtn" class="dock-action-btn btn-siren" onclick="triggerVoice()">
-              <svg class="dock-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
               <span id="dockSirenLabel">Dissuasione Audio IP</span>
             </button>
           </div>
@@ -283,11 +284,17 @@
       <!-- ════════════════════════════════════════════════════════════════════════
            VISTA 2: REGISTRO EVENTI COMPLETO (NAS)
            ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-events" class="view-panel" style="display:none;">
+      <div id="view-events" class="view-panel view-data" style="display:none;">
         <div class="glass-panel">
           <div class="panel-header-minimal">
-            <h3>Registro Eventi & Registrazioni (NAS Ugreen //sentinel-eventi)</h3>
-            <button class="ultra-primary-btn" onclick="renderEvents()" style="padding:6px 14px; font-size:12px;">Aggiorna</button>
+            <div class="ev-head-text">
+              <h3>Registro Eventi &amp; Registrazioni</h3>
+              <p class="ev-head-sub">NAS Ugreen // sentinel-eventi</p>
+            </div>
+            <button class="ultra-primary-btn panel-action-btn ev-refresh-btn" onclick="renderEvents()">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+              <span>Aggiorna</span>
+            </button>
           </div>
           
           <div class="table-scroll-wrap">
@@ -311,14 +318,17 @@
       <!-- ════════════════════════════════════════════════════════════════════════
            VISTA 3: WHITELIST TARGHE LPR
            ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-plates" class="view-panel" style="display:none;">
+      <div id="view-plates" class="view-panel view-data" style="display:none;">
         <div class="glass-panel">
           <div class="panel-header-minimal">
-            <div>
+            <div class="ev-head-text">
               <h3>Whitelist Targhe Autorizzate</h3>
-              <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">I veicoli registrati aprono automaticamente il cancello carrabile tramite IA (Modbus Relè 2)</p>
+              <p class="ev-head-sub">I veicoli registrati aprono automaticamente il cancello carrabile tramite IA (Modbus Relè 2)</p>
             </div>
-            <button class="ultra-primary-btn" onclick="openAddPlateModal()">+ Aggiungi Nuova Targa</button>
+            <button class="ultra-primary-btn panel-action-btn is-add" onclick="openAddPlateModal()">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Aggiungi Nuova Targa</span>
+            </button>
           </div>
 
           <div class="table-scroll-wrap">
@@ -341,7 +351,7 @@
       <!-- ════════════════════════════════════════════════════════════════════════
            VISTA 4: TELEMETRIA EDGE JETSON
            ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-diagnostics" class="view-panel" style="display:none;">
+      <div id="view-diagnostics" class="view-panel view-data" style="display:none;">
         <div class="data-split-zone">
           
           <!-- Metriche HW -->
@@ -350,26 +360,26 @@
               <h3>Hardware Jetson Orin Nano</h3>
               <span class="status-beacon">OPERATIVO</span>
             </div>
-            <div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Temperatura SoC (GPU/CPU)</span>
-                <strong id="diagTemp" style="font-family:var(--font-mono); font-size:16px; color:var(--cai-gold);">61.0 °C (Ottimale)</strong>
+            <div class="metric-list">
+              <div class="metric-row">
+                <span class="metric-label">Temperatura SoC (GPU/CPU)</span>
+                <strong id="diagTemp" class="metric-value is-accent">61.0 °C (Ottimale)</strong>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Memoria Swap NVMe</span>
-                <strong id="diagSwap" style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">4 MB / 3.8 GB (swappiness=10)</strong>
+              <div class="metric-row">
+                <span class="metric-label">Memoria Swap NVMe</span>
+                <strong id="diagSwap" class="metric-value is-ok">4 MB / 3.8 GB (swappiness=10)</strong>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">RAM Fisica in Uso</span>
-                <strong id="diagRam" style="font-family:var(--font-mono); font-size:16px;">4.56 GB / 7.6 GB</strong>
+              <div class="metric-row">
+                <span class="metric-label">RAM Fisica in Uso</span>
+                <strong id="diagRam" class="metric-value">4.56 GB / 7.6 GB</strong>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Potenza Assorbita (INA3221)</span>
-                <strong id="diagPower" style="font-family:var(--font-mono); font-size:16px; color:var(--accent-green);">16.0 W (Profilo 25W)</strong>
+              <div class="metric-row">
+                <span class="metric-label">Potenza Assorbita (INA3221)</span>
+                <strong id="diagPower" class="metric-value is-ok">16.0 W (Profilo 25W)</strong>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--text-muted); font-size:13px;">Uptime Sistema Jetson</span>
-                <strong id="diagUptime" style="font-family:var(--font-mono); font-size:16px;">--</strong>
+              <div class="metric-row">
+                <span class="metric-label">Uptime Sistema Jetson</span>
+                <strong id="diagUptime" class="metric-value">--</strong>
               </div>
             </div>
           </div>
@@ -380,26 +390,26 @@
               <h3>Nodi e Periferiche di Campo</h3>
               <span id="diagNetworkStatus" class="status-beacon">ALL LINKED</span>
             </div>
-            <div style="display:flex; flex-direction:column; gap:16px; margin-top:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Telecamera Carrabile</span>
-                <span id="diagCam1Node" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.20.11:554</span>
+            <div class="metric-list">
+              <div class="metric-row">
+                <span class="metric-label">Telecamera Carrabile</span>
+                <span id="diagCam1Node" class="node-value is-online">192.168.20.11:554</span>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Telecamera Pedonale</span>
-                <span id="diagCam2Node" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.20.12:554</span>
+              <div class="metric-row">
+                <span class="metric-label">Telecamera Pedonale</span>
+                <span id="diagCam2Node" class="node-value is-online">192.168.20.12:554</span>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Telecamera Piazzale</span>
-                <span id="diagCam3Node" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.20.13:554</span>
+              <div class="metric-row">
+                <span class="metric-label">Telecamera Piazzale</span>
+                <span id="diagCam3Node" class="node-value is-online">192.168.20.13:554</span>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
-                <span style="color:var(--text-muted); font-size:13px;">Scheda Relè Waveshare Modbus</span>
-                <span id="diagRelayNode" style="font-family:var(--font-mono); font-size:12px; color:var(--cai-gold);">192.168.1.30:4196</span>
+              <div class="metric-row">
+                <span class="metric-label">Scheda Relè Waveshare Modbus</span>
+                <span id="diagRelayNode" class="node-value is-accent is-online">192.168.1.30:4196</span>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:var(--text-muted); font-size:13px;">NAS Ugreen Storage (SMB)</span>
-                <span id="diagNasNode" style="font-family:var(--font-mono); font-size:12px; color:var(--accent-green);">192.168.1.11 (sentinel-eventi)</span>
+              <div class="metric-row">
+                <span class="metric-label">NAS Ugreen Storage (SMB)</span>
+                <span id="diagNasNode" class="node-value is-online">192.168.1.11 (sentinel-eventi)</span>
               </div>
             </div>
           </div>
@@ -410,15 +420,15 @@
       <!-- ════════════════════════════════════════════════════════════════════════
            VISTA 5: CONFIGURAZIONE & SINTESI VOCALE AI
            ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-settings" class="view-panel" style="display:none;">
+      <div id="view-settings" class="view-panel view-data" style="display:none;">
         <div class="data-split-zone">
 
           <!-- Colonna 1: Pacchetti Vocali Ufficiali Sentinel AI -->
           <div class="glass-panel">
             <div class="panel-header-minimal">
-              <div>
+              <div class="ev-head-text">
                 <h3>Pacchetti Vocali Ufficiali Sentinel AI</h3>
-                <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Seleziona e ascolta i pacchetti audio registrati a bordo del sistema</p>
+                <p class="ev-head-sub">Seleziona e ascolta i pacchetti audio registrati a bordo del sistema</p>
               </div>
               <span class="status-beacon">AUDIO ENGINE ONLINE</span>
             </div>
@@ -475,22 +485,22 @@
               </select>
 
               <!-- Mini Player Anteprima Audio Reale -->
-              <div class="audio-player-box" style="padding:14px 16px; background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:var(--radius-xs); display:flex; align-items:center; justify-content:space-between; gap:16px;">
+              <div class="audio-player-box setting-box">
                 <div style="display:flex; align-items:center; gap:12px;">
                   <button type="button" id="btnPlayTrack" class="ultra-primary-btn" onclick="playRealAudioTrack()" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px;">
                     <svg id="playIconSvg" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     <span id="playBtnText">Ascolta Traccia Reale</span>
                   </button>
-                  <span id="playingTrackLabel" style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">audio/carmelo/03_avviso_dissuasione.mp3</span>
+                  <span id="playingTrackLabel" class="track-path">audio/carmelo/03_avviso_dissuasione.mp3</span>
                 </div>
-                <span id="audioPlayingIndicator" class="status-beacon" style="display:none; color:var(--cai-gold);">IN RIPRODUZIONE</span>
+                <span id="audioPlayingIndicator" class="status-beacon is-accent" style="display:none;">IN RIPRODUZIONE</span>
               </div>
             </div>
 
             <!-- Pulsante invio al Fanvil -->
             <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
               <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:12px; padding:9px 18px;">
-                <svg class="dock-icon" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
                 <span>Trasmetti Traccia su Diffusore Fanvil (.35)</span>
               </button>
             </div>
@@ -500,9 +510,9 @@
           <!-- Colonna 2: Parametri Audio Altoparlante & Temporizzazioni -->
           <div class="glass-panel">
             <div class="panel-header-minimal">
-              <div>
+              <div class="ev-head-text">
                 <h3>Parametri Audio & Attuatori</h3>
-                <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Regolazione hardware Fanvil (.35) e Modbus Relè (.30)</p>
+                <p class="ev-head-sub">Regolazione hardware Fanvil (.35) e Modbus Relè (.30)</p>
               </div>
               <span class="status-beacon">HARDWARE LINKED</span>
             </div>
@@ -520,10 +530,10 @@
             <div style="margin-top:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <label class="setting-section-label" style="margin-bottom:0;">VOLUME DIFFUSIONE AUDIO</label>
-                <strong id="valVolume" style="font-family:var(--font-mono); font-size:14px; color:var(--cai-gold);">85%</strong>
+                <strong id="valVolume" class="setting-value is-accent">85%</strong>
               </div>
               <input type="range" id="rngVolume" min="10" max="100" value="85" class="tactical-slider" oninput="updateVolumeLabel(this.value)">
-              <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10px; color:var(--text-dim); margin-top:4px;">
+              <div class="slider-legend">
                 <span>10% (Basso)</span>
                 <span>50% (Medio)</span>
                 <span>100% (Dissuasione Max)</span>
@@ -531,11 +541,11 @@
             </div>
 
             <!-- Sirena Introduttiva -->
-            <div style="margin-top:22px; padding:14px 16px; background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:var(--radius-xs);">
+            <div class="setting-box" style="margin-top:22px;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <strong style="font-size:13.5px; font-weight:700;">Sirena Allarme Pre-Messaggio</strong>
-                  <p style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Emette un bitonale acustico per 3s prima del messaggio vocale</p>
+                  <strong class="setting-title">Sirena Allarme Pre-Messaggio</strong>
+                  <p class="metric-sub">Emette un bitonale acustico per 3s prima del messaggio vocale</p>
                 </div>
                 <label class="tactical-switch">
                   <input type="checkbox" id="chkSiren" checked>
@@ -548,26 +558,26 @@
             <div class="maintainer-only-block" style="margin-top:22px;">
               <label class="setting-section-label">TEMPORIZZAZIONE ATTUATORI HARDWARE</label>
               
-              <div style="display:flex; flex-direction:column; gap:14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:10px;">
+              <div class="metric-list">
+                <div class="metric-row">
                   <div>
-                    <span style="font-size:13px; font-weight:600;">Accensione Fari Piazzale</span>
-                    <p style="font-size:11px; color:var(--text-muted);">Relè 1 Modbus TCP // 192.168.1.30:4196</p>
+                    <span class="metric-label is-strong">Accensione Fari Piazzale</span>
+                    <p class="metric-sub">Relè 1 Modbus TCP // 192.168.1.30:4196</p>
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <input type="number" id="numFaroSec" value="30" min="5" max="300" class="ultra-input" style="width:64px; text-align:center; font-family:var(--font-mono); font-weight:700;">
-                    <span style="font-family:var(--font-mono); font-size:12px; color:var(--text-dim);">sec</span>
+                    <span class="unit-label">sec</span>
                   </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="metric-row">
                   <div>
-                    <span style="font-size:13px; font-weight:600;">Impulso Cancello Carraio</span>
-                    <p style="font-size:11px; color:var(--text-muted);">Relè 2 Modbus TCP (Apertura Automatica LPR)</p>
+                    <span class="metric-label is-strong">Impulso Cancello Carraio</span>
+                    <p class="metric-sub">Relè 2 Modbus TCP (Apertura Automatica LPR)</p>
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <input type="number" id="numGateSec" value="3" min="1" max="15" class="ultra-input" style="width:64px; text-align:center; font-family:var(--font-mono); font-weight:700;">
-                    <span style="font-family:var(--font-mono); font-size:12px; color:var(--text-dim);">sec</span>
+                    <span class="unit-label">sec</span>
                   </div>
                 </div>
               </div>
@@ -575,7 +585,7 @@
 
             <!-- Salva Configurazione -->
             <div style="margin-top:26px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
-              <span id="saveStatus" style="font-family:var(--font-mono); font-size:11px; color:var(--accent-green); display:none;">CONFIGURAZIONE SALVATA</span>
+              <span id="saveStatus" class="save-status" style="display:none;">CONFIGURAZIONE SALVATA</span>
               <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:10px 24px; font-size:13px;">Salva Impostazioni</button>
             </div>
 
@@ -584,35 +594,35 @@
           <!-- Riquadro 3: Gestione Credenziali & Codici PIN (Solo Manutentore) -->
           <div class="glass-panel maintainer-only-block" style="grid-column: 1 / -1; margin-top: 18px;">
             <div class="panel-header-minimal">
-              <div>
+              <div class="ev-head-text">
                 <h3>Gestione Credenziali & Codici di Accesso</h3>
-                <p style="font-size:12px; color:var(--text-dim); margin-top:2px;">Configurazione del doppio PIN per accesso Cliente e Manutentore (salvataggio locale Jetson)</p>
+                <p class="ev-head-sub">Configurazione del doppio PIN per accesso Cliente e Manutentore (salvataggio locale Jetson)</p>
               </div>
-              <span class="status-beacon" style="color:var(--cai-gold);">AREA RISERVATA TECNICO</span>
+              <span class="status-beacon is-accent">AREA RISERVATA TECNICO</span>
             </div>
 
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
-              <div style="background:rgba(255,255,255,0.02); padding:16px; border:1px solid var(--border-subtle); border-radius:var(--radius-xs);">
-                <label style="display:block; font-size:11px; font-family:var(--font-mono); color:var(--text-muted); margin-bottom:6px;">PIN CLIENTE (USO ORDINARIO)</label>
+              <div class="setting-box">
+                <label class="setting-section-label">PIN CLIENTE (USO ORDINARIO)</label>
                 <div style="display:flex; gap:10px;">
                   <input type="password" id="inputClientPin" class="ultra-input" maxlength="6" value="1111" style="font-family:var(--font-mono); letter-spacing:0.2em; font-weight:700;">
-                  <button type="button" class="dock-action-btn" onclick="togglePinVisibility('inputClientPin')" style="width:40px; padding:0;" title="Mostra/Nascondi">👁</button>
+                  <button type="button" class="pin-eye-btn" onclick="togglePinVisibility('inputClientPin', this)" title="Mostra il codice" aria-label="Mostra o nascondi il codice" aria-pressed="false"><svg class="pin-eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="eye-open" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle class="eye-open" cx="12" cy="12" r="3"/><path class="eye-off" d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.1M6.5 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path class="eye-off" d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><line class="eye-off" x1="3" y1="3" x2="21" y2="21"/></svg></button>
                 </div>
-                <span style="font-size:11px; color:var(--text-dim); margin-top:4px; display:block;">Accesso a telecamere, allarmi, targhe e voce/volume</span>
+                <span class="setting-hint">Accesso a telecamere, allarmi, targhe e voce/volume</span>
               </div>
 
-              <div style="background:rgba(255,255,255,0.02); padding:16px; border:1px solid var(--border-subtle); border-radius:var(--radius-xs);">
-                <label style="display:block; font-size:11px; font-family:var(--font-mono); color:var(--text-muted); margin-bottom:6px;">PIN MANUTENTORE (ACCESSO TOTALE)</label>
+              <div class="setting-box">
+                <label class="setting-section-label">PIN MANUTENTORE (ACCESSO TOTALE)</label>
                 <div style="display:flex; gap:10px;">
                   <input type="password" id="inputAdminPin" class="ultra-input" maxlength="6" value="9999" style="font-family:var(--font-mono); letter-spacing:0.2em; font-weight:700;">
-                  <button type="button" class="dock-action-btn" onclick="togglePinVisibility('inputAdminPin')" style="width:40px; padding:0;" title="Mostra/Nascondi">👁</button>
+                  <button type="button" class="pin-eye-btn" onclick="togglePinVisibility('inputAdminPin', this)" title="Mostra il codice" aria-label="Mostra o nascondi il codice" aria-pressed="false"><svg class="pin-eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="eye-open" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle class="eye-open" cx="12" cy="12" r="3"/><path class="eye-off" d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.1M6.5 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path class="eye-off" d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><line class="eye-off" x1="3" y1="3" x2="21" y2="21"/></svg></button>
                 </div>
-                <span style="font-size:11px; color:var(--text-dim); margin-top:4px; display:block;">Accesso a telemetria, relè, rete e gestione codici</span>
+                <span class="setting-hint">Accesso a telemetria, relè, rete e gestione codici</span>
               </div>
             </div>
 
             <div style="margin-top:18px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
-              <span id="pinSaveStatus" style="font-family:var(--font-mono); font-size:11px; color:var(--accent-green); display:none;">PIN AGGIORNATI CON SUCCESSO</span>
+              <span id="pinSaveStatus" class="save-status" style="display:none;">PIN AGGIORNATI CON SUCCESSO</span>
               <button type="button" class="ultra-primary-btn" onclick="saveNewPins()" style="padding:8px 20px; font-size:12px;">Aggiorna Codici PIN</button>
             </div>
           </div>
@@ -755,6 +765,6 @@
     </div>
   </div>
 
-  <script src="assets/app.js?v=3.4"></script>
+  <script src="assets/app.js?v=5.4"></script>
 </body>
 </html>
