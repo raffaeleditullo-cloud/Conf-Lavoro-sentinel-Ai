@@ -4,11 +4,11 @@
 
 // 1. GESTIONE NAVIGAZIONE VISTE (ROUTING INTERNO FLUIDO)
 const views = {
-  wall: { id: 'view-wall', title: 'OPERATIONS // LIVE VIDEO WALL' },
-  events: { id: 'view-events', title: 'ARCHIVIO EVIDENZE // REGISTRO EVENTI' },
-  plates: { id: 'view-plates', title: 'CONTROLLO ACCESSI // WHITELIST LPR' },
-  diagnostics: { id: 'view-diagnostics', title: 'SYSTEM HEALTH // TELEMETRIA EDGE' },
-  settings: { id: 'view-settings', title: 'CONFIGURAZIONE // SINTESI VOCALE AI & AUDIO' }
+  wall: { id: 'view-wall', title: 'LIVE VIDEO WALL', showStreamsBadge: true },
+  events: { id: 'view-events', title: 'ARCHIVIO EVIDENZE', showStreamsBadge: false },
+  plates: { id: 'view-plates', title: 'WHITELIST TARGHE', showStreamsBadge: false },
+  diagnostics: { id: 'view-diagnostics', title: 'TELEMETRIA JETSON', showStreamsBadge: false },
+  settings: { id: 'view-settings', title: 'AUDIO & DETERRENZA', showStreamsBadge: false }
 };
 
 function switchView(viewName) {
@@ -39,6 +39,12 @@ function switchView(viewName) {
   // Aggiorna titolo nel top HUD
   const hudTitle = document.getElementById('hudTitleText');
   if (hudTitle) hudTitle.textContent = target.title;
+
+  // Mostra il badge dei flussi 4K SOLO nella schermata Video Wall
+  const hudLivePill = document.getElementById('hudLivePill');
+  if (hudLivePill) {
+    hudLivePill.style.display = target.showStreamsBadge ? 'inline-flex' : 'none';
+  }
 }
 
 // Collega i click sui pulsanti della barra laterale e bottom nav mobile
@@ -57,6 +63,7 @@ const mobileThemeToggle = document.getElementById('mobileThemeToggle');
 const themeSvg = document.getElementById('themeSvg');
 const brandLogo = document.getElementById('brandLogo');
 const mobileBrandLogo = document.getElementById('mobileBrandLogo');
+const authModalLogo = document.getElementById('authModalLogo');
 
 const SUN_ICON = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 const MOON_ICON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
@@ -72,8 +79,15 @@ function applyTheme(theme) {
     const mSvg = mobileThemeToggle.querySelector('svg');
     if (mSvg) mSvg.innerHTML = isLight ? MOON_ICON : SUN_ICON;
   }
-  if (brandLogo) brandLogo.src = isLight ? 'assets/img/icona-ai-acqua-su-scuro.svg' : 'assets/img/icona-ai-viola-su-scuro.svg';
-  if (mobileBrandLogo) mobileBrandLogo.src = isLight ? 'assets/img/icona-ai-acqua-su-scuro.svg' : 'assets/img/icona-ai-viola-su-scuro.svg';
+  if (brandLogo) {
+    brandLogo.src = 'assets/img/conflavoro-ai-viola-su-scuro.svg';
+  }
+  if (mobileBrandLogo) {
+    mobileBrandLogo.src = isLight ? 'assets/img/conflavoro-ai-viola-su-chiaro.svg' : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
+  }
+  if (authModalLogo) {
+    authModalLogo.src = isLight ? 'assets/img/conflavoro-ai-viola-su-chiaro.svg' : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
+  }
 }
 
 function toggleTheme() {
