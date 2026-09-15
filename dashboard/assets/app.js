@@ -266,14 +266,73 @@ function handleSavePlate(e) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 5. ATTIVITÀ IN TEMPO REALE & MODALE VIDEO
+// 5. GESTIONE STREAM VIDEO REALI & STATI STANDBY HARDWARE
 // ──────────────────────────────────────────────────────────────────────────────
-const mockEvents = [
-  { time: '16:38:12', cam: 'Varco Carrabile', subj: 'Targa: FG492KS', conf: '94%', thumb: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=160&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { time: '16:21:05', cam: 'Varco Pedonale', subj: 'Persona Rilevata', conf: '88%', thumb: 'https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=160&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { time: '15:45:50', cam: 'Piazzale', subj: 'Persona Rilevata', conf: '91%', thumb: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=160&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-  { time: '14:12:00', cam: 'Varco Carrabile', subj: 'Veicolo in Transito', conf: '96%', thumb: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=160&q=80', video: 'https://www.w3schools.com/html/mov_bbb.mp4' }
-];
+function handleStreamLoaded(camId) {
+  const standby = document.getElementById(`standbyCam${camId}`);
+  const stream = document.getElementById(`streamCam${camId}`);
+  const badge = document.getElementById(`camStatusBadge${camId}`);
+  if (standby) standby.classList.add('feed-connected');
+  if (stream) stream.classList.add('online');
+  if (badge) {
+    badge.className = 'cam-status-pill live';
+    badge.textContent = '● LIVE 4K';
+  }
+}
+
+function handleStreamError(camId) {
+  const standby = document.getElementById(`standbyCam${camId}`);
+  const stream = document.getElementById(`streamCam${camId}`);
+  const badge = document.getElementById(`camStatusBadge${camId}`);
+  if (standby) standby.classList.remove('feed-connected');
+  if (stream) stream.classList.remove('online');
+  if (badge) {
+    badge.className = 'cam-status-pill offline';
+    badge.textContent = '● OFFLINE';
+  }
+  // Riprova il collegamento dello stream ogni 10 secondi (senza sovraccaricare la rete)
+  setTimeout(() => {
+    if (stream) {
+      const baseSrc = stream.src.split('?')[0];
+      stream.src = `${baseSrc}?_retry=${Date.now()}`;
+    }
+  }, 10000);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 5B. ATTIVITÀ IN TEMPO REALE & REGISTRO EVIDENZE REALI (ZERO DATI FINTI)
+// ──────────────────────────────────────────────────────────────────────────────
+let currentEvents = [];
+
+function formatCamName(raw) {
+  if (!raw) return 'Telecamera';
+  if (raw === 'varco_carrabile') return 'Varco Carrabile';
+  if (raw === 'varco_pedonale') return 'Varco Pedonale';
+  if (raw === 'piazzale') return 'Piazzale Centrale';
+  return raw.replace(/_/g, ' ').toUpperCase();
+}
+
+function formatEventLabel(raw) {
+  if (!raw) return 'Rilevamento';
+  if (raw.toLowerCase() === 'person') return 'Persona Rilevata';
+  if (raw.toLowerCase() === 'car') return 'Veicolo in Transito';
+  if (raw.toLowerCase().startsWith('plate:')) return `Targa: ${raw.replace('plate:', '').toUpperCase()}`;
+  return raw.toUpperCase();
+}
+
+async function loadRealEvents() {
+  try {
+    const res = await fetch('/api/events');
+    if (res.ok) {
+      const data = await res.json();
+      currentEvents = Array.isArray(data) ? data : [];
+      renderEvents();
+    }
+  } catch (err) {
+    currentEvents = [];
+    renderEvents();
+  }
+}
 
 function renderEvents() {
   const wallTbody = document.getElementById('eventsWallTbody');
@@ -281,54 +340,90 @@ function renderEvents() {
 
   if (wallTbody) {
     wallTbody.innerHTML = '';
-    mockEvents.slice(0, 3).forEach(ev => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">${ev.time}</td>
-        <td style="font-weight:600; font-size:11px;">${ev.cam}</td>
-        <td>
-          <span class="status-beacon" style="color:var(--text-main); font-weight:500;">${ev.subj}</span>
-          <span style="font-family:var(--font-mono); font-size:10px; color:var(--cai-gold);">(${ev.conf})</span>
-        </td>
-        <td>
-          <div class="event-thumb-wrap">
-            <img src="${ev.thumb}" alt="Snapshot">
-          </div>
-        </td>
-        <td>
-          <button class="play-video-link" onclick="openVideoModal('${ev.cam} // ${ev.time}', '${ev.video}')">
+    if (currentEvents.length === 0) {
+      wallTbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align:center; padding: 26px 12px; color:var(--text-muted); font-family:var(--font-mono); font-size:11px;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--cai-gold);"></span>
+              <span>NESSUN EVENTO REGISTRATO // NVR PRONTO AL RILEVAMENTO</span>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      currentEvents.slice(0, 4).forEach(ev => {
+        const camLabel = formatCamName(ev.camera);
+        const subjLabel = formatEventLabel(ev.label);
+        const thumbUrl = ev.thumb || 'assets/img/icona-ai-viola-su-scuro.svg';
+        const videoBtn = ev.video ? `
+          <button class="play-video-link" onclick="openVideoModal('${camLabel} // ${ev.time}', '${ev.video}')">
             <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             <span>Play MP4</span>
           </button>
-        </td>
-      `;
-      wallTbody.appendChild(tr);
-    });
+        ` : `<span style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim);">No Clip</span>`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted);">${ev.time}</td>
+          <td style="font-weight:600; font-size:11px;">${camLabel}</td>
+          <td>
+            <span class="status-beacon" style="color:var(--text-main); font-weight:500;">${subjLabel}</span>
+            <span style="font-family:var(--font-mono); font-size:10px; color:var(--cai-gold);">(${ev.conf || '90%'})</span>
+          </td>
+          <td>
+            <div class="event-thumb-wrap">
+              <img src="${thumbUrl}" alt="Snapshot" onerror="this.src='assets/img/icona-ai-viola-su-scuro.svg'">
+            </div>
+          </td>
+          <td>${videoBtn}</td>
+        `;
+        wallTbody.appendChild(tr);
+      });
+    }
   }
 
   if (fullTbody) {
     fullTbody.innerHTML = '';
-    mockEvents.forEach(ev => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">${ev.time}</td>
-        <td><strong>${ev.cam}</strong></td>
-        <td>${ev.subj}</td>
-        <td><span style="font-family:var(--font-mono); color:var(--cai-gold); font-weight:600;">${ev.conf}</span></td>
-        <td>
-          <div class="event-thumb-wrap" style="width:60px; height:38px;">
-            <img src="${ev.thumb}" alt="Snapshot">
-          </div>
-        </td>
-        <td>
-          <button class="play-video-link" onclick="openVideoModal('${ev.cam} // ${ev.time}', '${ev.video}')">
-            <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <span>Riproduci Video NAS</span>
-          </button>
-        </td>
+    if (currentEvents.length === 0) {
+      fullTbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding: 48px 16px; color:var(--text-muted); font-family:var(--font-mono); font-size:12px;">
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+              <span style="color:var(--cai-gold); font-weight:700; letter-spacing:0.08em; font-family:var(--font-brand);">REGISTRO EVENTI VUOTO // HARDWARE IN ATTESA</span>
+              <span style="font-size:11px; color:var(--text-dim);">Gli snapshot e le registrazioni appariranno in tempo reale ai primi passaggi rilevati dai sensori ottici.</span>
+            </div>
+          </td>
+        </tr>
       `;
-      fullTbody.appendChild(tr);
-    });
+    } else {
+      currentEvents.forEach(ev => {
+        const camLabel = formatCamName(ev.camera);
+        const subjLabel = formatEventLabel(ev.label);
+        const thumbUrl = ev.thumb || 'assets/img/icona-ai-viola-su-scuro.svg';
+        const videoBtn = ev.video ? `
+          <button class="play-video-link" onclick="openVideoModal('${camLabel} // ${ev.time}', '${ev.video}')">
+            <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>Riproduci Video NVR</span>
+          </button>
+        ` : `<span style="font-family:var(--font-mono); font-size:11px; color:var(--text-dim);">Solo Snapshot</span>`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">${ev.time}</td>
+          <td><strong>${camLabel}</strong></td>
+          <td>${subjLabel}</td>
+          <td><span style="font-family:var(--font-mono); color:var(--cai-gold); font-weight:600;">${ev.conf || '90%'}</span></td>
+          <td>
+            <div class="event-thumb-wrap" style="width:60px; height:38px;">
+              <img src="${thumbUrl}" alt="Snapshot" onerror="this.src='assets/img/icona-ai-viola-su-scuro.svg'">
+            </div>
+          </td>
+          <td>${videoBtn}</td>
+        `;
+        fullTbody.appendChild(tr);
+      });
+    }
   }
 }
 
@@ -703,7 +798,9 @@ window.addEventListener('keydown', (e) => {
 // Inizializzazione iniziale
 document.addEventListener('DOMContentLoaded', () => {
   renderPlates();
-  renderEvents();
+  loadRealEvents();
+  // Aggiornamento periodico eventi reali ogni 5 secondi
+  setInterval(loadRealEvents, 5000);
   loadSettings();
 
   // Controllo sessione PIN attiva

@@ -133,56 +133,91 @@
         
         <section class="video-wall-grid">
           <!-- Camera 1: Varco Carrabile (Hero View) -->
-          <div class="cam-viewport-hero">
-            <img src="https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=1200&q=80" alt="Varco Carrabile" class="feed-img-live">
+          <div class="cam-viewport-hero" id="viewportCam1">
+            <!-- Standby Tactical Screen (Active when disconnected) -->
+            <div class="camera-standby-screen" id="standbyCam1">
+              <div class="standby-radar-ring">
+                <div class="standby-radar-dot"></div>
+              </div>
+              <div class="standby-text-block">
+                <span class="standby-title">CAM 01 // VARCO CARRABILE</span>
+                <span class="standby-sub">RTSP: 192.168.20.11:554/h264Preview_01_main</span>
+                <span class="standby-status-tag">[IN ATTESA SEGNALE HARDWARE]</span>
+              </div>
+            </div>
+
+            <!-- Live Stream Feed from Frigate proxy -->
+            <img id="streamCam1" class="camera-stream-feed" src="/api/camera/varco_carrabile" alt="Varco Carrabile Live" onerror="handleStreamError(1)" onload="handleStreamLoaded(1)">
+
             <div class="cam-scanlines"></div>
             <div class="cam-crosshair"></div>
             
             <div class="feed-hud-top">
               <span class="cam-tag-glass">CAM 01 // VARCO CARRABILE</span>
-              <div class="ai-hud-pill plate">
-                <span>TARGET: FG492KS</span>
-                <span>94% CONF</span>
-              </div>
+              <span id="camStatusBadge1" class="cam-status-pill offline">● OFFLINE</span>
             </div>
 
             <div class="feed-hud-bottom">
-              <span>RTSP 4K • 25.0 FPS • 8192 KBPS</span>
-              <span>ENC: JETSON NVDEC H.264</span>
+              <span id="camTechInfo1">RTSP 4K • 25.0 FPS • NVDEC H.264</span>
+              <span>SUBNET // 192.168.20.11</span>
             </div>
           </div>
 
           <!-- Camera 2: Varco Pedonale -->
-          <div class="cam-viewport-secondary">
-            <img src="https://images.unsplash.com/photo-1541888946425-d0fbb186c5f3?auto=format&fit=crop&w=800&q=80" alt="Varco Pedonale" class="feed-img-live">
+          <div class="cam-viewport-secondary" id="viewportCam2">
+            <!-- Standby Tactical Screen -->
+            <div class="camera-standby-screen" id="standbyCam2">
+              <div class="standby-radar-ring">
+                <div class="standby-radar-dot"></div>
+              </div>
+              <div class="standby-text-block">
+                <span class="standby-title">CAM 02 // VARCO PEDONALE</span>
+                <span class="standby-sub">RTSP: 192.168.20.12:554/h264Preview_01_main</span>
+                <span class="standby-status-tag">[IN ATTESA SEGNALE HARDWARE]</span>
+              </div>
+            </div>
+
+            <img id="streamCam2" class="camera-stream-feed" src="/api/camera/varco_pedonale" alt="Varco Pedonale Live" onerror="handleStreamError(2)" onload="handleStreamLoaded(2)">
+
             <div class="cam-scanlines"></div>
             
             <div class="feed-hud-top">
               <span class="cam-tag-glass">CAM 02 // VARCO PEDONALE</span>
-              <div class="ai-hud-pill person">
-                <span>PERSONA RILEVATA</span>
-              </div>
+              <span id="camStatusBadge2" class="cam-status-pill offline">● OFFLINE</span>
             </div>
 
             <div class="feed-hud-bottom">
               <span>RTSP 4K • 25.0 FPS</span>
-              <span>SUBNET // 192.168.1.21</span>
+              <span>SUBNET // 192.168.20.12</span>
             </div>
           </div>
 
           <!-- Camera 3: Piazzale -->
-          <div class="cam-viewport-secondary">
-            <img src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80" alt="Piazzale" class="feed-img-live">
+          <div class="cam-viewport-secondary" id="viewportCam3">
+            <!-- Standby Tactical Screen -->
+            <div class="camera-standby-screen" id="standbyCam3">
+              <div class="standby-radar-ring">
+                <div class="standby-radar-dot"></div>
+              </div>
+              <div class="standby-text-block">
+                <span class="standby-title">CAM 03 // PIAZZALE CENTRALE</span>
+                <span class="standby-sub">RTSP: 192.168.20.13:554/h264Preview_01_main</span>
+                <span class="standby-status-tag">[IN ATTESA SEGNALE HARDWARE]</span>
+              </div>
+            </div>
+
+            <img id="streamCam3" class="camera-stream-feed" src="/api/camera/piazzale" alt="Piazzale Live" onerror="handleStreamError(3)" onload="handleStreamLoaded(3)">
+
             <div class="cam-scanlines"></div>
             
             <div class="feed-hud-top">
               <span class="cam-tag-glass">CAM 03 // PIAZZALE CENTRALE</span>
-              <span class="cam-tag-glass" style="font-size:10px; color:var(--accent-green);">MONITORAGGIO ATTIVO</span>
+              <span id="camStatusBadge3" class="cam-status-pill offline">● OFFLINE</span>
             </div>
 
             <div class="feed-hud-bottom">
               <span>RTSP 4K • 25.0 FPS</span>
-              <span>SUBNET // 192.168.1.22</span>
+              <span>SUBNET // 192.168.20.13</span>
             </div>
           </div>
         </section>

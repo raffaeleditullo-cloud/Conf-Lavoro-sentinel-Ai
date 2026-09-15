@@ -561,7 +561,144 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
-  filter: contrast(1.04) brightness(0.96);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * STANDBY & REAL CAMERA STREAM SYSTEM
+ * ────────────────────────────────────────────────────────────────────────────── */
+.camera-stream-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.camera-stream-feed.online {
+  opacity: 1;
+}
+
+.camera-standby-screen {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, #0a0d18 0%, #030306 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 3;
+  padding: 20px;
+  text-align: center;
+  transition: opacity 0.3s ease;
+}
+
+.camera-standby-screen.feed-connected {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.standby-radar-ring {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(138, 84, 234, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.standby-radar-ring::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1px dashed rgba(212, 175, 55, 0.35);
+  animation: radar-spin 10s linear infinite;
+}
+
+@keyframes radar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.standby-radar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cai-gold);
+  box-shadow: 0 0 10px var(--cai-gold-glow);
+  animation: pulse-standby 2.2s infinite;
+}
+
+@keyframes pulse-standby {
+  0%, 100% { transform: scale(0.85); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.standby-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.standby-title {
+  font-family: var(--font-brand);
+  font-variation-settings: "wdth" 120, "wght" 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--text-main);
+  text-transform: uppercase;
+}
+
+.standby-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+.standby-status-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--cai-gold);
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.cam-status-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cam-status-pill.offline {
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: var(--accent-red);
+}
+
+.cam-status-pill.live {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: var(--accent-green);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
 }
 
 /* Subtle Tactical Scanlines */

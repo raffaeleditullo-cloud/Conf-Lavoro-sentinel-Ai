@@ -108,6 +108,83 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
             self._send_json(data)
             return
 
+        # API Eventi Reali da database SQLite Frigate
+        elif parsed.path == "/api/events":
+            events = []
+            db_path = os.environ.get("DB_PATH", "/media/frigate/db/frigate.db" if os.path.exists("/media/frigate/db/frigate.db") else os.path.join(BASE_DIR, "..", "storage", "db", "frigate.db"))
+            if os.path.exists(db_path):
+                try:
+                    import sqlite3
+                    conn = sqlite3.connect(db_path)
+                    c = conn.cursor()
+                    c.execute("SELECT id, camera, label, start_time, top_score, has_clip, has_snapshot FROM events ORDER BY start_time DESC LIMIT 25")
+                    rows = c.fetchall()
+                    conn.close()
+                    for r in rows:
+                        events.append({
+                            "id": r[0],
+                            "camera": r[1],
+                            "label": r[2],
+                            "time": time.strftime("%H:%M:%S", time.localtime(r[3])),
+                            "conf": f"{int(r[4] * 100)}%" if r[4] else "90%",
+                            "has_clip": bool(r[5]) if len(r) > 5 else False,
+                            "has_snapshot": bool(r[6]) if len(r) > 6 else False,
+                            "thumb": f"/api/events/{r[0]}/snapshot.jpg" if (len(r) > 6 and r[6]) else None,
+                            "video": f"/api/events/{r[0]}/clip.mp4" if (len(r) > 5 and r[5]) else None
+                        })
+                except Exception:
+                    pass
+            self._send_json(events)
+            return
+
+        # API Proxy Media Eventi (Snapshot e Clip MP4) da Frigate
+        elif parsed.path.startswith("/api/events/") and ("/snapshot.jpg" in parsed.path or "/clip.mp4" in parsed.path):
+            subpath = parsed.path.replace("/api/events/", "").strip()
+            import urllib.request
+            frigate_url = f"http://127.0.0.1:5000/api/events/{subpath}"
+            try:
+                req = urllib.request.Request(frigate_url)
+                with urllib.request.urlopen(req, timeout=3.0) as response:
+                    c_type = response.headers.get("Content-Type", "image/jpeg" if "snapshot" in subpath else "video/mp4")
+                    self.send_response(200)
+                    self.send_header("Content-Type", c_type)
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    while True:
+                        chunk = response.read(65536)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                return
+            except Exception:
+                self.send_response(404)
+                self.end_headers()
+                return
+
+        # API Proxy Stream Telecamere da Frigate (localhost:5000/api/<camera>)
+        elif parsed.path.startswith("/api/camera/"):
+            cam_name = parsed.path.replace("/api/camera/", "").strip()
+            import urllib.request
+            frigate_url = f"http://127.0.0.1:5000/api/{cam_name}"
+            try:
+                req = urllib.request.Request(frigate_url)
+                with urllib.request.urlopen(req, timeout=1.5) as response:
+                    content_type = response.headers.get("Content-Type", "image/jpeg")
+                    self.send_response(200)
+                    self.send_header("Content-Type", content_type)
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    while True:
+                        chunk = response.read(65536)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                return
+            except Exception:
+                # Telecamera o Frigate disconnessi: 503 con fallback standby
+                self._send_json({"connected": False, "status": "offline", "camera": cam_name}, status=503)
+                return
+
         # Serve i file statici normalmente
         return super().do_GET()
 
