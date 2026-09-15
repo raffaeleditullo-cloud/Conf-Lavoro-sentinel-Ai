@@ -68,6 +68,36 @@ const authModalLogo = document.getElementById('authModalLogo');
 const SUN_ICON = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 const MOON_ICON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
 
+function updateBrandLogos(theme, isCollapsed) {
+  const isLight = (theme === 'light');
+
+  if (brandLogo) {
+    if (isCollapsed) {
+      // Quando la barra è chiusa: SOLO icona AI (oro in chiaro, viola in scuro)
+      brandLogo.src = isLight 
+        ? 'assets/img/conflavoro-ai-icon-oro.svg' 
+        : 'assets/img/conflavoro-ai-icon-viola.svg';
+    } else {
+      // Quando la barra è aperta: logo completo CONFLAVORO AI (AI oro in chiaro, AI viola in scuro)
+      brandLogo.src = isLight 
+        ? 'assets/img/conflavoro-ai-oro.svg' 
+        : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
+    }
+  }
+
+  if (mobileBrandLogo) {
+    mobileBrandLogo.src = isLight 
+      ? 'assets/img/conflavoro-ai-oro.svg' 
+      : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
+  }
+
+  if (authModalLogo) {
+    authModalLogo.src = isLight 
+      ? 'assets/img/conflavoro-ai-oro.svg' 
+      : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
+  }
+}
+
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('sentinel_theme', theme);
@@ -79,15 +109,9 @@ function applyTheme(theme) {
     const mSvg = mobileThemeToggle.querySelector('svg');
     if (mSvg) mSvg.innerHTML = isLight ? MOON_ICON : SUN_ICON;
   }
-  if (brandLogo) {
-    brandLogo.src = 'assets/img/conflavoro-ai-viola-su-scuro.svg';
-  }
-  if (mobileBrandLogo) {
-    mobileBrandLogo.src = isLight ? 'assets/img/conflavoro-ai-viola-su-chiaro.svg' : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
-  }
-  if (authModalLogo) {
-    authModalLogo.src = isLight ? 'assets/img/conflavoro-ai-viola-su-chiaro.svg' : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
-  }
+
+  const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+  updateBrandLogos(theme, isCollapsed);
 }
 
 function toggleTheme() {
@@ -113,6 +137,7 @@ const ICON_COLLAPSE = '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1
 
 function setSidebarCollapsed(collapsed) {
   if (!sidebar) return;
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
   if (collapsed) {
     sidebar.classList.add('collapsed');
     if (collapseSvg) collapseSvg.innerHTML = ICON_EXPAND;
@@ -124,6 +149,7 @@ function setSidebarCollapsed(collapsed) {
     if (collapseBtn) collapseBtn.title = 'Comprimi Barra Laterale';
     localStorage.setItem('sentinel_sidebar_collapsed', '0');
   }
+  updateBrandLogos(currentTheme, collapsed);
 }
 
 if (collapseBtn) {
