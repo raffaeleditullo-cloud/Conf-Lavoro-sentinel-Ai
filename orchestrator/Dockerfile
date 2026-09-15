@@ -16,8 +16,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia script orchestratore
-COPY observer.py .
+# Copia tutti gli script Python dell'orchestratore (observer, relay, speaker, nas)
+COPY *.py .
 
 # Cartella di destinazione per i registri eventi montata dall'host
 VOLUME ["/app/logs"]

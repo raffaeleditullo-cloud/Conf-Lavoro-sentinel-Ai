@@ -434,6 +434,25 @@ function handleStreamError(camId) {
   }, 10000);
 }
 
+// Esponi esplicitamente su window per retrocompatibilità globale
+window.handleStreamLoaded = handleStreamLoaded;
+window.handleStreamError = handleStreamError;
+
+function initCameraStreams() {
+  [1, 2, 3].forEach(camId => {
+    const stream = document.getElementById(`streamCam${camId}`);
+    if (!stream) return;
+    
+    stream.onload = () => handleStreamLoaded(camId);
+    stream.onerror = () => handleStreamError(camId);
+
+    // Se l'immagine era già in cache o completata prima dell'esecuzione del JS:
+    if (stream.complete && stream.naturalWidth > 0) {
+      handleStreamLoaded(camId);
+    }
+  });
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 5B. ATTIVITÀ IN TEMPO REALE & REGISTRO EVIDENZE REALI (ZERO DATI FINTI)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1077,6 +1096,7 @@ window.addEventListener('keydown', (e) => {
 
 // Inizializzazione iniziale
 document.addEventListener('DOMContentLoaded', () => {
+  initCameraStreams();
   loadPlates();
   loadRealEvents();
   // Aggiornamento periodico eventi reali ogni 5 secondi

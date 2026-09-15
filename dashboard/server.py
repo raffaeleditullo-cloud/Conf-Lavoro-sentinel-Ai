@@ -13,6 +13,8 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
 
 PORT = int(os.environ.get("DASHBOARD_PORT", "8080"))
+FRIGATE_HOST = os.environ.get("FRIGATE_HOST", "frigate")
+FRIGATE_PORT = int(os.environ.get("FRIGATE_PORT", "5000"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.environ.get("CONFIG_DIR", "/config" if os.path.exists("/config") else os.path.abspath(os.path.join(BASE_DIR, "..", "config")))
 PLATES_FILE = os.path.join(CONFIG_DIR, "known_plates.json")
@@ -320,10 +322,10 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         elif parsed.path.startswith("/api/events/") and ("/snapshot.jpg" in parsed.path or "/clip.mp4" in parsed.path):
             subpath = parsed.path.replace("/api/events/", "").strip()
             import urllib.request
-            frigate_url = f"http://127.0.0.1:5000/api/events/{subpath}"
+            frigate_url = f"http://{FRIGATE_HOST}:{FRIGATE_PORT}/api/events/{subpath}"
             try:
                 req = urllib.request.Request(frigate_url)
-                with urllib.request.urlopen(req, timeout=3.0) as response:
+                with urllib.request.urlopen(req, timeout=5.0) as response:
                     c_type = response.headers.get("Content-Type", "image/jpeg" if "snapshot" in subpath else "video/mp4")
                     self.send_response(200)
                     self.send_header("Content-Type", c_type)
@@ -340,7 +342,7 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 return
 
-        # API Proxy Singolo Frame Telecamere da Frigate (localhost:5000/api/<camera>/latest.jpg)
+        # API Proxy Singolo Frame Telecamere da Frigate (http://<FRIGATE_HOST>:<PORT>/api/<camera>/latest.jpg)
         # Usa latest.jpg invece dello stream MJPEG continuo per evitare BrokenPipeError:
         # lo stream MJPEG non termina mai, blocca il thread HTTP e causa timeout + ciclo di ricaricamento.
         # Il frontend effettua il polling periodico di latest.jpg simulando il video.
@@ -353,7 +355,7 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 cam_name = cam_path
             import urllib.request
             # Richiede sempre il singolo fotogramma latest.jpg da Frigate
-            frigate_url = f"http://127.0.0.1:5000/api/{cam_name}/latest.jpg"
+            frigate_url = f"http://{FRIGATE_HOST}:{FRIGATE_PORT}/api/{cam_name}/latest.jpg"
             try:
                 req = urllib.request.Request(frigate_url)
                 # Timeout elevato: su Jetson Orin Nano Frigate puo' impiegare fino a 10s per il primo frame
