@@ -81,8 +81,16 @@ services:
       - "8080:8080"
     volumes:
       - ./config:/config
+      # Driver hardware condivisi con l'orchestratore (relè Modbus + altoparlante Fanvil).
+      # Senza questo montaggio server.py non riesce a importarli e i comandi manuali
+      # della dashboard rispondono "success" senza pilotare nulla.
+      - ./orchestrator:/app/drivers:ro
+      # Pacchetti audio ufficiali: unica copia autorevole, condivisa con l'orchestratore
       - ./orchestrator/audio:/app/audio:ro
       - ./storage/logs:/app/logs:ro
+      # Database eventi di Frigate in SOLA LETTURA: alimenta /api/events (Archivio Evidenze).
+      # Frigate ci scrive di continuo, quindi la dashboard lo apre read-only per non contendere il lock.
+      - ${STORAGE_DB_PATH:-./storage/db}:/media/frigate/db:ro
     env_file:
       - .env
     depends_on:

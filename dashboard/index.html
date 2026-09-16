@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SENTINEL AI // Mission Control</title>
-  <link rel="stylesheet" href="assets/styles.css?v=6.0">
+  <link rel="stylesheet" href="assets/styles.css?v=7.0">
 </head>
 <body>
 
@@ -145,94 +145,89 @@
       <div id="view-wall" class="view-panel view-data">
         
         <section class="video-wall-grid">
-          <!-- Camera 1: Varco Carrabile (Hero View) -->
-          <div class="cam-viewport-hero" id="viewportCam1">
-            <!-- Standby Tactical Screen (Active when disconnected) -->
-            <div class="camera-standby-screen" id="standbyCam1">
-              <div class="standby-radar-ring">
-                <div class="standby-radar-dot"></div>
+          <button type="button" class="cam-card" onclick="openCamModal(1)" aria-label="Ingrandisci Varco Carrabile a schermo intero">
+            <div class="cam-card-viewport">
+              <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
+              <div class="camera-standby-screen" id="standbyCam1">
+                <div class="standby-radar-ring">
+                  <div class="standby-radar-dot"></div>
+                </div>
+                <div class="standby-text-block">
+                  <span class="standby-title">Varco Carrabile</span>
+                  <span class="standby-sub">In attesa del segnale</span>
+                </div>
               </div>
-              <div class="standby-text-block">
-                <span class="standby-title">CAM 01 // VARCO CARRABILE</span>
-                <span class="standby-sub">RTSP: 192.168.20.11:554/h264Preview_01_main</span>
-                <span class="standby-status-tag">[IN ATTESA SEGNALE HARDWARE]</span>
+
+              <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
+              <img id="streamCam1" class="camera-stream-feed" src="/api/camera/varco_carrabile/latest.jpg" alt="Varco Carrabile in diretta">
+
+              <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
+            </div>
+
+            <div class="cam-card-footer">
+              <div class="cam-card-ident">
+                <span class="cam-card-name">Varco Carrabile</span>
+                <span class="cam-card-meta" id="camCardMeta1">In attesa del segnale</span>
               </div>
+              <span id="camStatusBadge1" class="cam-status-pill offline">Offline</span>
             </div>
+          </button>
 
-            <!-- Live Stream Feed from Frigate proxy -->
-            <img id="streamCam1" class="camera-stream-feed" src="/api/camera/varco_carrabile/latest.jpg" alt="Varco Carrabile Live">
-
-            <div class="cam-scanlines"></div>
-            <div class="cam-crosshair"></div>
-            
-            <div class="feed-hud-top">
-              <span class="cam-tag-glass">CAM 01 // VARCO CARRABILE</span>
-              <span id="camStatusBadge1" class="cam-status-pill offline">● OFFLINE</span>
-            </div>
-
-            <div class="feed-hud-bottom">
-              <span id="camTechInfo1">RTSP 4K • 25.0 FPS • NVDEC H.264</span>
-              <span>SUBNET // 192.168.20.11</span>
-            </div>
-          </div>
-
-          <!-- Camera 2: Varco Pedonale -->
-          <div class="cam-viewport-secondary" id="viewportCam2">
-            <!-- Standby Tactical Screen -->
-            <div class="camera-standby-screen" id="standbyCam2">
-              <div class="standby-radar-ring">
-                <div class="standby-radar-dot"></div>
+          <button type="button" class="cam-card" onclick="openCamModal(2)" aria-label="Ingrandisci Varco Pedonale a schermo intero">
+            <div class="cam-card-viewport">
+              <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
+              <div class="camera-standby-screen" id="standbyCam2">
+                <div class="standby-radar-ring">
+                  <div class="standby-radar-dot"></div>
+                </div>
+                <div class="standby-text-block">
+                  <span class="standby-title">Varco Pedonale</span>
+                  <span class="standby-sub">In attesa del segnale</span>
+                </div>
               </div>
-              <div class="standby-text-block">
-                <span class="standby-title">CAM 02 // VARCO PEDONALE</span>
-                <span class="standby-sub">RTSP: 192.168.20.12:554/h264Preview_01_main</span>
-                <span class="standby-status-tag">[IN ATTESA SEGNALE HARDWARE]</span>
+
+              <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
+              <img id="streamCam2" class="camera-stream-feed" src="/api/camera/varco_pedonale/latest.jpg" alt="Varco Pedonale in diretta">
+
+              <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
+            </div>
+
+            <div class="cam-card-footer">
+              <div class="cam-card-ident">
+                <span class="cam-card-name">Varco Pedonale</span>
+                <span class="cam-card-meta" id="camCardMeta2">In attesa del segnale</span>
               </div>
+              <span id="camStatusBadge2" class="cam-status-pill offline">Offline</span>
             </div>
+          </button>
 
-            <img id="streamCam2" class="camera-stream-feed" src="/api/camera/varco_pedonale/latest.jpg" alt="Varco Pedonale Live">
-
-            <div class="cam-scanlines"></div>
-            
-            <div class="feed-hud-top">
-              <span class="cam-tag-glass">CAM 02 // VARCO PEDONALE</span>
-              <span id="camStatusBadge2" class="cam-status-pill offline">● OFFLINE</span>
-            </div>
-
-            <div class="feed-hud-bottom">
-              <span>RTSP 4K • 25.0 FPS</span>
-              <span>SUBNET // 192.168.20.12</span>
-            </div>
-          </div>
-
-          <!-- Camera 3: Piazzale -->
-          <div class="cam-viewport-secondary" id="viewportCam3">
-            <!-- Standby Tactical Screen -->
-            <div class="camera-standby-screen" id="standbyCam3">
-              <div class="standby-radar-ring">
-                <div class="standby-radar-dot"></div>
+          <button type="button" class="cam-card" onclick="openCamModal(3)" aria-label="Ingrandisci Piazzale a schermo intero">
+            <div class="cam-card-viewport">
+              <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
+              <div class="camera-standby-screen" id="standbyCam3">
+                <div class="standby-radar-ring">
+                  <div class="standby-radar-dot"></div>
+                </div>
+                <div class="standby-text-block">
+                  <span class="standby-title">Piazzale</span>
+                  <span class="standby-sub">In attesa del segnale</span>
+                </div>
               </div>
-              <div class="standby-text-block">
-                <span class="standby-title">CAM 03 // PIAZZALE CENTRALE</span>
-                <span class="standby-sub">RTSP: 192.168.20.13:554/h264Preview_01_main</span>
-                <span class="standby-status-tag">[IN ATTESA SEGNALE HARDWARE]</span>
+
+              <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
+              <img id="streamCam3" class="camera-stream-feed" src="/api/camera/piazzale/latest.jpg" alt="Piazzale in diretta">
+
+              <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
+            </div>
+
+            <div class="cam-card-footer">
+              <div class="cam-card-ident">
+                <span class="cam-card-name">Piazzale</span>
+                <span class="cam-card-meta" id="camCardMeta3">In attesa del segnale</span>
               </div>
+              <span id="camStatusBadge3" class="cam-status-pill offline">Offline</span>
             </div>
-
-            <img id="streamCam3" class="camera-stream-feed" src="/api/camera/piazzale/latest.jpg" alt="Piazzale Live">
-
-            <div class="cam-scanlines"></div>
-            
-            <div class="feed-hud-top">
-              <span class="cam-tag-glass">CAM 03 // PIAZZALE CENTRALE</span>
-              <span id="camStatusBadge3" class="cam-status-pill offline">● OFFLINE</span>
-            </div>
-
-            <div class="feed-hud-bottom">
-              <span>RTSP 4K • 25.0 FPS</span>
-              <span>SUBNET // 192.168.20.13</span>
-            </div>
-          </div>
+          </button>
         </section>
 
         <!-- FLOATING COMMAND DOCK -->
@@ -501,7 +496,7 @@
             <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
               <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:12px; padding:9px 18px;">
                 <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
-                <span>Trasmetti Traccia su Diffusore Fanvil (.35)</span>
+                <span>Trasmetti Traccia su Diffusore Fanvil (.31)</span>
               </button>
             </div>
 
@@ -512,7 +507,7 @@
             <div class="panel-header-minimal">
               <div class="ev-head-text">
                 <h3>Parametri Audio & Attuatori</h3>
-                <p class="ev-head-sub">Regolazione hardware Fanvil (.35) e Modbus Relè (.30)</p>
+                <p class="ev-head-sub">Regolazione hardware Fanvil (.31) e Modbus Relè (.30)</p>
               </div>
               <span class="status-beacon">HARDWARE LINKED</span>
             </div>
@@ -522,7 +517,7 @@
               <label class="setting-section-label">DESTINAZIONE OUTPUT AUDIO (HARDWARE)</label>
               <select id="selAudioTarget" class="ultra-input" style="margin-bottom:14px; font-weight:600;">
                 <option value="cameras" selected>Altoparlanti Integrati Telecamere Reolink (Banco Collaudo)</option>
-                <option value="fanvil">Diffusore IP Fanvil A233 // 192.168.1.35 (Esterno)</option>
+                <option value="fanvil">Diffusore IP Fanvil A233 // 192.168.1.31 (Esterno)</option>
               </select>
             </div>
 
@@ -686,6 +681,56 @@
     </div>
   </div>
   <!-- ──────────────────────────────────────────────────────────────────────────
+       MODALE TELECAMERA A SCHERMO INTERO (CLIC SU UNA SCHEDA DEL VIDEO WALL)
+       Ha un flusso proprio (#camModalStream) con polling dedicato: la griglia
+       sottostante continua a lavorare senza interferenze.
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div id="camModal" class="cam-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="camModalTitle">
+    <div class="cam-modal">
+      <div class="cam-modal-header">
+        <div class="cam-modal-ident">
+          <span class="cam-modal-title" id="camModalTitle">Telecamera</span>
+          <span id="camModalBadge" class="cam-status-pill offline">Offline</span>
+        </div>
+        <button type="button" class="cam-modal-close" onclick="closeCamModal()" aria-label="Chiudi la vista a schermo intero">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span>Chiudi</span>
+        </button>
+      </div>
+
+      <div class="cam-modal-stage">
+        <img id="camModalStream" class="cam-modal-stream" alt="">
+        <div id="camModalStandby" class="cam-modal-standby is-visible">
+          <div class="standby-radar-ring">
+            <div class="standby-radar-dot"></div>
+          </div>
+          <div class="standby-text-block">
+            <span class="standby-title">In attesa del segnale</span>
+            <span class="standby-sub" id="camModalStandbySub">Riconnessione automatica in corso</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cam-modal-actions">
+        <button type="button" id="modalFaroBtn" class="dock-action-btn btn-faro" onclick="triggerFaro()">
+          <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="11" height="8" rx="1.5"/><path d="M13.5 8.2 20 5.5v8l-6.5-2.7"/><path d="M8 13.5v3.5"/><path d="M4.5 20.5 8 17l3.5 3.5"/></svg>
+          <span id="modalFaroLabel">Accendi Faro</span>
+        </button>
+
+        <button type="button" id="modalGateBtn" class="dock-action-btn btn-gate" onclick="triggerGate()">
+          <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 7.5h11v12h-11z"/><path d="M6.2 7.5v12M9.8 7.5v12"/><path d="M2.5 13.5h11"/><path d="M16.5 13.5H21"/><path d="m18.8 11.2 2.3 2.3-2.3 2.3"/></svg>
+          <span id="modalGateLabel">Apri Cancello</span>
+        </button>
+
+        <button type="button" id="modalVoiceBtn" class="dock-action-btn btn-siren" onclick="triggerVoice()">
+          <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
+          <span id="modalVoiceLabel">Dissuasione Audio</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
        MOBILE BOTTOM NAVIGATION BAR (FORMATO TELEFONO)
        ────────────────────────────────────────────────────────────────────────── -->
   <nav class="mobile-bottom-nav">
@@ -765,6 +810,6 @@
     </div>
   </div>
 
-  <script src="assets/app.js?v=6.0"></script>
+  <script src="assets/app.js?v=7.0"></script>
 </body>
 </html>

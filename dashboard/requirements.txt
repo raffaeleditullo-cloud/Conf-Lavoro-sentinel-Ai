@@ -1,0 +1,9 @@
+# Dipendenze della Dashboard Web Hub (Fase 3).
+# Servono esclusivamente ai driver hardware condivisi montati da ../orchestrator
+# su /app/drivers (relay_controller.py e speaker_controller.py).
+# Le versioni sono allineate a orchestrator/requirements.txt: se cambiano li,
+# vanno aggiornate anche qui.
+# pymodbus: BSD-3-Clause (rele Waveshare Modbus TCP)
+pymodbus==3.8.3
+# requests: Apache-2.0 (altoparlante Fanvil A233 e proxy API Frigate)
+requests==2.32.3

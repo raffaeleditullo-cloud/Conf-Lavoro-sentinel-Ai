@@ -33,25 +33,43 @@ class FanvilSpeakerController:
         Esegue la richiesta in background senza bloccare il flusso del rilevamento.
         """
         def _play_worker():
-            if not os.path.exists(audio_filepath):
-                logger.error("File audio non trovato: %s", audio_filepath)
+            abs_path = os.path.abspath(audio_filepath)
+
+            if not os.path.exists(abs_path):
+                logger.error(
+                    "DISSUASIONE VOCALE NON ESEGUITA: file audio inesistente '%s'. "
+                    "Verificare il montaggio della cartella audio nel container.",
+                    abs_path
+                )
                 return
 
-            filename = os.path.basename(audio_filepath)
-            logger.info("Avvio riproduzione audio su Fanvil %s: %s", self.host, filename)
-
-            # Fanvil API standard per avvio riproduzione audio o trigger allarme
-            # NOTA: I dispositivi Fanvil supportano chiamate Action URL / CGI standard:
-            # es. /cgi-bin/ConfigManApp.com?key=tone:alert o riproduzione via web server locale.
             try:
-                # Esempio comando API Fanvil HTTP Digest/Basic Auth
-                # Se l'altoparlante ha il file caricato a bordo o streaming:
-                play_url = f"{self.base_url}/cgi-bin/ConfigManApp.com"
-                params = {
-                    "key": f"play:{filename}"
-                }
-                
-                # Tentativo chiamata HTTP (con fallback morbido se siamo in modalità simulatore/collaudo)
+                size_bytes = os.path.getsize(abs_path)
+            except OSError as size_err:
+                logger.error("Impossibile leggere il file audio '%s': %s", abs_path, size_err)
+                return
+
+            if size_bytes == 0:
+                logger.error("DISSUASIONE VOCALE NON ESEGUITA: file audio vuoto (0 byte): '%s'", abs_path)
+                return
+
+            filename = os.path.basename(abs_path)
+
+            # ATTENZIONE — API DA VALIDARE SUL DISPOSITIVO REALE:
+            # questo endpoint CGI e' una ipotesi di lavoro, non una specifica verificata
+            # del firmware Fanvil A233. Inoltre invia il solo NOME del file, quindi
+            # presuppone che l'MP3 sia gia' caricato a bordo dell'altoparlante: nessuna
+            # procedura del progetto carica oggi quei file sul dispositivo.
+            # Da confermare in campo con la documentazione del firmware installato.
+            play_url = f"{self.base_url}/cgi-bin/ConfigManApp.com"
+            params = {"key": f"play:{filename}"}
+
+            logger.info(
+                "Comando dissuasione vocale -> Fanvil %s:%d | file locale: '%s' (%d byte) | URL: %s?key=%s",
+                self.host, self.http_port, abs_path, size_bytes, play_url, params["key"]
+            )
+
+            try:
                 res = requests.get(
                     play_url,
                     params=params,
@@ -59,17 +77,43 @@ class FanvilSpeakerController:
                     timeout=self.timeout
                 )
                 if res.status_code == 200:
-                    logger.info("Comando audio ricevuto con successo da Fanvil %s", self.host)
+                    logger.info(
+                        "Fanvil %s ha accettato il comando (HTTP 200) per '%s'. "
+                        "Se non si sente audio, il file non e' presente a bordo del dispositivo "
+                        "oppure l'endpoint CGI non e' quello corretto per questo firmware.",
+                        self.host, filename
+                    )
+                elif res.status_code in (401, 403):
+                    logger.error(
+                        "DISSUASIONE VOCALE RIFIUTATA: Fanvil %s ha risposto HTTP %d (autenticazione). "
+                        "Verificare SPEAKER_USER e SPEAKER_PASSWORD nel file .env.",
+                        self.host, res.status_code
+                    )
                 else:
-                    logger.warning("Fanvil %s ha risposto con codice HTTP %d", self.host, res.status_code)
+                    logger.error(
+                        "DISSUASIONE VOCALE FALLITA: Fanvil %s ha risposto HTTP %d per '%s'. Corpo: %s",
+                        self.host, res.status_code, filename, res.text[:200].replace("\n", " ")
+                    )
 
+            except requests.exceptions.ConnectTimeout:
+                logger.error(
+                    "DISSUASIONE VOCALE FALLITA: timeout di connessione (%.1fs) verso l'altoparlante "
+                    "Fanvil %s:%d. Dispositivo spento, IP errato o non raggiungibile dalla rete del container.",
+                    self.timeout, self.host, self.http_port
+                )
+            except requests.exceptions.ConnectionError as conn_err:
+                logger.error(
+                    "DISSUASIONE VOCALE FALLITA: altoparlante Fanvil %s:%d non raggiungibile (%s). "
+                    "Verificare alimentazione, cablaggio e la variabile SPEAKER_HOST nel file .env.",
+                    self.host, self.http_port, conn_err
+                )
             except requests.exceptions.RequestException as req_err:
-                logger.warning(
-                    "Altoparlante Fanvil %s non raggiungibile (%s). Se l'altoparlante non è ancora connesso al banco, questo è normale.",
-                    self.host, req_err
+                logger.error(
+                    "DISSUASIONE VOCALE FALLITA: errore HTTP verso Fanvil %s:%d (%s)",
+                    self.host, self.http_port, req_err
                 )
             except Exception as exc:
-                logger.error("Errore imprevisto comando altoparlante: %s", exc)
+                logger.exception("Errore imprevisto nel comando altoparlante Fanvil %s: %s", self.host, exc)
 
         t = threading.Thread(target=_play_worker, daemon=True)
         t.start()

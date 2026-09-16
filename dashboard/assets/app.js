@@ -181,71 +181,158 @@ if (localStorage.getItem('sentinel_sidebar_collapsed') === '1') {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 3. COMANDI ATTUATORI FLOATING DOCK (FARI, CANCELLO, VOCE)
+// 3. COMANDI ATTUATORI (DOCK SOTTO LA GRIGLIA E MODALE A SCHERMO INTERO)
+//
+// I tre comandi condividono un solo motore: prima erano tre funzioni quasi
+// identiche che ignoravano la risposta del server con .catch(() => {}), quindi
+// l'animazione di successo partiva anche quando il comando non veniva eseguito.
+// Ora l'esito viene atteso: su errore di rete o su risposta 503 (driver non
+// caricato lato server) il pulsante passa in stato di errore e mostra il motivo.
 // ──────────────────────────────────────────────────────────────────────────────
-let faroTimer = null;
-function triggerFaro() {
-  const btn = document.getElementById('dockFaroBtn');
-  const label = document.getElementById('dockFaroLabel');
-  const bar = document.getElementById('dockFaroProgress');
+function getActuatorSeconds(key) {
+  // currentSettings e' dichiarata piu' avanti nel file: qui viene solo letta al
+  // momento del clic, quando e' gia' inizializzata da loadSettings().
+  if (key === 'faro') return Number(currentSettings.faro_sec) || 30;
+  if (key === 'gate') return Number(currentSettings.gate_sec) || 3;
+  return 4;
+}
 
-  label.textContent = 'FARI ATTIVI // 30s';
-  btn.classList.add('is-running');
-  bar.style.transition = 'none';
-  bar.style.width = '100%';
+const ACTUATORS = {
+  faro: {
+    endpoint: '/api/relay/faretto',
+    targets: [
+      {
+        btn: 'dockFaroBtn', label: 'dockFaroLabel', progress: 'dockFaroProgress',
+        idle: (s) => `Fari Piazzale // ${s}s`,
+        running: (s) => `FARI ATTIVI // ${s}s`
+      },
+      {
+        btn: 'modalFaroBtn', label: 'modalFaroLabel',
+        idle: () => 'Accendi Faro',
+        running: (s) => `Faro attivo // ${s}s`
+      }
+    ]
+  },
+  gate: {
+    endpoint: '/api/relay/cancello',
+    targets: [
+      {
+        btn: 'dockGateBtn', label: 'dockGateLabel', progress: 'dockGateProgress',
+        idle: (s) => `Apri Cancello // ${s}s`,
+        running: (s) => `Apertura in corso // ${s}s`
+      },
+      {
+        btn: 'modalGateBtn', label: 'modalGateLabel',
+        idle: () => 'Apri Cancello',
+        running: () => 'Apertura in corso'
+      }
+    ]
+  },
+  voice: {
+    endpoint: '/api/speaker/voice',
+    targets: [
+      {
+        btn: 'dockSirenBtn', label: 'dockSirenLabel',
+        idle: () => 'Dissuasione Audio IP',
+        running: () => 'Trasmissione in corso...'
+      },
+      {
+        btn: 'modalVoiceBtn', label: 'modalVoiceLabel',
+        idle: () => 'Dissuasione Audio',
+        running: () => 'Trasmissione...'
+      }
+    ]
+  }
+};
 
-  setTimeout(() => {
-    bar.style.transition = 'width 30s linear';
+const actuatorTimers = {};
+
+function setActuatorState(key, state, seconds, message) {
+  const cfg = ACTUATORS[key];
+  if (!cfg) return;
+
+  cfg.targets.forEach((target) => {
+    const btn = document.getElementById(target.btn);
+    const label = document.getElementById(target.label);
+    if (btn) {
+      btn.classList.toggle('is-running', state === 'running');
+      btn.classList.toggle('is-error', state === 'error');
+    }
+    if (!label) return;
+    if (state === 'running') {
+      label.textContent = target.running(seconds);
+    } else if (state === 'error') {
+      label.textContent = message || 'Comando non riuscito';
+    } else {
+      label.textContent = target.idle(seconds);
+    }
+  });
+}
+
+function runActuatorProgress(key, seconds) {
+  ACTUATORS[key].targets.forEach((target) => {
+    if (!target.progress) return;
+    const bar = document.getElementById(target.progress);
+    if (!bar) return;
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+    setTimeout(() => {
+      bar.style.transition = `width ${seconds}s linear`;
+      bar.style.width = '0%';
+    }, 50);
+  });
+}
+
+function resetActuatorProgress(key) {
+  ACTUATORS[key].targets.forEach((target) => {
+    if (!target.progress) return;
+    const bar = document.getElementById(target.progress);
+    if (!bar) return;
+    bar.style.transition = 'none';
     bar.style.width = '0%';
-  }, 50);
-
-  if (faroTimer) clearTimeout(faroTimer);
-  faroTimer = setTimeout(() => {
-    label.textContent = 'Fari Piazzale // 30s';
-    btn.classList.remove('is-running');
-  }, 30000);
-
-  fetch('/api/relay/faretto', { method: 'POST' }).catch(() => {});
+  });
 }
 
-let gateTimer = null;
-function triggerGate() {
-  const btn = document.getElementById('dockGateBtn');
-  const label = document.getElementById('dockGateLabel');
-  const bar = document.getElementById('dockGateProgress');
+async function runActuatorAction(key) {
+  const cfg = ACTUATORS[key];
+  if (!cfg) return;
 
-  label.textContent = 'Apertura Relè 2 (3s)...';
-  btn.classList.add('is-running');
-  bar.style.transition = 'none';
-  bar.style.width = '100%';
+  const seconds = getActuatorSeconds(key);
+  if (actuatorTimers[key]) clearTimeout(actuatorTimers[key]);
 
-  setTimeout(() => {
-    bar.style.transition = 'width 3s linear';
-    bar.style.width = '0%';
-  }, 50);
+  setActuatorState(key, 'running', seconds);
+  runActuatorProgress(key, seconds);
 
-  if (gateTimer) clearTimeout(gateTimer);
-  gateTimer = setTimeout(() => {
-    label.textContent = 'Apri Cancello // 3s';
-    btn.classList.remove('is-running');
-  }, 3500);
+  let errorMessage = null;
+  try {
+    const res = await fetch(cfg.endpoint, { method: 'POST' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      errorMessage = data.error || `Errore server (HTTP ${res.status})`;
+    }
+  } catch (err) {
+    errorMessage = 'Server non raggiungibile';
+  }
 
-  fetch('/api/relay/cancello', { method: 'POST' }).catch(() => {});
+  if (errorMessage) {
+    console.warn(`[Sentinel Dashboard] Comando '${key}' non riuscito:`, errorMessage);
+    resetActuatorProgress(key);
+    setActuatorState(key, 'error', seconds, errorMessage);
+    actuatorTimers[key] = setTimeout(() => setActuatorState(key, 'idle', seconds), 6000);
+    return;
+  }
+
+  // Comando accettato: si lascia lo stato attivo per la durata reale dell'impulso
+  actuatorTimers[key] = setTimeout(
+    () => setActuatorState(key, 'idle', seconds),
+    seconds * 1000
+  );
 }
 
-function triggerVoice() {
-  const btn = document.getElementById('dockSirenBtn');
-  const label = document.getElementById('dockSirenLabel');
-  label.textContent = 'Broadcasting Audio...';
-  if (btn) btn.classList.add('is-running');
-
-  setTimeout(() => {
-    label.textContent = 'Dissuasione Audio IP';
-    if (btn) btn.classList.remove('is-running');
-  }, 4000);
-
-  fetch('/api/speaker/voice', { method: 'POST' }).catch(() => {});
-}
+// Nomi storici mantenuti: sono richiamati dagli onclick nel markup
+function triggerFaro() { runActuatorAction('faro'); }
+function triggerGate() { runActuatorAction('gate'); }
+function triggerVoice() { runActuatorAction('voice'); }
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 4. GESTIONE WHITELIST TARGHE (LPR) — PERSISTENZA NVME SU config/known_plates.json
@@ -404,12 +491,19 @@ function handleStreamLoaded(camId) {
   const standby = document.getElementById(`standbyCam${camId}`);
   const stream = document.getElementById(`streamCam${camId}`);
   const badge = document.getElementById(`camStatusBadge${camId}`);
+  const meta = document.getElementById(`camCardMeta${camId}`);
   if (standby) standby.classList.add('feed-connected');
   if (stream) stream.classList.add('online');
   if (badge) {
+    // Il pallino colorato e' uno pseudo-elemento CSS: qui va solo l'etichetta
     badge.className = 'cam-status-pill live';
-    badge.textContent = '● LIVE 4K';
+    badge.textContent = 'Live';
   }
+  // Il polling riassegna la sorgente ogni secondo e ogni fotogramma ricevuto
+  // richiama questa funzione: vale quindi da orologio della diretta, senza
+  // bisogno di un timer aggiuntivo.
+  if (meta) meta.textContent = `In diretta · ${new Date().toLocaleTimeString('it-IT')}`;
+  syncCamModalStatus(camId);
   // Avvia il polling periodico per aggiornare il frame
   startCamPolling(camId);
 }
@@ -422,8 +516,11 @@ function handleStreamError(camId) {
   if (stream) stream.classList.remove('online');
   if (badge) {
     badge.className = 'cam-status-pill offline';
-    badge.textContent = '● OFFLINE';
+    badge.textContent = 'Offline';
   }
+  const meta = document.getElementById(`camCardMeta${camId}`);
+  if (meta) meta.textContent = 'Segnale assente · nuovo tentativo tra 10s';
+  syncCamModalStatus(camId);
   // Ferma il polling e riprova il collegamento ogni 10 secondi
   stopCamPolling(camId);
   setTimeout(() => {
@@ -437,6 +534,115 @@ function handleStreamError(camId) {
 // Esponi esplicitamente su window per retrocompatibilità globale
 window.handleStreamLoaded = handleStreamLoaded;
 window.handleStreamError = handleStreamError;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 5A-bis. MODALE TELECAMERA A SCHERMO INTERO (CLIC SU UNA SCHEDA)
+//
+// La modale ha un proprio elemento immagine e un proprio intervallo di polling:
+// la griglia sottostante continua a lavorare senza essere toccata, cosi' la
+// logica di startCamPolling/handleStreamLoaded resta quella gia' stabile in campo.
+// ──────────────────────────────────────────────────────────────────────────────
+const CAM_LABELS = { 1: 'Varco Carrabile', 2: 'Varco Pedonale', 3: 'Piazzale' };
+
+let expandedCamId = null;
+let camModalPollInterval = null;
+let camModalLastFocus = null;
+
+function refreshCamModalFrame() {
+  if (!expandedCamId) return;
+  const img = document.getElementById('camModalStream');
+  if (!img) return;
+  img.src = `/api/camera/${CAM_NAMES[expandedCamId]}/latest.jpg?_t=${Date.now()}`;
+}
+
+// Allinea la pastiglia della modale a quella della scheda corrispondente,
+// cosi' lo stato resta uno solo e non puo' divergere fra le due viste.
+function syncCamModalStatus(camId) {
+  if (expandedCamId !== camId) return;
+  const source = document.getElementById(`camStatusBadge${camId}`);
+  const target = document.getElementById('camModalBadge');
+  if (source && target) {
+    target.className = source.className;
+    target.textContent = source.textContent;
+  }
+}
+
+function openCamModal(camId) {
+  const modal = document.getElementById('camModal');
+  const img = document.getElementById('camModalStream');
+  const standby = document.getElementById('camModalStandby');
+  const title = document.getElementById('camModalTitle');
+  if (!modal || !img) return;
+
+  expandedCamId = camId;
+  camModalLastFocus = document.activeElement;
+
+  const name = CAM_LABELS[camId] || 'Telecamera';
+  if (title) title.textContent = name;
+  img.alt = `${name} in diretta`;
+
+  img.onload = () => {
+    if (standby) standby.classList.remove('is-visible');
+  };
+  img.onerror = () => {
+    if (standby) standby.classList.add('is-visible');
+  };
+
+  // Si parte dalla schermata di attesa finche' non arriva il primo fotogramma
+  if (standby) standby.classList.add('is-visible');
+
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  syncCamModalStatus(camId);
+  refreshCamModalFrame();
+
+  if (camModalPollInterval) clearInterval(camModalPollInterval);
+  camModalPollInterval = setInterval(refreshCamModalFrame, CAM_POLL_MS);
+
+  const closeBtn = modal.querySelector('.cam-modal-close');
+  if (closeBtn) closeBtn.focus();
+}
+
+function closeCamModal() {
+  const modal = document.getElementById('camModal');
+  const img = document.getElementById('camModalStream');
+
+  if (camModalPollInterval) {
+    clearInterval(camModalPollInterval);
+    camModalPollInterval = null;
+  }
+  expandedCamId = null;
+
+  if (img) {
+    // Si azzerano i gestori e la sorgente per non lasciare richieste in volo
+    img.onload = null;
+    img.onerror = null;
+    img.removeAttribute('src');
+  }
+  if (modal) modal.classList.remove('open');
+  document.body.style.overflow = '';
+
+  if (camModalLastFocus && typeof camModalLastFocus.focus === 'function') {
+    camModalLastFocus.focus();
+  }
+  camModalLastFocus = null;
+}
+
+// Chiusura con Esc e con clic sullo sfondo scuro
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && expandedCamId !== null) {
+    closeCamModal();
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('camModal');
+  if (!modal) return;
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeCamModal();
+  });
+});
 
 function initCameraStreams() {
   [1, 2, 3].forEach(camId => {
@@ -522,7 +728,7 @@ function renderEvents() {
           <td class="ev-cam">${camLabel}</td>
           <td>
             <span class="ev-type">${subjLabel}</span>
-            <span class="ev-conf">(${ev.conf || '90%'})</span>
+            <span class="ev-conf">(${ev.conf || 'n.d.'})</span>
           </td>
           <td>
             <div class="event-thumb-wrap">
@@ -566,7 +772,7 @@ function renderEvents() {
           <td class="ev-time">${ev.time}</td>
           <td class="ev-cam">${camLabel}</td>
           <td><span class="ev-type">${subjLabel}</span></td>
-          <td><span class="ev-conf">${ev.conf || '90%'}</span></td>
+          <td><span class="ev-conf">${ev.conf || 'n.d.'}</span></td>
           <td>
             <div class="event-thumb-wrap" style="width:60px; height:38px;">
               <img src="${thumbUrl}" alt="Snapshot" onerror="this.src='assets/img/icona-ai-viola-su-scuro.svg'">

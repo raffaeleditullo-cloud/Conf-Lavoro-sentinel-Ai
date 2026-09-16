@@ -632,7 +632,12 @@ body {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
- * CINEMATIC VIDEO WALL (TACTICAL HUD & TARGET RETICLES)
+ * VIDEO WALL — GRIGLIA SIMMETRICA A TRE SCHEDE
+ *
+ * Le tre telecamere hanno pari dignita': nessun riquadro "hero" allargato.
+ * Gli overlay tattici (scanline, mirino, angoli, sigle di rete) sono stati
+ * rimossi: l'immagine ripresa non viene piu' coperta da nulla. Lo stato vive
+ * in una barra sotto il video, come nei citofoni e nelle videocamere domestiche.
  * ────────────────────────────────────────────────────────────────────────────── */
 .stage-content-scroll {
   flex: 1;
@@ -645,86 +650,122 @@ body {
 
 .video-wall-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 16px;
-  min-height: 480px;
-  height: 58vh;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  align-items: start;
 }
 
+/* Tablet e portatili stretti: due colonne fluide */
 @media (max-width: 1280px) {
   .video-wall-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    height: auto;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* Common Camera Viewport Style */
-.cam-viewport-hero, .cam-viewport-secondary {
-  position: relative;
-  background: #000;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
-  transition: border-color 0.25s var(--ease-spring), box-shadow 0.25s var(--ease-spring);
-}
-
-/* High-Tech Tactical Reticles on 4 Corners */
-.cam-viewport-hero::before, .cam-viewport-secondary::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  width: 16px;
-  height: 16px;
-  border-top: 2px solid var(--cai-gold);
-  border-left: 2px solid var(--cai-gold);
-  z-index: 12;
-  pointer-events: none;
-}
-
-.cam-viewport-hero::after, .cam-viewport-secondary::after {
-  content: '';
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 16px;
-  height: 16px;
-  border-bottom: 2px solid var(--cai-gold);
-  border-right: 2px solid var(--cai-gold);
-  z-index: 12;
-  pointer-events: none;
-}
-
-.cam-viewport-hero:hover, .cam-viewport-secondary:hover {
-  border-color: var(--border-active);
-  box-shadow: 0 12px 40px rgba(138, 84, 234, 0.25);
-}
-
-.cam-viewport-hero {
-  grid-row: 1 / span 2;
-}
-
-.feed-img-live {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+/* Smartphone: colonna singola */
+@media (max-width: 767.98px) {
+  .video-wall-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
- * STANDBY & REAL CAMERA STREAM SYSTEM
+ * SCHEDA TELECAMERA
+ * E' un <button>: si apre a schermo intero con clic, Invio o Barra spaziatrice.
+ * ────────────────────────────────────────────────────────────────────────────── */
+.cam-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.22s var(--ease-spring),
+              border-color 0.22s ease,
+              box-shadow 0.22s ease;
+}
+
+.cam-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--cai-violet);
+  box-shadow: 0 16px 40px rgba(138, 84, 234, 0.22);
+}
+
+.cam-card:focus-visible {
+  outline: 2px solid var(--cai-violet);
+  outline-offset: 3px;
+}
+
+/* Riquadro video con proporzione fissa: le tre schede restano allineate */
+.cam-card-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #05060a;
+  overflow: hidden;
+}
+
+/* Icona di espansione: discreta, compare al passaggio del mouse o col fuoco */
+.cam-expand-hint {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(10, 11, 14, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.cam-card:hover .cam-expand-hint,
+.cam-card:focus-visible .cam-expand-hint {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.cam-expand-hint svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * FLUSSO VIDEO E SCHERMATA DI ATTESA
+ * NOTA: .camera-stream-feed, .camera-standby-screen e la classe .feed-connected
+ * sono pilotate da app.js (handleStreamLoaded / handleStreamError). I nomi non
+ * vanno cambiati senza aggiornare anche quella logica.
  * ────────────────────────────────────────────────────────────────────────────── */
 .camera-stream-feed {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 4;
+  z-index: 2;
   opacity: 0;
   transition: opacity 0.35s ease;
 }
@@ -736,15 +777,15 @@ body {
 .camera-standby-screen {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, #0a0d18 0%, #030306 100%);
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  z-index: 3;
-  padding: 20px;
+  gap: 10px;
+  padding: 18px;
   text-align: center;
+  background: radial-gradient(circle at center, #1b1e24 0%, #0c0e11 100%);
   transition: opacity 0.3s ease;
 }
 
@@ -754,10 +795,10 @@ body {
 }
 
 .standby-radar-ring {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 1px solid rgba(138, 84, 234, 0.3);
+  border: 1px solid rgba(138, 84, 234, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -769,7 +810,7 @@ body {
   position: absolute;
   inset: 5px;
   border-radius: 50%;
-  border: 1px dashed rgba(212, 175, 55, 0.35);
+  border: 1px dashed rgba(138, 84, 234, 0.3);
   animation: radar-spin 10s linear infinite;
 }
 
@@ -779,11 +820,11 @@ body {
 }
 
 .standby-radar-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--cai-gold);
-  box-shadow: 0 0 10px var(--cai-gold-glow);
+  background: var(--cai-violet);
+  box-shadow: 0 0 10px var(--cai-violet-glow);
   animation: pulse-standby 2.2s infinite;
 }
 
@@ -799,174 +840,257 @@ body {
 }
 
 .standby-title {
-  font-family: var(--font-brand);
-  font-variation-settings: "wdth" 120, "wght" 700;
+  font-family: var(--font-display);
   font-size: 13px;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   color: var(--text-main);
-  text-transform: uppercase;
 }
 
 .standby-sub {
   font-family: var(--font-mono);
   font-size: 10.5px;
+  letter-spacing: 0.04em;
   color: var(--text-dim);
-  letter-spacing: 0.06em;
 }
 
-.standby-status-tag {
+/* ──────────────────────────────────────────────────────────────────────────────
+ * BARRA DI STATO SOTTO IL VIDEO
+ * ────────────────────────────────────────────────────────────────────────────── */
+.cam-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.cam-card-ident {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cam-card-name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cam-card-meta {
   font-family: var(--font-mono);
-  font-size: 9.5px;
-  color: var(--cai-gold);
-  background: rgba(212, 175, 55, 0.08);
-  border: 1px solid rgba(212, 175, 55, 0.25);
-  padding: 3px 8px;
-  border-radius: var(--radius-xs);
-  display: inline-block;
-  margin-top: 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Pastiglia di stato. Le classi .live / .offline sono impostate da app.js:
+   il pallino e' un pseudo-elemento, quindi il testo resta la sola etichetta. */
 .cam-status-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  padding: 3px 8px;
-  border-radius: var(--radius-xs);
   text-transform: uppercase;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
-.cam-status-pill.offline {
-  background: rgba(244, 63, 94, 0.12);
-  border: 1px solid rgba(244, 63, 94, 0.35);
-  color: var(--accent-red);
+.cam-status-pill::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .cam-status-pill.live {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.45);
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.38);
   color: var(--accent-green);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
 }
 
-/* Subtle Tactical Scanlines */
-.cam-scanlines {
-  position: absolute;
+.cam-status-pill.live::before {
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18);
+  animation: cam-live-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes cam-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.cam-status-pill.offline {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: var(--text-dim);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * MODALE TELECAMERA A SCHERMO INTERO (CLIC SULLA SCHEDA)
+ * Sopra la barra di navigazione mobile (1000), sotto la finestra di accesso (2000).
+ * ────────────────────────────────────────────────────────────────────────────── */
+.cam-modal-backdrop {
+  position: fixed;
   inset: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
-  background-size: 100% 4px;
-  pointer-events: none;
-  z-index: 6;
-  opacity: 0.55;
+  z-index: 1500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(5, 6, 9, 0.92);
+  backdrop-filter: blur(16px);
 }
 
-/* Target Crosshair in Hero Viewport */
-.cam-crosshair {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 44px;
-  height: 44px;
-  pointer-events: none;
-  z-index: 8;
-  opacity: 0.4;
+.cam-modal-backdrop.open {
+  display: flex;
 }
 
-.cam-crosshair::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--cai-gold);
+.cam-modal {
+  width: min(1440px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.cam-crosshair::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--cai-gold);
-}
-
-/* HUD Top Overlays */
-.feed-hud-top {
-  position: absolute;
-  top: 14px;
-  left: 16px;
-  right: 16px;
+.cam-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  pointer-events: none;
-  z-index: 15;
+  gap: 16px;
 }
 
-.cam-tag-glass {
-  background: rgba(10, 8, 16, 0.85);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-left: 3px solid var(--cai-gold);
-  padding: 5px 12px;
-  border-radius: var(--radius-xs);
+.cam-modal-ident {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cam-modal-title {
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 17px;
   font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.ai-hud-pill {
+.cam-modal-close {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
-  border-radius: var(--radius-xs);
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-main);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  backdrop-filter: blur(14px);
-  animation: hud-flicker 3s infinite;
-  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
-.ai-hud-pill.plate {
-  background: rgba(212, 175, 55, 0.9);
-  color: #08070d;
-  border: 1px solid #D4AF37;
-  box-shadow: 0 0 16px var(--cai-gold-glow);
+.cam-modal-close:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
 }
 
-.ai-hud-pill.person {
-  background: rgba(138, 84, 234, 0.9);
-  color: #fff;
-  border: 1px solid #8a54ea;
-  box-shadow: 0 0 16px var(--cai-violet-glow);
+.cam-modal-close:focus-visible {
+  outline: 2px solid var(--cai-violet);
+  outline-offset: 2px;
 }
 
-.feed-hud-bottom {
+.cam-modal-close svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+/* Palcoscenico video: 'contain' per non tagliare mai l'inquadratura ingrandita */
+.cam-modal-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: calc(100vh - 220px);
+  background: #05060a;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.cam-modal-stream {
   position: absolute;
-  bottom: 12px;
-  left: 16px;
-  right: 16px;
-  display: flex;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.cam-modal-standby {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.8);
-  pointer-events: none;
-  z-index: 15;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  background: radial-gradient(circle at center, #1b1e24 0%, #0c0e11 100%);
+}
+
+.cam-modal-standby.is-visible {
+  display: flex;
+}
+
+.cam-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+@media (max-width: 767.98px) {
+  .cam-modal-backdrop {
+    padding: 14px;
+  }
+
+  .cam-modal-title {
+    font-size: 15px;
+  }
+
+  .cam-modal-stage {
+    max-height: calc(100vh - 260px);
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -1118,6 +1242,20 @@ body {
   50% { box-shadow: 0 0 28px var(--dock-accent-soft); }
 }
 
+/* Comando rifiutato dal server (es. HTTP 503: driver hardware non caricato)
+   oppure server non raggiungibile: il pulsante lo dichiara invece di fingere
+   un'esecuzione riuscita. app.js ripristina lo stato normale dopo 6 secondi. */
+.dock-action-btn.is-error {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.28);
+  animation: none;
+}
+
+.dock-action-btn.is-error .dock-icon {
+  color: var(--accent-red);
+}
+
 .dock-icon {
   width: 18px;
   height: 18px;
@@ -1160,6 +1298,19 @@ body {
 
   .dock-action-btn:hover::after,
   .dock-action-btn.is-running {
+    animation: none;
+  }
+
+  /* Video wall: niente sollevamento della scheda ne' pulsazioni di stato */
+  .cam-card,
+  .cam-card:hover {
+    transform: none;
+    transition: border-color 0.2s ease;
+  }
+
+  .cam-status-pill.live::before,
+  .standby-radar-ring::after,
+  .standby-radar-dot {
     animation: none;
   }
 }
@@ -2110,21 +2261,6 @@ body {
     gap: 16px;
   }
 
-  /* Griglia Video Wall collassata in colonna singola */
-  .video-wall-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    height: auto;
-    min-height: auto;
-    gap: 12px;
-  }
-
-  .cam-viewport-hero, .cam-viewport-secondary {
-    height: auto;
-    aspect-ratio: 16/9;
-    min-height: 200px;
-  }
-
   /* Griglie dati e controlli a 1 colonna */
   .data-split-zone {
     grid-template-columns: 1fr;
@@ -2219,13 +2355,6 @@ body {
 
   .hud-title {
     font-size: 13.5px;
-  }
-
-  .video-wall-grid {
-    grid-template-columns: 1fr;
-    height: auto;
-    min-height: auto;
-    gap: 14px;
   }
 
   .data-split-zone {
@@ -3334,30 +3463,33 @@ body[data-role="client"] .hud-telemetry-zone {
   color: var(--ev-on-accent);
 }
 
-/* ââ VIDEO WALL: RIQUADRI CAMERA E SCHERMATE DI ATTESA ââââââââââââââââââââââ */
-.view-data .cam-viewport-hero,
-.view-data .cam-viewport-secondary {
-  border: 1px solid var(--ev-border);
-  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.6);
+/* ── VIDEO WALL: SCHEDE TELECAMERA ──────────────────────────────────────────── */
+.view-data .cam-card {
+  background: var(--ev-surface);
+  border-color: var(--ev-border);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
-.view-data .cam-viewport-hero:hover,
-.view-data .cam-viewport-secondary:hover {
+.view-data .cam-card:hover {
   border-color: var(--ev-accent);
-  box-shadow: 0 14px 44px var(--ev-accent-soft);
+  box-shadow: 0 16px 40px var(--ev-accent-soft);
 }
 
-/* Mirini angolari nel colore d'accento della pagina */
-.view-data .cam-viewport-hero::before,
-.view-data .cam-viewport-secondary::before {
-  border-top-color: var(--ev-accent);
-  border-left-color: var(--ev-accent);
+.view-data .cam-card:focus-visible {
+  outline-color: var(--ev-accent);
 }
 
-.view-data .cam-viewport-hero::after,
-.view-data .cam-viewport-secondary::after {
-  border-bottom-color: var(--ev-accent);
-  border-right-color: var(--ev-accent);
+.view-data .cam-card-footer {
+  background: var(--ev-surface);
+  border-top-color: var(--ev-border);
+}
+
+.view-data .cam-card-name {
+  color: var(--ev-text);
+}
+
+.view-data .cam-card-meta {
+  color: var(--ev-text-muted);
 }
 
 /* Schermata di attesa: antracite al posto del blu notte */
@@ -3373,12 +3505,6 @@ body[data-role="client"] .hud-telemetry-zone {
   color: var(--ev-text-muted);
 }
 
-.view-data .standby-status-tag {
-  color: var(--ev-accent);
-  background: var(--ev-accent-soft);
-  border-color: var(--ev-accent-line);
-}
-
 .view-data .standby-radar-ring {
   border-color: var(--ev-accent-line);
 }
@@ -3392,16 +3518,19 @@ body[data-role="client"] .hud-telemetry-zone {
   box-shadow: 0 0 10px var(--ev-accent);
 }
 
-/* Targhetta camera e barra tecnica */
-.view-data .cam-tag-glass {
-  background: rgba(22, 24, 28, 0.85);
-  border: 1px solid var(--ev-border);
-  border-left: 3px solid var(--ev-accent);
+/* Modale a schermo intero */
+.view-data .cam-modal-title {
   color: var(--ev-text);
 }
 
-.view-data .feed-hud-bottom {
-  color: rgba(255, 255, 255, 0.75);
+.view-data .cam-modal-stage {
+  border-color: var(--ev-border);
+}
+
+.view-data .cam-modal-close {
+  background: var(--ev-surface);
+  border-color: var(--ev-border);
+  color: var(--ev-text);
 }
 
 /* Anteprima eventi compatta sotto la dock */
