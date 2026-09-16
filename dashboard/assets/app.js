@@ -4,11 +4,11 @@
 
 // 1. GESTIONE NAVIGAZIONE VISTE (ROUTING INTERNO FLUIDO)
 const views = {
-  wall: { id: 'view-wall', title: 'LIVE VIDEO WALL', showStreamsBadge: true },
-  events: { id: 'view-events', title: 'ARCHIVIO EVIDENZE', showStreamsBadge: false },
-  plates: { id: 'view-plates', title: 'WHITELIST TARGHE', showStreamsBadge: false },
-  diagnostics: { id: 'view-diagnostics', title: 'TELEMETRIA JETSON', showStreamsBadge: false },
-  settings: { id: 'view-settings', title: 'AUDIO & DETERRENZA', showStreamsBadge: false }
+  wall: { id: 'view-wall', title: 'Telecamere' },
+  events: { id: 'view-events', title: 'Archivio Evidenze' },
+  plates: { id: 'view-plates', title: 'Targhe Autorizzate' },
+  diagnostics: { id: 'view-diagnostics', title: 'Telemetria Edge' },
+  settings: { id: 'view-settings', title: 'Audio e Deterrenza' }
 };
 
 function switchView(viewName) {
@@ -40,12 +40,47 @@ function switchView(viewName) {
   const hudTitle = document.getElementById('hudTitleText');
   if (hudTitle) hudTitle.textContent = target.title;
 
-  // Mostra il badge dei flussi 4K SOLO nella schermata Video Wall
-  const hudLivePill = document.getElementById('hudLivePill');
-  if (hudLivePill) {
-    hudLivePill.style.display = target.showStreamsBadge ? 'inline-flex' : 'none';
-  }
+  // Cambiando vista il menu del telefono non deve restare aperto
+  closeHudMenu();
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 1B. MENU DEL TELEFONO
+//
+// Raccoglie ruolo, stato del rilevatore e uscita verso il tastierino. Su schermo
+// largo il pannello e' sempre in linea nella barra e il pulsante e' nascosto:
+// queste funzioni restano innocue perche' agiscono solo sulla classe 'open',
+// che al di fuori del telefono non produce alcun effetto.
+// ──────────────────────────────────────────────────────────────────────────────
+function setHudMenuOpen(open) {
+  const menu = document.getElementById('hudMenu');
+  const btn = document.getElementById('hudMenuBtn');
+  if (!menu || !btn) return;
+  menu.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  btn.setAttribute('aria-label', open ? 'Chiudi il menu' : 'Apri il menu');
+}
+
+function toggleHudMenu() {
+  const menu = document.getElementById('hudMenu');
+  setHudMenuOpen(!(menu && menu.classList.contains('open')));
+}
+
+function closeHudMenu() {
+  setHudMenuOpen(false);
+}
+
+// Si chiude toccando fuori e con Esc
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('hudMenu');
+  const btn = document.getElementById('hudMenuBtn');
+  if (!menu || !btn || !menu.classList.contains('open')) return;
+  if (!menu.contains(e.target) && !btn.contains(e.target)) closeHudMenu();
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeHudMenu();
+});
 
 // Collega i click sui pulsanti della barra laterale e bottom nav mobile
 document.querySelectorAll('.nav-btn[data-view], .bottom-nav-btn[data-view]').forEach(btn => {
@@ -56,94 +91,39 @@ document.querySelectorAll('.nav-btn[data-view], .bottom-nav-btn[data-view]').for
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 2. TEMA SCURO / CHIARO CON LOGO VETTORIALE ED ICONA SOLE/LUNA
-// ──────────────────────────────────────────────────────────────────────────────
-// 2. SELETTORI GLOBALI & TEMA SCURO / CHIARO CON LOGO VETTORIALE
+// 2. SELETTORI GLOBALI E MARCHIO
+//
+// Il selettore tema chiaro/scuro e' stato rimosso: l'interfaccia ha un tema
+// unico. Resta solo la scelta fra marchio esteso e sola icona, che dipende
+// dalla larghezza della barra laterale e dal formato dello schermo.
 // ──────────────────────────────────────────────────────────────────────────────
 const sidebar = document.querySelector('.soc-nav');
 const collapseBtn = document.getElementById('sidebarCollapseBtn');
 const collapseSvg = document.getElementById('collapseSvg');
 
-const themeToggleBtn = document.getElementById('themeToggle');
-const mobileThemeToggle = document.getElementById('mobileThemeToggle');
-const themeSvg = document.getElementById('themeSvg');
 const brandLogo = document.getElementById('brandLogo');
-const mobileBrandLogo = document.getElementById('mobileBrandLogo');
-const authModalLogo = document.getElementById('authModalLogo');
 
-const SUN_ICON = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-const MOON_ICON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-
-// Sotto i 1024px (tablet e smartphone) il marchio si riduce alla sola AI
+// Sotto i 1024px (tablet e telefono) la barra e' a sole icone
 const brandIconOnlyQuery = window.matchMedia('(max-width: 1023.98px)');
 
-function updateBrandLogos(theme, isCollapsed) {
-  const isLight = (theme === 'light');
+// Marchio in oro: unica variante leggibile sul fondo rosso della barra
+const BRAND_LOGO_FULL = 'assets/img/conflavoro-ai-oro.svg';
+const BRAND_LOGO_ICON = 'assets/img/conflavoro-ai-icon-oro.svg';
+
+function updateBrandLogos(isCollapsed) {
+  if (!brandLogo) return;
   const iconOnly = isCollapsed || brandIconOnlyQuery.matches;
-
-  if (brandLogo) {
-    if (iconOnly) {
-      // Barra chiusa, tablet o smartphone: SOLO icona AI (verde acqua in chiaro, viola in scuro)
-      brandLogo.src = isLight
-        ? 'assets/img/icona-ai-acqua-su-scuro.svg'
-        : 'assets/img/conflavoro-ai-icon-viola.svg';
-    } else {
-      // Barra aperta su desktop: marchio completo CONFLAVORO AI
-      brandLogo.src = isLight
-        ? 'assets/img/conflavoro-ai-acqua-su-scuro.svg'
-        : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
-    }
-  }
-
-  // Marchio dell'header compatto: compare solo sotto i 768px, quindi sempre sola AI
-  if (mobileBrandLogo) {
-    mobileBrandLogo.src = isLight
-      ? 'assets/img/icona-ai-acqua-su-scuro.svg'
-      : 'assets/img/icona-ai-viola-su-scuro.svg';
-  }
-
-  // Finestra di accesso: ha fondo chiaro nel tema chiaro, quindi variante su chiaro
-  if (authModalLogo) {
-    authModalLogo.src = isLight
-      ? 'assets/img/conflavoro-ai-acqua-su-chiaro.svg'
-      : 'assets/img/conflavoro-ai-viola-su-scuro.svg';
-  }
+  brandLogo.src = iconOnly ? BRAND_LOGO_ICON : BRAND_LOGO_FULL;
 }
 
 // Il marchio segue il cambio di formato senza ricaricare la pagina
 if (brandIconOnlyQuery.addEventListener) {
   brandIconOnlyQuery.addEventListener('change', () => {
-    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-    updateBrandLogos(theme, !!(sidebar && sidebar.classList.contains('collapsed')));
+    updateBrandLogos(!!(sidebar && sidebar.classList.contains('collapsed')));
   });
 }
 
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('sentinel_theme', theme);
-
-  const isLight = (theme === 'light');
-  if (themeToggleBtn) themeToggleBtn.title = isLight ? 'Passa a Tema Scuro' : 'Passa a Tema Chiaro';
-  if (themeSvg) themeSvg.innerHTML = isLight ? MOON_ICON : SUN_ICON;
-  if (mobileThemeToggle) {
-    const mSvg = mobileThemeToggle.querySelector('svg');
-    if (mSvg) mSvg.innerHTML = isLight ? MOON_ICON : SUN_ICON;
-  }
-
-  const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
-  updateBrandLogos(theme, isCollapsed);
-}
-
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  applyTheme(current === 'light' ? 'dark' : 'light');
-}
-
-if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
-if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
-
-const savedTheme = localStorage.getItem('sentinel_theme') || 'dark';
-applyTheme(savedTheme);
+updateBrandLogos(!!(sidebar && sidebar.classList.contains('collapsed')));
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 3. COLLAPSE / EXPAND SIDEBAR (BUSINESS CALL COMPRESSIONE DESKTOP)
@@ -153,7 +133,6 @@ const ICON_COLLAPSE = '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1
 
 function setSidebarCollapsed(collapsed) {
   if (!sidebar) return;
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
   if (collapsed) {
     sidebar.classList.add('collapsed');
     if (collapseSvg) collapseSvg.innerHTML = ICON_EXPAND;
@@ -165,7 +144,7 @@ function setSidebarCollapsed(collapsed) {
     if (collapseBtn) collapseBtn.title = 'Comprimi Barra Laterale';
     localStorage.setItem('sentinel_sidebar_collapsed', '0');
   }
-  updateBrandLogos(currentTheme, collapsed);
+  updateBrandLogos(collapsed);
 }
 
 if (collapseBtn) {
@@ -361,8 +340,8 @@ function renderPlates() {
       <tr>
         <td colspan="5" class="ev-empty-cell">
           <div class="ev-empty">
-            <span class="ev-empty-title">NESSUNA TARGA AUTORIZZATA</span>
-            <span class="ev-empty-sub">Usa il pulsante "Aggiungi Nuova Targa" per registrare un veicolo: il cancello carrabile si aprira' al riconoscimento.</span>
+            <span class="ev-empty-title">Nessuna targa autorizzata</span>
+            <span class="ev-empty-sub">Registra un veicolo con il pulsante qui sopra: il cancello carrabile si aprira' da solo al riconoscimento della targa.</span>
           </div>
         </td>
       </tr>
@@ -373,18 +352,21 @@ function renderPlates() {
   currentPlates.forEach((p) => {
     const isAct = p.active !== false;
     const tr = document.createElement('tr');
+    // L'attributo data-field non ha effetto su schermo largo: lo usa il foglio
+    // di stile per ricomporre la riga come scheda quando lo schermo e' stretto.
     tr.innerHTML = `
-      <td><span class="plate-pill">${p.plate}</span></td>
-      <td class="ev-cam">${p.owner}</td>
-      <td class="ev-role">${p.role || 'Personale Autorizzato'}</td>
-      <td>
-        <button class="plate-state ${isAct ? 'is-active' : 'is-suspended'}" onclick="togglePlate('${p.plate}')" title="Clicca per abilitare o sospendere l'autorizzazione">
+      <td data-field="plate"><span class="plate-pill">${p.plate}</span></td>
+      <td data-field="owner" class="ev-cam">${p.owner}</td>
+      <td data-field="role" class="ev-role">${p.role || 'Personale Autorizzato'}</td>
+      <td data-field="state">
+        <button class="plate-state ${isAct ? 'is-active' : 'is-suspended'}" onclick="togglePlate('${p.plate}')" title="Tocca per abilitare o sospendere l'autorizzazione">
           ${isAct ? 'Autorizzata' : 'Sospesa'}
         </button>
       </td>
-      <td style="text-align:right;">
-        <button class="icon-action-btn" title="Rimuovi definitivamente da NVMe" onclick="deletePlate('${p.plate}')">
+      <td data-field="actions" style="text-align:right;">
+        <button class="icon-action-btn" title="Rimuovi definitivamente la targa" onclick="deletePlate('${p.plate}')">
           <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span class="icon-action-label">Elimina</span>
         </button>
       </td>
     `;
@@ -664,6 +646,31 @@ function initCameraStreams() {
 // ──────────────────────────────────────────────────────────────────────────────
 let currentEvents = [];
 
+// Telecamera selezionata nel registro completo ('all' = nessun filtro)
+let eventCameraFilter = 'all';
+
+// Telecamera selezionata nell'anteprima "Attivita' Recente". E' una variabile
+// distinta di proposito: nell'anteprima si guarda cosa sta succedendo adesso,
+// nell'Archivio si cerca un evento passato, e i due filtri non devono
+// influenzarsi a vicenda.
+let wallCameraFilter = 'all';
+
+// Miniatura mostrata quando lo snapshot manca o non si carica
+const EVENT_THUMB_FALLBACK = 'assets/img/conflavoro-ai-icon-viola.svg';
+
+// Il filtro agisce sul solo registro completo: l'anteprima nella schermata
+// delle telecamere continua a mostrare l'attivita' recente di tutti i varchi.
+// Lo stato visivo non va sincronizzato a mano, ci pensa il select stesso.
+function setEventFilter(cam) {
+  eventCameraFilter = cam;
+  renderEvents();
+}
+
+function setWallFilter(cam) {
+  wallCameraFilter = cam;
+  renderEvents();
+}
+
 function formatCamName(raw) {
   if (!raw) return 'Telecamera';
   if (raw === 'varco_carrabile') return 'Varco Carrabile';
@@ -699,22 +706,27 @@ function renderEvents() {
   const fullTbody = document.getElementById('eventsFullTbody');
 
   if (wallTbody) {
+    const wallEvents = (wallCameraFilter === 'all'
+      ? currentEvents
+      : currentEvents.filter((ev) => ev.camera === wallCameraFilter)
+    ).slice(0, 4);
+
     wallTbody.innerHTML = '';
-    if (currentEvents.length === 0) {
+    if (wallEvents.length === 0) {
       wallTbody.innerHTML = `
         <tr>
           <td colspan="5" class="ev-empty-cell is-compact">
             <div class="ev-empty">
-              <span class="ev-empty-title">NESSUN EVENTO REGISTRATO // NVR PRONTO AL RILEVAMENTO</span>
+              <span class="ev-empty-title">${wallCameraFilter === 'all' ? 'Nessun evento registrato' : 'Nessun evento per questa telecamera'}</span>
             </div>
           </td>
         </tr>
       `;
     } else {
-      currentEvents.slice(0, 4).forEach(ev => {
+      wallEvents.forEach(ev => {
         const camLabel = formatCamName(ev.camera);
         const subjLabel = formatEventLabel(ev.label);
-        const thumbUrl = ev.thumb || 'assets/img/icona-ai-viola-su-scuro.svg';
+        const thumbUrl = ev.thumb || EVENT_THUMB_FALLBACK;
         const videoBtn = ev.video ? `
           <button class="play-video-link" onclick="openVideoModal('${camLabel} // ${ev.time}', '${ev.video}')">
             <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -724,18 +736,18 @@ function renderEvents() {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="ev-time">${ev.time}</td>
-          <td class="ev-cam">${camLabel}</td>
-          <td>
+          <td data-field="time" class="ev-time">${ev.time}</td>
+          <td data-field="cam" class="ev-cam">${camLabel}</td>
+          <td data-field="type">
             <span class="ev-type">${subjLabel}</span>
             <span class="ev-conf">(${ev.conf || 'n.d.'})</span>
           </td>
-          <td>
+          <td data-field="thumb">
             <div class="event-thumb-wrap">
-              <img src="${thumbUrl}" alt="Snapshot" onerror="this.src='assets/img/icona-ai-viola-su-scuro.svg'">
+              <img src="${thumbUrl}" alt="Fotogramma dell'evento" onerror="this.src='${EVENT_THUMB_FALLBACK}'">
             </div>
           </td>
-          <td>${videoBtn}</td>
+          <td data-field="video">${videoBtn}</td>
         `;
         wallTbody.appendChild(tr);
       });
@@ -743,23 +755,27 @@ function renderEvents() {
   }
 
   if (fullTbody) {
+    const visibleEvents = eventCameraFilter === 'all'
+      ? currentEvents
+      : currentEvents.filter((ev) => ev.camera === eventCameraFilter);
+
     fullTbody.innerHTML = '';
-    if (currentEvents.length === 0) {
+    if (visibleEvents.length === 0) {
       fullTbody.innerHTML = `
         <tr>
           <td colspan="6" class="ev-empty-cell">
             <div class="ev-empty">
-              <span class="ev-empty-title">REGISTRO EVENTI VUOTO // HARDWARE IN ATTESA</span>
-              <span class="ev-empty-sub">Gli snapshot e le registrazioni appariranno in tempo reale ai primi passaggi rilevati dai sensori ottici.</span>
+              <span class="ev-empty-title">${eventCameraFilter === 'all' ? 'Nessun evento registrato' : 'Nessun evento per questa telecamera'}</span>
+              <span class="ev-empty-sub">${eventCameraFilter === 'all' ? 'Fotogrammi e registrazioni compariranno qui ai primi passaggi rilevati.' : 'Scegli "Tutte" per rivedere gli eventi degli altri varchi.'}</span>
             </div>
           </td>
         </tr>
       `;
     } else {
-      currentEvents.forEach(ev => {
+      visibleEvents.forEach(ev => {
         const camLabel = formatCamName(ev.camera);
         const subjLabel = formatEventLabel(ev.label);
-        const thumbUrl = ev.thumb || 'assets/img/icona-ai-viola-su-scuro.svg';
+        const thumbUrl = ev.thumb || EVENT_THUMB_FALLBACK;
         const videoBtn = ev.video ? `
           <button class="play-video-link" onclick="openVideoModal('${camLabel} // ${ev.time}', '${ev.video}')">
             <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -768,17 +784,19 @@ function renderEvents() {
         ` : `<span class="ev-noclip">Solo Snapshot</span>`;
 
         const tr = document.createElement('tr');
+        // data-field non ha effetto su schermo largo: serve al foglio di stile
+        // per ricomporre la riga come scheda quando lo schermo e' stretto.
         tr.innerHTML = `
-          <td class="ev-time">${ev.time}</td>
-          <td class="ev-cam">${camLabel}</td>
-          <td><span class="ev-type">${subjLabel}</span></td>
-          <td><span class="ev-conf">${ev.conf || 'n.d.'}</span></td>
-          <td>
-            <div class="event-thumb-wrap" style="width:60px; height:38px;">
-              <img src="${thumbUrl}" alt="Snapshot" onerror="this.src='assets/img/icona-ai-viola-su-scuro.svg'">
+          <td data-field="time" class="ev-time">${ev.time}</td>
+          <td data-field="cam" class="ev-cam">${camLabel}</td>
+          <td data-field="type"><span class="ev-type">${subjLabel}</span></td>
+          <td data-field="conf"><span class="ev-conf">${ev.conf || 'n.d.'}</span></td>
+          <td data-field="thumb">
+            <div class="event-thumb-wrap">
+              <img src="${thumbUrl}" alt="Fotogramma dell'evento" onerror="this.src='${EVENT_THUMB_FALLBACK}'">
             </div>
           </td>
-          <td>${videoBtn}</td>
+          <td data-field="video">${videoBtn}</td>
         `;
         fullTbody.appendChild(tr);
       });
@@ -805,27 +823,49 @@ function closeVideoModal() {
 // ──────────────────────────────────────────────────────────────────────────────
 // 5C. VITALITY HEARTBEAT & WATCHDOG ANTI-FREEZE TENSORRT (SEGNALAZIONE ALESSIO)
 // ──────────────────────────────────────────────────────────────────────────────
+// Aggiorna l'indicatore rassicurante al centro della barra superiore.
+// E' l'unico elemento di stato che vede anche il cliente: resta verde quando il
+// sistema sorveglia, diventa rosso solo se il watchdog segnala il rilevatore bloccato.
+function updateSecurityStatus(status) {
+  const box = document.getElementById('securityStatus');
+  const label = document.getElementById('securityStatusLabel');
+  if (!box || !label) return;
+
+  if (status === 'frozen') {
+    box.classList.add('is-alert');
+    label.textContent = 'Anomalia · Rilevamento bloccato';
+    box.title = 'Il rilevatore non elabora immagini: contattare l\'assistenza tecnica';
+  } else {
+    box.classList.remove('is-alert');
+    label.textContent = 'Protetto';
+    box.title = 'Il sistema sorveglia regolarmente le aree controllate';
+  }
+}
+
 async function pollDetectorVitality() {
   try {
     const res = await fetch('/api/detector/vitality');
     if (!res.ok) return;
     const data = await res.json();
+
+    updateSecurityStatus(data.status);
+
     const badge = document.getElementById('detectorVitalityBadge');
     const textEl = document.getElementById('vitalityText');
     if (!badge || !textEl) return;
 
     if (data.status === 'frozen') {
       badge.className = 'vitality-badge frozen';
-      textEl.textContent = 'ALLARME: RILEVAMENTO BLOCCATO';
+      textEl.textContent = 'Rilevamento bloccato';
     } else if (data.status === 'healthy' && data.detection_fps > 0) {
       badge.className = 'vitality-badge healthy';
-      textEl.innerHTML = `IA VIGILANTE: <strong>${data.detection_fps.toFixed(1)}</strong> FPS`;
+      textEl.innerHTML = `Rilevamento attivo · <strong>${data.detection_fps.toFixed(1)}</strong> FPS`;
     } else if (data.status === 'waiting') {
       badge.className = 'vitality-badge healthy';
-      textEl.innerHTML = `IA VIGILANTE: <strong>IN ATTESA FLUSSI</strong>`;
+      textEl.textContent = 'In attesa dei flussi video';
     } else {
       badge.className = 'vitality-badge standby';
-      textEl.textContent = 'IA: IN ATTESA SEGNALE';
+      textEl.textContent = 'In attesa di segnale';
     }
     // Il testo resta leggibile anche con etichetta collassata
     badge.title = textEl.textContent;
@@ -843,35 +883,9 @@ async function pollJetsonTelemetry() {
     if (!res.ok) return;
     const data = await res.json();
 
-    // 1. Aggiornamento Top HUD Chips
-    const hudTemp = document.getElementById('hudTemp');
-    const hudSwap = document.getElementById('hudSwap');
-    const hudRam = document.getElementById('hudRam');
-    const hudPwr = document.getElementById('hudPwr');
-    const hudRelay = document.getElementById('hudRelay');
-
-    if (hudTemp && data.temperature !== undefined) {
-      hudTemp.textContent = `${data.temperature.toFixed(1)}°C`;
-      hudTemp.style.color = data.temperature > 75 ? 'var(--accent-red)' : (data.temperature > 65 ? 'var(--cai-gold)' : 'var(--text-main)');
-    }
-
-    if (hudSwap && data.swap_used_mb !== undefined) {
-      hudSwap.textContent = `${data.swap_used_mb} MB`;
-      hudSwap.style.color = data.swap_used_mb > 500 ? 'var(--accent-red)' : 'var(--accent-green)';
-    }
-
-    if (hudRam && data.ram_used_mb !== undefined) {
-      const ramGb = (data.ram_used_mb / 1024).toFixed(2);
-      hudRam.textContent = `${ramGb} GB`;
-    }
-
-    if (hudPwr && data.power_watts !== undefined) {
-      hudPwr.textContent = `${Math.round(data.power_watts)} W`;
-    }
-
-    if (hudRelay && data.devices) {
-      hudRelay.style.color = data.devices.relay_modbus ? 'var(--accent-green)' : 'var(--text-dim)';
-    }
+    // NOTA: le pastiglie di telemetria che stavano nella barra superiore sono
+    // state rimosse per non esporre al cliente numeri di sistema. I valori
+    // continuano ad alimentare la vista "Telemetria Edge", riservata al manutentore.
 
     // 2. Aggiornamento Pannello Diagnostica Completa (Vista 4)
     const diagTemp = document.getElementById('diagTemp');
@@ -1159,12 +1173,12 @@ function applyRole(role) {
     if (roleBadge) {
       roleBadge.className = 'role-pill maintainer';
     }
-    if (roleLabel) roleLabel.textContent = 'MANUTENTORE';
+    if (roleLabel) roleLabel.textContent = 'Manutentore';
   } else {
     if (roleBadge) {
       roleBadge.className = 'role-pill client';
     }
-    if (roleLabel) roleLabel.textContent = 'CLIENTE';
+    if (roleLabel) roleLabel.textContent = 'Cliente';
 
     // Se l'utente era nella pagina diagnostica, reindirizza al wall
     const currentActiveBtn = document.querySelector('.nav-btn.active, .bottom-nav-btn.active');
@@ -1239,6 +1253,10 @@ function closeAuthModal() {
 }
 
 function lockSession() {
+  // Il comando parte da dentro il menu del telefono, quindi il clic non ricade
+  // "fuori" e va chiuso qui a mano, altrimenti resterebbe aperto dietro il
+  // tastierino e ricomparirebbe al rientro.
+  closeHudMenu();
   sessionStorage.removeItem('sentinel_role');
   openAuthModal();
 }

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="dark">
+<html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SENTINEL AI // Mission Control</title>
-  <link rel="stylesheet" href="assets/styles.css?v=7.0">
+  <link rel="stylesheet" href="assets/styles.css?v=9.9">
 </head>
 <body>
 
@@ -14,7 +14,7 @@
   <aside class="soc-nav">
     <div class="nav-brand">
       <div class="nav-brand-clean-wrap">
-        <img id="brandLogo" class="conflavoro-official-logo" src="assets/img/conflavoro-ai-viola-su-scuro.svg" alt="Conflavoro AI">
+        <img id="brandLogo" class="conflavoro-official-logo" src="assets/img/conflavoro-ai-oro.svg" alt="Conflavoro AI">
         <span class="nav-brand-sub">SENTINEL PERIMETER // V2.4</span>
       </div>
     </div>
@@ -48,11 +48,8 @@
       </button>
     </nav>
 
-    <!-- Pulsanti Azione in Basso: Tema Scuro/Chiaro & Comprimi Barra -->
+    <!-- Comprimi / espandi la barra laterale -->
     <div class="nav-bottom-actions">
-      <button id="themeToggle" class="theme-icon-btn" title="Passa a Tema Chiaro">
-        <svg id="themeSvg" class="theme-toggle-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      </button>
       <button id="sidebarCollapseBtn" class="collapse-icon-btn" title="Comprimi Barra Laterale">
         <svg id="collapseSvg" class="collapse-toggle-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="m14 9-3 3 3 3"/></svg>
       </button>
@@ -69,70 +66,58 @@
       <!-- Zona Sinistra: Titolo Vista & Badge Canali -->
       <div class="hud-left-zone">
         <div class="mobile-hud-brand">
-          <img id="mobileBrandLogo" class="mobile-brand-icon" src="assets/img/conflavoro-ai-viola-su-scuro.svg" alt="Conflavoro AI">
+          <img id="mobileBrandLogo" class="mobile-brand-icon" src="assets/img/conflavoro-ai-icon-oro.svg" alt="Conflavoro AI">
         </div>
         <div class="hud-title-wrap">
           <span id="hudTitleText" class="hud-main-title">LIVE VIDEO WALL</span>
-          <div id="hudLivePill" class="hud-live-pill">
-            <span class="live-dot-beacon"></span>
-            <span>3x 4K STREAMS</span>
-          </div>
         </div>
       </div>
 
-      <!-- Zona Centrale: Strip Telemetria Compatta Unificata (Solo Manutentore) -->
-      <div class="hud-telemetry-zone maintainer-only-block">
-        <div class="hud-telemetry-strip" title="Telemetria Hardware Jetson Orin Nano">
-          <div class="telem-item">
-            <span class="telem-label">TEMP</span>
-            <strong id="hudTemp" class="telem-val">61.0°C</strong>
-          </div>
-          <span class="telem-divider"></span>
-          <div class="telem-item">
-            <span class="telem-label">SWAP</span>
-            <strong id="hudSwap" class="telem-val" style="color:var(--accent-green)">4 MB</strong>
-          </div>
-          <span class="telem-divider"></span>
-          <div class="telem-item">
-            <span class="telem-label">RAM</span>
-            <strong id="hudRam" class="telem-val">4.56 GB</strong>
-          </div>
-          <span class="telem-divider"></span>
-          <div class="telem-item">
-            <span class="telem-label">PWR</span>
-            <strong id="hudPwr" class="telem-val" style="color:var(--cai-gold)">16 W</strong>
-          </div>
-          <span class="telem-divider"></span>
-          <div class="telem-item">
-            <span class="telem-label">RELÈ</span>
-            <strong id="hudRelay" class="telem-val" style="color:var(--accent-green)">.30</strong>
-          </div>
+      <!-- Zona Centrale: stato di protezione.
+           E' il messaggio principale per il cliente. La telemetria hardware
+           (RAM, swap, temperatura, potenza) vive ora esclusivamente nella vista
+           "Telemetria Edge", riservata al manutentore. -->
+      <div class="hud-security-zone">
+        <div id="securityStatus" class="security-status" title="Stato di protezione del sistema">
+          <svg class="security-status-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          <span class="security-status-text">
+            <span id="securityStatusLabel">Protetto</span>
+            <span class="security-status-dot"></span>
+          </span>
         </div>
       </div>
 
       <!-- Zona Destra: Vitality Watchdog IA + Ruolo & Blocco PIN -->
       <div class="hud-right-zone">
-        <!-- Vitality Heartbeat Watchdog Badge (Alessio Anti-Freeze Watchdog) -->
-        <div id="detectorVitalityBadge" class="vitality-badge standby" title="IA: IN ATTESA SEGNALE">
-          <svg class="vitality-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l2.5-7 4 14 2.5-7h7"/></svg>
-          <span class="vitality-dot"></span>
-          <span id="vitalityText" class="vitality-label">IA: IN ATTESA SEGNALE</span>
-        </div>
-
-        <!-- Controllo Ruolo & Blocco PIN -->
-        <div class="hud-role-zone">
-          <div id="roleBadge" class="role-pill client">
-            <span class="role-indicator-dot"></span>
-            <span id="roleLabel">CLIENTE</span>
-          </div>
-          <button id="btnRoleLock" class="role-lock-btn" title="Blocca / Cambia PIN" onclick="lockSession()">
-            <svg class="role-lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </button>
-        </div>
-
-        <button id="mobileThemeToggle" class="theme-icon-btn mobile-theme-btn" style="display:none;" title="Cambia Tema">
-          <svg class="theme-toggle-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <!-- Su telefono questo pulsante apre il pannello sottostante;
+             su schermo largo e' nascosto e il pannello resta in linea. -->
+        <button id="hudMenuBtn" class="hud-menu-btn" type="button"
+                aria-label="Apri il menu" aria-expanded="false" aria-controls="hudMenu"
+                onclick="toggleHudMenu()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
+
+        <div id="hudMenu" class="hud-menu">
+          <!-- Stato del rilevatore (watchdog anti-blocco) -->
+          <div id="detectorVitalityBadge" class="vitality-badge standby" title="In attesa di segnale">
+            <svg class="vitality-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l2.5-7 4 14 2.5-7h7"/></svg>
+            <span class="vitality-dot"></span>
+            <span id="vitalityText" class="vitality-label">In attesa di segnale</span>
+          </div>
+
+          <!-- Ruolo in corso e uscita verso il tastierino -->
+          <div class="hud-role-zone">
+            <div id="roleBadge" class="role-pill client">
+              <span class="role-indicator-dot"></span>
+              <span id="roleLabel">Cliente</span>
+            </div>
+            <button id="btnRoleLock" class="role-lock-btn" title="Blocca la sessione e torna al tastierino" onclick="lockSession()">
+              <svg class="role-lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span class="role-lock-label">Blocca sessione</span>
+            </button>
+          </div>
+        </div>
+
       </div>
     </header>
 
@@ -255,9 +240,27 @@
         <!-- Live Ticker Preview -->
         <div class="glass-panel">
           <div class="panel-header-minimal">
-            <h3>Attività Recente</h3>
-            <button class="ultra-primary-btn" onclick="switchView('events')" style="padding:4px 12px; font-size:11px;">Visualizza Tutto →</button>
+            <div class="ev-head-text">
+              <h3>Attività Recente</h3>
+              <p class="ev-head-sub">Ultimi passaggi rilevati dalle telecamere</p>
+            </div>
+            <button class="ultra-primary-btn panel-action-btn" onclick="switchView('events')">
+              <span>Visualizza tutto</span>
+            </button>
           </div>
+
+          <!-- Filtro indipendente da quello dell'Archivio: qui si guarda cosa
+               sta succedendo adesso, la' si cerca un evento passato. -->
+          <div class="ev-filter-bar">
+            <label class="ev-filter-label" for="selWallCamera">Telecamera</label>
+            <select id="selWallCamera" class="ultra-input ev-filter-select" onchange="setWallFilter(this.value)">
+              <option value="all">Tutte le telecamere</option>
+              <option value="varco_carrabile">Varco Carrabile</option>
+              <option value="varco_pedonale">Varco Pedonale</option>
+              <option value="piazzale">Piazzale</option>
+            </select>
+          </div>
+
           <div class="table-scroll-wrap">
             <table class="data-table-ultra">
               <thead>
@@ -292,6 +295,19 @@
             </button>
           </div>
           
+          <!-- Filtro per telecamera. E' un select nativo di proposito: sul
+               telefono apre il selettore di sistema, gia' comodo e accessibile.
+               I valori corrispondono al campo 'camera' degli eventi di Frigate. -->
+          <div class="ev-filter-bar">
+            <label class="ev-filter-label" for="selEventCamera">Telecamera</label>
+            <select id="selEventCamera" class="ultra-input ev-filter-select" onchange="setEventFilter(this.value)">
+              <option value="all">Tutte le telecamere</option>
+              <option value="varco_carrabile">Varco Carrabile</option>
+              <option value="varco_pedonale">Varco Pedonale</option>
+              <option value="piazzale">Piazzale</option>
+            </select>
+          </div>
+
           <div class="table-scroll-wrap">
             <table class="data-table-ultra" style="margin-top:12px;">
               <thead>
@@ -353,7 +369,7 @@
           <div class="glass-panel">
             <div class="panel-header-minimal">
               <h3>Hardware Jetson Orin Nano</h3>
-              <span class="status-beacon">OPERATIVO</span>
+              <span class="status-beacon">Operativo</span>
             </div>
             <div class="metric-list">
               <div class="metric-row">
@@ -425,7 +441,7 @@
                 <h3>Pacchetti Vocali Ufficiali Sentinel AI</h3>
                 <p class="ev-head-sub">Seleziona e ascolta i pacchetti audio registrati a bordo del sistema</p>
               </div>
-              <span class="status-beacon">AUDIO ENGINE ONLINE</span>
+              <span class="status-beacon">Audio pronto</span>
             </div>
 
             <!-- Selezione Voce Carmelo / Sami -->
@@ -488,7 +504,7 @@
                   </button>
                   <span id="playingTrackLabel" class="track-path">audio/carmelo/03_avviso_dissuasione.mp3</span>
                 </div>
-                <span id="audioPlayingIndicator" class="status-beacon is-accent" style="display:none;">IN RIPRODUZIONE</span>
+                <span id="audioPlayingIndicator" class="status-beacon is-accent" style="display:none;">In riproduzione</span>
               </div>
             </div>
 
@@ -509,7 +525,7 @@
                 <h3>Parametri Audio & Attuatori</h3>
                 <p class="ev-head-sub">Regolazione hardware Fanvil (.31) e Modbus Relè (.30)</p>
               </div>
-              <span class="status-beacon">HARDWARE LINKED</span>
+              <span class="status-beacon">Hardware collegato</span>
             </div>
 
             <!-- Destinazione Output Audio (Reolink vs Fanvil - Solo Manutentore) -->
@@ -580,7 +596,7 @@
 
             <!-- Salva Configurazione -->
             <div style="margin-top:26px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
-              <span id="saveStatus" class="save-status" style="display:none;">CONFIGURAZIONE SALVATA</span>
+              <span id="saveStatus" class="save-status" style="display:none;">Configurazione salvata</span>
               <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:10px 24px; font-size:13px;">Salva Impostazioni</button>
             </div>
 
@@ -593,7 +609,7 @@
                 <h3>Gestione Credenziali & Codici di Accesso</h3>
                 <p class="ev-head-sub">Configurazione del doppio PIN per accesso Cliente e Manutentore (salvataggio locale Jetson)</p>
               </div>
-              <span class="status-beacon is-accent">AREA RISERVATA TECNICO</span>
+              <span class="status-beacon is-accent">Area riservata</span>
             </div>
 
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
@@ -617,7 +633,7 @@
             </div>
 
             <div style="margin-top:18px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
-              <span id="pinSaveStatus" class="save-status" style="display:none;">PIN AGGIORNATI CON SUCCESSO</span>
+              <span id="pinSaveStatus" class="save-status" style="display:none;">PIN aggiornati</span>
               <button type="button" class="ultra-primary-btn" onclick="saveNewPins()" style="padding:8px 20px; font-size:12px;">Aggiorna Codici PIN</button>
             </div>
           </div>
@@ -674,9 +690,9 @@
           <source src="" type="video/mp4">
         </video>
       </div>
-      <div style="display:flex; justify-content:space-between; margin-top:12px; font-family:var(--font-mono); font-size:10px; color:var(--text-dim);">
+      <div style="display:flex; justify-content:space-between; margin-top:12px; font-family:var(--font-mono); font-size:10px; color:var(--text-faint);">
         <span id="videoMeta">Event ID</span>
-        <span style="color:var(--accent-green)">Storage: //192.168.1.11/sentinel-eventi</span>
+        <span style="color:var(--tone-ok-fg)">Storage: //192.168.1.11/sentinel-eventi</span>
       </div>
     </div>
   </div>
@@ -761,20 +777,15 @@
        ────────────────────────────────────────────────────────────────────────── -->
   <div id="authModal" class="auth-modal-backdrop">
     <div class="auth-card">
-      <div class="tactical-corner-tl">
-        <svg viewBox="0 0 12 12"><path d="M0,12 L0,0 L12,0" stroke="var(--cai-gold)" stroke-width="2" fill="none"/></svg>
-      </div>
-      <div class="tactical-corner-br">
-        <svg viewBox="0 0 12 12"><path d="M12,0 L12,12 L0,12" stroke="var(--cai-gold)" stroke-width="2" fill="none"/></svg>
-      </div>
-
+      <!-- Fascia di testa in granata: e' l'unico fondo scuro della scheda,
+           quindi e' qui che il marchio in oro si legge come si deve. -->
       <div class="auth-header">
-        <img id="authModalLogo" src="assets/img/conflavoro-ai-viola-su-scuro.svg" alt="Conflavoro AI" style="max-width: 170px; height: auto; margin: 0 auto 10px; display: block; filter: drop-shadow(0 0 12px rgba(138, 84, 234, 0.4));">
-        <p class="auth-sub" style="margin-top: 4px;">SENTINEL AI // AUTENTICAZIONE DI SICUREZZA</p>
+        <img id="authModalLogo" class="auth-logo" src="assets/img/conflavoro-ai-oro.svg" alt="Conflavoro AI">
+        <p class="auth-sub">Accesso riservato</p>
       </div>
 
-      <div class="auth-body" style="width:100%;">
-        <p class="auth-instruction">Inserire PIN Cliente o PIN Manutentore:</p>
+      <div class="auth-body">
+        <p class="auth-instruction">Inserisci il tuo codice PIN</p>
         
         <!-- Indicatori 4 Cifre -->
         <div class="pin-display-row" id="pinDots">
@@ -784,7 +795,7 @@
           <span class="pin-dot"></span>
         </div>
 
-        <div id="authErrorMsg" class="auth-error-msg" style="display:none;">PIN NON VALIDO</div>
+        <div id="authErrorMsg" class="auth-error-msg" style="display:none;">Codice PIN non valido</div>
 
         <!-- Tastierino Numerico Touch & Mouse -->
         <div class="keypad-grid">
@@ -797,9 +808,13 @@
           <button type="button" class="keypad-btn" onclick="pressKeypad('7')">7</button>
           <button type="button" class="keypad-btn" onclick="pressKeypad('8')">8</button>
           <button type="button" class="keypad-btn" onclick="pressKeypad('9')">9</button>
-          <button type="button" class="keypad-btn action-clear" onclick="clearKeypad()" title="Cancella">C</button>
+          <button type="button" class="keypad-btn action-clear" onclick="clearKeypad()" title="Cancella" aria-label="Cancella il codice inserito">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6H9l-5 6 5 6h11a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/><line x1="17" y1="9.5" x2="12.5" y2="14.5"/><line x1="12.5" y1="9.5" x2="17" y2="14.5"/></svg>
+          </button>
           <button type="button" class="keypad-btn" onclick="pressKeypad('0')">0</button>
-          <button type="button" class="keypad-btn action-submit" onclick="submitKeypad()" title="Invio">↵</button>
+          <button type="button" class="keypad-btn action-submit" onclick="submitKeypad()" title="Conferma" aria-label="Conferma il codice">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
         </div>
 
         <div class="auth-hint">
@@ -810,6 +825,6 @@
     </div>
   </div>
 
-  <script src="assets/app.js?v=7.0"></script>
+  <script src="assets/app.js?v=9.9"></script>
 </body>
 </html>
