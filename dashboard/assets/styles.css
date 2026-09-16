@@ -113,7 +113,7 @@
 
   /* ── Misure ────────────────────────────────────────────────────────────── */
   --sidebar-w: 248px;
-  --sidebar-collapsed-w: 72px;
+  --sidebar-collapsed-w: 78px;
   --bottom-bar-h: 64px;
   --topbar-h: 68px;
 }
@@ -278,8 +278,16 @@ body[data-role="client"] .maintainer-only-nav {
 
 .soc-nav.collapsed {
   width: var(--sidebar-collapsed-w);
-  padding: 20px 10px;
+  padding: 20px 9px;
   align-items: center;
+}
+
+/* Con align-items:center i figli si restringono al contenuto: senza questo i
+ * bersagli compressi sarebbero larghi quanto la sola icona. */
+.soc-nav.collapsed .nav-brand,
+.soc-nav.collapsed .nav-items-group,
+.soc-nav.collapsed .nav-bottom-actions {
+  width: 100%;
 }
 
 .nav-brand {
@@ -354,7 +362,9 @@ body[data-role="client"] .maintainer-only-nav {
 
 .soc-nav.collapsed .nav-btn {
   justify-content: center;
-  padding: 11px 0;
+  padding: 0;
+  height: 46px;
+  border-radius: var(--radius-md);
 }
 
 .nav-btn:hover {
@@ -363,8 +373,10 @@ body[data-role="client"] .maintainer-only-nav {
 }
 
 .nav-btn.active {
-  background: var(--nav-active);
+  background-color: #320101;
   color: var(--nav-fg);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .nav-btn:focus-visible {
@@ -2329,8 +2341,14 @@ select.ultra-input {
 @media (max-width: 1023.98px) {
   .soc-nav {
     width: var(--sidebar-collapsed-w);
-    padding: 20px 10px;
+    padding: 20px 9px;
     align-items: center;
+  }
+
+  .soc-nav .nav-brand,
+  .soc-nav .nav-items-group,
+  .soc-nav .nav-bottom-actions {
+    width: 100%;
   }
 
   .soc-nav .nav-brand {
@@ -2345,7 +2363,9 @@ select.ultra-input {
 
   .soc-nav .nav-btn {
     justify-content: center;
-    padding: 11px 0;
+    padding: 0;
+    height: 46px;
+    border-radius: var(--radius-md);
   }
 
   .soc-nav .nav-bottom-actions {
