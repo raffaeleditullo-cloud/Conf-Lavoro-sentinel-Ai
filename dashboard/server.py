@@ -330,31 +330,44 @@ def read_recent_events(limit=25):
         conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True, timeout=5.0)
         cursor = conn.cursor()
 
-        cursor.execute("PRAGMA table_info(events)")
-        available = {r[1] for r in cursor.fetchall()}
-        if not available:
+        # Nome della tabella: in Frigate e' 'event' al SINGOLARE (verificato sul
+        # database reale del Jetson). Si mantiene il ripiego su 'events' per
+        # eventuali database piu' vecchi. La scelta avviene fra due valori fissi,
+        # quindi il nome puo' essere interpolato nella query senza rischi.
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = {r[0] for r in cursor.fetchall()}
+        if "event" in tables:
+            table_name = "event"
+        elif "events" in tables:
+            table_name = "events"
+        else:
             logger.error(
-                "Archivio Evidenze vuoto: la tabella 'events' non esiste in %s. "
-                "Database non inizializzato o versione di Frigate incompatibile.",
-                DB_PATH
+                "Archivio Evidenze vuoto: in %s non esiste ne' la tabella 'event' ne' 'events'. "
+                "Tabelle presenti: %s",
+                DB_PATH, ", ".join(sorted(tables)) or "(nessuna)"
             )
             return []
+
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        available = {r[1] for r in cursor.fetchall()}
 
         required = ["id", "camera", "label", "start_time"]
         missing = [c for c in required if c not in available]
         if missing:
             logger.error(
-                "Archivio Evidenze non leggibile: colonne obbligatorie assenti in 'events': %s. "
+                "Archivio Evidenze non leggibile: colonne obbligatorie assenti in '%s': %s. "
                 "Colonne disponibili: %s",
-                ", ".join(missing), ", ".join(sorted(available))
+                table_name, ", ".join(missing), ", ".join(sorted(available))
             )
             return []
 
+        # 'data' e' il campo JSON che nelle versioni recenti contiene il punteggio;
+        # 'top_score' resta come colonna solo nei database piu' vecchi.
         optional = [c for c in ("top_score", "data", "has_clip", "has_snapshot") if c in available]
         columns = required + optional
 
         cursor.execute(
-            "SELECT {} FROM events ORDER BY start_time DESC LIMIT ?".format(", ".join(columns)),
+            "SELECT {} FROM {} ORDER BY start_time DESC LIMIT ?".format(", ".join(columns), table_name),
             (limit,)
         )
         rows = cursor.fetchall()
@@ -391,7 +404,10 @@ def read_recent_events(limit=25):
                 DB_PATH
             )
         else:
-            logger.info("Archivio Evidenze: %d eventi letti da %s", len(events), DB_PATH)
+            logger.info(
+                "Archivio Evidenze: %d eventi letti dalla tabella '%s' di %s",
+                len(events), table_name, DB_PATH
+            )
 
         return events
 
