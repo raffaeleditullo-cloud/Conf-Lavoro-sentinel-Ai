@@ -25,6 +25,7 @@ import os
 import sys
 import time
 import json
+import socket
 import logging
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
@@ -38,7 +39,11 @@ from nas_archiver import UgreenNASArchiver
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. PARAMETRI DI RUNTIME
 # ──────────────────────────────────────────────────────────────────────────────
-MQTT_HOST = os.environ.get("FRIGATE_MQTT_HOST", "mosquitto")
+# Nomi dei servizi come richiesti da .env: validi in rete bridge Docker.
+# Con 'network_mode: host' (necessario per il multicast RTP verso il Fanvil) i nomi
+# dei container NON sono risolvibili: vengono convertiti in 127.0.0.1 dalla funzione
+# resolve_service_host() piu' sotto, che entrambe le porte pubblicano gia' su loopback.
+MQTT_HOST_PREFERRED = os.environ.get("FRIGATE_MQTT_HOST", "mosquitto")
 MQTT_PORT = 1883
 MQTT_USER = os.environ.get("FRIGATE_MQTT_USER", "")
 MQTT_PASSWORD = os.environ.get("FRIGATE_MQTT_PASSWORD", "")
@@ -76,6 +81,16 @@ SPEAKER_PORT = int(os.environ.get("SPEAKER_PORT", "80"))
 SPEAKER_USER = os.environ.get("SPEAKER_USER", "admin")
 SPEAKER_PASSWORD = os.environ.get("SPEAKER_PASSWORD", "admin")
 
+# Canale MULTICAST RTP su cui il Fanvil A233 e' gia' in ascolto (collaudo Alessio).
+FANVIL_MULTICAST_IP = os.environ.get("FANVIL_MULTICAST_IP", "239.255.1.1")
+FANVIL_MULTICAST_PORT = int(os.environ.get("FANVIL_MULTICAST_PORT", "5004"))
+# Volume di ripiego (0-100) quando system_settings.json non e' leggibile.
+FANVIL_DEFAULT_VOLUME = float(os.environ.get("FANVIL_DEFAULT_VOLUME", "70"))
+
+# API interna di Frigate usata dall'archiviatore NAS per scaricare foto e clip.
+FRIGATE_HOST_PREFERRED = os.environ.get("FRIGATE_HOST", "frigate")
+FRIGATE_PORT = int(os.environ.get("FRIGATE_PORT", "5000"))
+
 NAS_IP = os.environ.get("NAS_IP", "192.168.1.11")
 NAS_SHARE = os.environ.get("NAS_SHARE", "sentinel-eventi")
 NAS_USER = os.environ.get("NAS_USER", "jetson")
@@ -109,11 +124,46 @@ file_handler.setFormatter(logging.Formatter(fmt="%(message)s"))
 jsonl_logger.addHandler(file_handler)
 
 # ──────────────────────────────────────────────────────────────────────────────
+# 2B. RISOLUZIONE HOST DEI SERVIZI (compatibilita' bridge Docker / rete host)
+# ──────────────────────────────────────────────────────────────────────────────
+def resolve_service_host(preferred: str, fallback: str = "127.0.0.1") -> str:
+    """
+    Restituisce 'preferred' se il nome e' risolvibile (rete bridge Docker), altrimenti
+    'fallback'. Serve a rendere trasparente il passaggio a 'network_mode: host',
+    imposto dal multicast RTP verso il Fanvil: in quella modalita' i nomi dei
+    container ('mosquitto', 'frigate') non esistono, ma le rispettive porte sono
+    gia' pubblicate su 127.0.0.1 dal docker-compose.
+    """
+    try:
+        socket.getaddrinfo(preferred, None)
+        return preferred
+    except socket.gaierror:
+        logger.warning(
+            "Host di servizio '%s' non risolvibile (rete host attiva?): ripiego su '%s'.",
+            preferred, fallback
+        )
+        return fallback
+
+MQTT_HOST = resolve_service_host(MQTT_HOST_PREFERRED)
+FRIGATE_HOST = resolve_service_host(FRIGATE_HOST_PREFERRED)
+
+# ──────────────────────────────────────────────────────────────────────────────
 # 3. INIZIALIZZAZIONE ATTUATORI
 # ──────────────────────────────────────────────────────────────────────────────
 relay = WaveshareRelayController(host=RELAY_HOST, port=RELAY_PORT)
-speaker = FanvilSpeakerController(host=SPEAKER_HOST, http_port=SPEAKER_PORT, user=SPEAKER_USER, password=SPEAKER_PASSWORD)
-nas = UgreenNASArchiver(nas_ip=NAS_IP, share_name=NAS_SHARE, user=NAS_USER, password=NAS_PASSWORD)
+speaker = FanvilSpeakerController(
+    host=SPEAKER_HOST,
+    http_port=SPEAKER_PORT,
+    user=SPEAKER_USER,
+    password=SPEAKER_PASSWORD,
+    multicast_ip=FANVIL_MULTICAST_IP,
+    multicast_port=FANVIL_MULTICAST_PORT,
+    default_volume_percent=FANVIL_DEFAULT_VOLUME,
+)
+nas = UgreenNASArchiver(
+    nas_ip=NAS_IP, share_name=NAS_SHARE, user=NAS_USER, password=NAS_PASSWORD,
+    frigate_host=FRIGATE_HOST, frigate_port=FRIGATE_PORT
+)
 
 # Tracciamento cooldown per telecamera/azione: { "camera_azione": timestamp_ultimo_trigger }
 cooldown_tracker = {}
@@ -168,6 +218,29 @@ def get_voice_pack() -> str:
             pass
     return VOICE_PACK
 
+def get_voice_volume() -> float:
+    """
+    Restituisce il volume di diffusione corrente in percentuale (0-100).
+
+    Fonte primaria: 'voice_volume' di system_settings.json, cioe' il cursore che
+    l'operatore muove dalla dashboard; la lettura e' fatta a ogni annuncio, quindi
+    una modifica ha effetto immediato senza riavviare l'orchestratore.
+    Fonte di ripiego: FANVIL_DEFAULT_VOLUME (default 70%).
+    """
+    settings_file = os.environ.get("SETTINGS_FILE", "/config/system_settings.json")
+    if os.path.exists(settings_file):
+        try:
+            with open(settings_file, "r", encoding="utf-8") as f:
+                value = json.load(f).get("voice_volume")
+            if value is not None:
+                return max(0.0, min(100.0, float(value)))
+        except Exception as err:
+            logger.warning(
+                "Volume non leggibile da '%s' (%s): uso il valore predefinito %.0f%%.",
+                settings_file, err, FANVIL_DEFAULT_VOLUME
+            )
+    return FANVIL_DEFAULT_VOLUME
+
 def get_audio_path(sound_id: str) -> str:
     """Restituisce il percorso assoluto del file audio per il pacchetto vocale attivo."""
     pack = get_voice_pack()
@@ -209,8 +282,12 @@ def handle_frigate_event(event_data: dict, topic: str):
             # Qualsiasi persona rilevata su varchi perimetrali o piazzale riceve avviso di dissuasione
             if not is_in_cooldown(f"{camera}_audio", cooldown_seconds=AUDIO_COOLDOWN):
                 audio_file = get_audio_path("03_avviso_dissuasione")
-                logger.info(">>> AZIONE: Riproduzione avviso vocale '%s' per '%s'", os.path.basename(audio_file), camera)
-                speaker.play_audio_file(audio_file)
+                volume = get_voice_volume()
+                logger.info(
+                    ">>> AZIONE: Riproduzione avviso vocale '%s' per '%s' (multicast RTP %s:%d, volume %.0f%%)",
+                    os.path.basename(audio_file), camera, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
+                )
+                speaker.play_audio_file(audio_file, volume_percent=volume)
 
             # 3. Archiviazione Snapshot sul NAS (una sola volta per ID evento, istantanea)
             if has_snapshot and mark_snapshot_archived(event_id):
@@ -249,19 +326,19 @@ def handle_lpr_update(lpr_data: dict):
         if not is_in_cooldown("cancello_apertura", cooldown_seconds=10.0):
             logger.info(">>> AZIONE: Targa autorizzata '%s' (%s) -> Apertura Cancello (Relè Canale %d) + Voce", plate, name, RELAY_CHANNEL_CANCELLO + 1)
             relay.apri_cancello(channel=RELAY_CHANNEL_CANCELLO, impulso_secondi=3.0)
-            speaker.play_audio_file(get_audio_path("02_targa_autorizzata"))
+            speaker.play_audio_file(get_audio_path("02_targa_autorizzata"), volume_percent=get_voice_volume())
     elif name is None and score >= 0.85:
         # Targa sconosciuta
         if not is_in_cooldown("cancello_non_autorizzato", cooldown_seconds=15.0):
             logger.info(">>> AZIONE: Targa NON autorizzata '%s' -> Avviso dissuasione vocale", plate)
-            speaker.play_audio_file(get_audio_path("05_targa_non_autorizzata"))
+            speaker.play_audio_file(get_audio_path("05_targa_non_autorizzata"), volume_percent=get_voice_volume())
 
 def handle_audio_alarm(topic: str, value: str):
     """Elabora rilevamenti audio di emergenza ('frigate/<camera>/audio/<type>')."""
     if value.upper() == "ON":
         logger.warning(">>> ALLARME AUDIO RILEVATO su topic %s: Valore=%s -> Accensione faretto immediata", topic, value)
         relay.accendi_faretto(channel=RELAY_CHANNEL_PIAZZALE, durata_secondi=45.0)
-        speaker.play_audio_file(get_audio_path("04_allarme_intrusione"))
+        speaker.play_audio_file(get_audio_path("04_allarme_intrusione"), volume_percent=get_voice_volume())
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4B. WATCHDOG ANTI-FREEZE TENSORRT (SEGNALAZIONE CRITICA ALESSIO)
@@ -432,8 +509,12 @@ def main():
     logger.info("════════════════════════════════════════════════════════════════════")
     logger.info("CONF-LAVORO SENTINEL AI — ORCHESTRATORE ATTIVO (FASE 2)")
     logger.info("Broker: %s:%d | Utente: %s", MQTT_HOST, MQTT_PORT, MQTT_USER)
+    logger.info("API Frigate: http://%s:%d", FRIGATE_HOST, FRIGATE_PORT)
     logger.info("Relè Waveshare: %s:%d (Canale 1: Faretto, Canale 2: Cancello)", RELAY_HOST, RELAY_PORT)
-    logger.info("Altoparlante Fanvil: %s:%d (Pacchetto voce: '%s')", SPEAKER_HOST, SPEAKER_PORT, VOICE_PACK)
+    logger.info(
+        "Altoparlante Fanvil %s: MULTICAST RTP rtp://%s:%d (Pacchetto voce: '%s', volume %.0f%%)",
+        SPEAKER_HOST, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, VOICE_PACK, get_voice_volume()
+    )
     logger.info("NAS Ugreen: %s (Condivisione: '%s', Utente: '%s')", NAS_IP, NAS_SHARE, NAS_USER)
     logger.info("════════════════════════════════════════════════════════════════════")
 

@@ -44,6 +44,48 @@ sul **Jetson Orin Nano Super Dev Kit 8GB** del cliente. Il sistema gestisce
 
 ---
 
+## Altoparlante Fanvil A233 — Dissuasione vocale (Multicast RTP)
+
+La riproduzione degli avvisi vocali **non usa chiamate HTTP/CGI né SIP**: il sistema
+invia l'audio come flusso **Multicast RTP** con `ffmpeg`, sul canale che l'A233
+ascolta già di suo.
+
+| Parametro | Valore predefinito | Variabile d'ambiente |
+|-----------|--------------------|----------------------|
+| Indirizzo multicast | `239.255.1.1` | `FANVIL_MULTICAST_IP` |
+| Porta | `5004` | `FANVIL_MULTICAST_PORT` |
+| Codec | G.711 µ-law, 8 kHz, mono | *(fisso)* |
+| Volume | cursore della dashboard (`voice_volume`) | `FANVIL_DEFAULT_VOLUME` (ripiego, 0-100) |
+
+> **CONFIGURAZIONE OBBLIGATORIA SULLO SPEAKER (nota di Alessio)**
+> Nell'interfaccia web del Fanvil A233 vanno **disattivati** i due toni di servizio:
+> - **Multicast Tone**
+> - **Auto HangUp Tone**
+>
+> Se restano attivi, al termine di ogni annuncio lo speaker emette **3 bip**
+> che si sovrappongono all'avviso di dissuasione.
+
+> **PERCHÉ I CONTAINER USANO LA RETE DELL'HOST**
+> I servizi `orchestrator` e `dashboard` girano con `network_mode: host` in
+> `docker-compose.yml`: con la rete bridge di Docker i pacchetti multicast
+> restano confinati in `docker0` e non raggiungono mai l'altoparlante.
+> Di conseguenza i nomi dei container non sono risolvibili: il codice ripiega
+> automaticamente su `127.0.0.1` per il broker MQTT (`mosquitto`) e per l'API
+> interna di Frigate, entrambi già pubblicati su loopback. Nessuna modifica
+> al file `.env` è necessaria.
+
+> **VERIFICA RAPIDA IN CAMPO**
+> Dall'host, con lo speaker alimentato e in rete:
+> ```
+> ffmpeg -re -i orchestrator/audio/carmelo/03_avviso_dissuasione.mp3 \
+>        -af volume=0.85 -ac 1 -ar 8000 -acodec pcm_mulaw \
+>        -payload_type 0 -f rtp rtp://239.255.1.1:5004
+> ```
+> Se si sente l'annuncio, il canale è corretto e il problema è eventualmente
+> nel container (manca `ffmpeg` nell'immagine o non è attiva la rete host).
+
+---
+
 ## Struttura della cartella
 
 ```

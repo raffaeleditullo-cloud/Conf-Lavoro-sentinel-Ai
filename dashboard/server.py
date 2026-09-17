@@ -14,6 +14,7 @@ import os
 import sys
 import json
 import time
+import socket
 import logging
 import sqlite3
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -27,8 +28,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SentinelDashboard")
 
+def resolve_service_host(preferred: str, fallback: str = "127.0.0.1") -> str:
+    """
+    Restituisce 'preferred' se il nome e' risolvibile (rete bridge Docker), altrimenti
+    'fallback'. Il servizio dashboard gira con 'network_mode: host' perche' la
+    dissuasione vocale manuale diffonde audio in multicast RTP verso il Fanvil A233:
+    in quella modalita' il nome 'frigate' non esiste, ma l'API interna di Frigate e'
+    gia' pubblicata su 127.0.0.1:5000 dal docker-compose. Stessa logica in
+    orchestrator/observer.py::resolve_service_host.
+    """
+    try:
+        socket.getaddrinfo(preferred, None)
+        return preferred
+    except socket.gaierror:
+        logger.warning(
+            "Host di servizio '%s' non risolvibile (rete host attiva?): ripiego su '%s'.",
+            preferred, fallback
+        )
+        return fallback
+
 PORT = int(os.environ.get("DASHBOARD_PORT", "8080"))
-FRIGATE_HOST = os.environ.get("FRIGATE_HOST", "frigate")
+FRIGATE_HOST = resolve_service_host(os.environ.get("FRIGATE_HOST", "frigate"))
 FRIGATE_PORT = int(os.environ.get("FRIGATE_PORT", "5000"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.environ.get("CONFIG_DIR", "/config" if os.path.exists("/config") else os.path.abspath(os.path.join(BASE_DIR, "..", "config")))
@@ -102,6 +122,10 @@ relay_host = os.environ.get("RELAY_HOST", "192.168.1.30")
 relay_port = int(os.environ.get("RELAY_PORT", "4196"))
 speaker_host = os.environ.get("SPEAKER_HOST", "192.168.1.31")
 speaker_port = int(os.environ.get("SPEAKER_PORT", "80"))
+# Canale MULTICAST RTP su cui il Fanvil A233 e' gia' in ascolto (collaudo Alessio).
+fanvil_multicast_ip = os.environ.get("FANVIL_MULTICAST_IP", "239.255.1.1")
+fanvil_multicast_port = int(os.environ.get("FANVIL_MULTICAST_PORT", "5004"))
+fanvil_default_volume = float(os.environ.get("FANVIL_DEFAULT_VOLUME", "70"))
 
 try:
     from relay_controller import WaveshareRelayController
@@ -119,9 +143,14 @@ try:
     speaker_user = os.environ.get("SPEAKER_USER", "admin")
     speaker_password = os.environ.get("SPEAKER_PASSWORD", "admin")
     speaker_controller = FanvilSpeakerController(
-        host=speaker_host, http_port=speaker_port, user=speaker_user, password=speaker_password
+        host=speaker_host, http_port=speaker_port, user=speaker_user, password=speaker_password,
+        multicast_ip=fanvil_multicast_ip, multicast_port=fanvil_multicast_port,
+        default_volume_percent=fanvil_default_volume
     )
-    logger.info("[HARDWARE] FanvilSpeakerController caricato: %s:%d", speaker_host, speaker_port)
+    logger.info(
+        "[HARDWARE] FanvilSpeakerController caricato: %s (multicast RTP rtp://%s:%d)",
+        speaker_host, fanvil_multicast_ip, fanvil_multicast_port
+    )
 except Exception as _sp_err:
     logger.error(
         "[HARDWARE] Altoparlante Fanvil NON caricato da %s (%s): la dissuasione vocale "
@@ -648,16 +677,27 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         elif parsed.path == "/api/speaker/voice":
             pack = "carmelo"
             track = "03_avviso_dissuasione"
+            volume = fanvil_default_volume
             if os.path.exists(SETTINGS_FILE):
                 try:
                     with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
                         cfg = json.load(f)
                         pack = cfg.get("voice_pack", cfg.get("voice_gender", "carmelo"))
                         track = cfg.get("active_track", "03_avviso_dissuasione")
-                except Exception:
-                    pass
+                        # Cursore volume della dashboard (0-100): il driver lo converte
+                        # nel filtro ffmpeg 'volume' (85 -> 0.85) per il flusso RTP.
+                        volume = float(cfg.get("voice_volume", fanvil_default_volume))
+                except Exception as _cfg_err:
+                    logger.warning(
+                        "Impostazioni vocali non leggibili (%s): uso pacchetto '%s', traccia '%s', volume %.0f%%.",
+                        _cfg_err, pack, track, volume
+                    )
+            volume = max(0.0, min(100.0, volume))
             pack, audio_path = resolve_audio_path(pack, track)
-            logger.info("Comando Altoparlante: dissuasione vocale '%s/%s.mp3' -> %s", pack, track, audio_path)
+            logger.info(
+                "Comando Altoparlante: dissuasione vocale '%s/%s.mp3' -> %s | multicast RTP rtp://%s:%d | volume %.0f%%",
+                pack, track, audio_path, fanvil_multicast_ip, fanvil_multicast_port, volume
+            )
 
             if speaker_controller is None:
                 logger.error("Comando vocale ignorato: driver altoparlante non caricato.")
@@ -675,8 +715,22 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 }, status=404)
                 return
 
-            speaker_controller.play_audio_file(audio_path)
-            self._send_json({"success": True, "action": "voice", "pack": pack, "track": track})
+            started = speaker_controller.play_audio_file(audio_path, volume_percent=volume)
+            if started is False:
+                # Un annuncio e' gia' in corso: il driver ammette un solo flusso RTP
+                # per volta, quindi la richiesta e' stata scartata, non eseguita.
+                logger.warning("Comando vocale scartato: riproduzione gia' in corso sul canale multicast.")
+                self._send_json({
+                    "success": False, "action": "voice", "pack": pack, "track": track,
+                    "error": "Annuncio gia' in corso sull'altoparlante: attendere la fine della riproduzione"
+                }, status=409)
+                return
+
+            self._send_json({
+                "success": True, "action": "voice", "pack": pack, "track": track,
+                "volume": volume, "transport": "multicast-rtp",
+                "target": f"rtp://{fanvil_multicast_ip}:{fanvil_multicast_port}"
+            })
             return
 
         elif parsed.path == "/api/plates":
@@ -802,7 +856,11 @@ def main():
     logger.info("Database eventi     : %s (esiste: %s)", DB_PATH, os.path.exists(DB_PATH))
     logger.info("Frigate API         : http://%s:%d", FRIGATE_HOST, FRIGATE_PORT)
     logger.info("Relè Modbus         : %s:%d (driver %s)", relay_host, relay_port, "OK" if relay_controller else "NON DISPONIBILE")
-    logger.info("Altoparlante Fanvil : %s:%d (driver %s)", speaker_host, speaker_port, "OK" if speaker_controller else "NON DISPONIBILE")
+    logger.info(
+        "Altoparlante Fanvil : %s via multicast RTP rtp://%s:%d (driver %s)",
+        speaker_host, fanvil_multicast_ip, fanvil_multicast_port,
+        "OK" if speaker_controller else "NON DISPONIBILE"
+    )
     logger.info("================================================================")
     server = HTTPServer(("0.0.0.0", PORT), SentinelDashboardHandler)
     try:

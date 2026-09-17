@@ -59,6 +59,14 @@ services:
       context: ./orchestrator
       dockerfile: Dockerfile
     restart: unless-stopped
+    # RETE HOST OBBLIGATORIA PER LA DISSUASIONE VOCALE:
+    # l'altoparlante Fanvil A233 ascolta un canale MULTICAST RTP (239.255.1.1:5004).
+    # Con la rete bridge di Docker i pacchetti multicast restano confinati in docker0
+    # e non raggiungono l'interfaccia fisica su cui e' attestato lo speaker.
+    # Conseguenze sulla risoluzione dei nomi (gestite con fallback trasparente nel codice):
+    #   - il broker MQTT non e' piu' 'mosquitto' ma 127.0.0.1:1883 (porta gia' pubblicata)
+    #   - l'API Frigate non e' piu' 'frigate:5000' ma 127.0.0.1:5000 (porta gia' pubblicata)
+    network_mode: host
     volumes:
       # Registro eventi persistente sull'host con rotazione automatica (max 50MB)
       - ./storage/logs:/app/logs
@@ -76,9 +84,13 @@ services:
       context: ./dashboard
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      # Interfaccia Web Commerciale Conflavoro Sentinel AI (accessibile da LAN)
-      - "8080:8080"
+    # RETE HOST anche qui: il pulsante "dissuasione vocale" della dashboard usa lo
+    # stesso driver multicast RTP dell'orchestratore. In rete bridge il comando
+    # risponderebbe "success" senza che dallo speaker esca alcun suono.
+    # L'interfaccia Web Commerciale resta raggiungibile dalla LAN sulla porta 8080
+    # (DASHBOARD_PORT), che il server apre direttamente sull'host: con network_mode
+    # host la sezione 'ports:' non e' ammessa e non serve.
+    network_mode: host
     volumes:
       - ./config:/config
       # Driver hardware condivisi con l'orchestratore (relè Modbus + altoparlante Fanvil).
