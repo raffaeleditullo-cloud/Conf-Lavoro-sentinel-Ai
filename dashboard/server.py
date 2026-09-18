@@ -80,17 +80,15 @@ DB_PATH = os.environ.get("DB_PATH", os.path.join(DB_DIR, "frigate.db"))
 DRIVERS_DIR = "/app/drivers" if os.path.isdir("/app/drivers") else os.path.abspath(os.path.join(BASE_DIR, "..", "orchestrator"))
 
 DEFAULT_SETTINGS = {
-    "voice_gender": "male",
+    "voice_gender": "carmelo",
     "voice_profile": "carmelo",
     "voice_pack": "carmelo",
     "active_track": "03_avviso_dissuasione",
-    "voice_volume": 85,
-    "siren_enabled": True,
+    "voice_volume": 70,
     "faro_sec": 30,
     "gate_sec": 3,
     "client_pin": "1111",
     "admin_pin": "9999",
-    "audio_target": "cameras",
     "preset": "preset1",
     "custom_message": "Attenzione: Area sotto videosorveglianza con tracciamento biometrico. Allontanarsi immediatamente."
 }

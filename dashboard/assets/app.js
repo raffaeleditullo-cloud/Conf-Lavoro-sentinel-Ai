@@ -649,6 +649,9 @@ let currentEvents = [];
 // Telecamera selezionata nel registro completo ('all' = nessun filtro)
 let eventCameraFilter = 'all';
 
+// Filtro tipo oggetto nel registro completo ('all', 'person', 'vehicle')
+let eventLabelFilter = 'all';
+
 // Telecamera selezionata nell'anteprima "Attivita' Recente". E' una variabile
 // distinta di proposito: nell'anteprima si guarda cosa sta succedendo adesso,
 // nell'Archivio si cerca un evento passato, e i due filtri non devono
@@ -661,8 +664,17 @@ const EVENT_THUMB_FALLBACK = 'assets/img/conflavoro-ai-icon-viola.svg';
 // Il filtro agisce sul solo registro completo: l'anteprima nella schermata
 // delle telecamere continua a mostrare l'attivita' recente di tutti i varchi.
 // Lo stato visivo non va sincronizzato a mano, ci pensa il select stesso.
-function setEventFilter(cam) {
+function setEventCameraFilter(cam) {
   eventCameraFilter = cam;
+  renderEvents();
+}
+
+function setEventFilter(cam) {
+  setEventCameraFilter(cam);
+}
+
+function setEventLabelFilter(val) {
+  eventLabelFilter = val;
   renderEvents();
 }
 
@@ -755,18 +767,35 @@ function renderEvents() {
   }
 
   if (fullTbody) {
-    const visibleEvents = eventCameraFilter === 'all'
-      ? currentEvents
-      : currentEvents.filter((ev) => ev.camera === eventCameraFilter);
+    const visibleEvents = currentEvents.filter((ev) => {
+      // Filtro telecamera
+      if (eventCameraFilter !== 'all' && ev.camera !== eventCameraFilter) {
+        return false;
+      }
+      // Filtro tipo oggetto (persona vs veicolo)
+      if (eventLabelFilter !== 'all') {
+        const lbl = (ev.label || '').toLowerCase();
+        if (eventLabelFilter === 'person') {
+          if (lbl !== 'person') return false;
+        } else if (eventLabelFilter === 'vehicle') {
+          const isVehicle = ['car', 'truck', 'motorcycle', 'bus'].includes(lbl) || lbl.startsWith('plate:');
+          if (!isVehicle) return false;
+        }
+      }
+      return true;
+    });
 
     fullTbody.innerHTML = '';
     if (visibleEvents.length === 0) {
+      const emptySub = (eventCameraFilter !== 'all' || eventLabelFilter !== 'all')
+        ? 'Nessun evento corrispondente ai filtri selezionati. Modifica i criteri per visualizzare altri passaggi.'
+        : 'Fotogrammi e registrazioni compariranno qui ai primi passaggi rilevati.';
       fullTbody.innerHTML = `
         <tr>
           <td colspan="6" class="ev-empty-cell">
             <div class="ev-empty">
-              <span class="ev-empty-title">${eventCameraFilter === 'all' ? 'Nessun evento registrato' : 'Nessun evento per questa telecamera'}</span>
-              <span class="ev-empty-sub">${eventCameraFilter === 'all' ? 'Fotogrammi e registrazioni compariranno qui ai primi passaggi rilevati.' : 'Scegli "Tutte" per rivedere gli eventi degli altri varchi.'}</span>
+              <span class="ev-empty-title">Nessun evento trovato</span>
+              <span class="ev-empty-sub">${emptySub}</span>
             </div>
           </td>
         </tr>
@@ -1054,45 +1083,79 @@ function updateVolumeLabel(val) {
   }
 }
 
-function saveSettings() {
+async function saveSettings() {
   const rngVol = document.getElementById('rngVolume');
-  const chkSiren = document.getElementById('chkSiren');
   const numFaro = document.getElementById('numFaroSec');
   const numGate = document.getElementById('numGateSec');
   const selTrack = document.getElementById('selAudioTrack');
 
   const payload = {
-    voice_pack: currentSettings.voice_pack,
-    voice_gender: currentSettings.voice_pack,
-    active_track: selTrack ? selTrack.value : '03_avviso_dissuasione',
-    voice_volume: rngVol ? parseInt(rngVol.value, 10) : 85,
-    siren_enabled: chkSiren ? chkSiren.checked : true,
-    faro_sec: numFaro ? parseInt(numFaro.value, 10) : 30,
-    gate_sec: numGate ? parseInt(numGate.value, 10) : 3
+    voice_pack: currentSettings.voice_pack || 'carmelo',
+    voice_gender: currentSettings.voice_pack || 'carmelo',
+    active_track: selTrack ? selTrack.value : (currentSettings.active_track || '03_avviso_dissuasione'),
+    voice_volume: rngVol ? parseInt(rngVol.value, 10) : (currentSettings.voice_volume || 70),
+    faro_sec: numFaro ? parseInt(numFaro.value, 10) : (currentSettings.faro_sec || 30),
+    gate_sec: numGate ? parseInt(numGate.value, 10) : (currentSettings.gate_sec || 3)
   };
 
-  localStorage.setItem('sentinel_settings', JSON.stringify(payload));
-
-  fetch('/api/settings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).catch(() => {});
-
   const statusLbl = document.getElementById('saveStatus');
-  if (statusLbl) {
-    statusLbl.style.display = 'inline';
-    setTimeout(() => {
-      statusLbl.style.display = 'none';
-    }, 3000);
+
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const respData = await res.json();
+      if (respData.settings) {
+        Object.assign(currentSettings, respData.settings);
+      }
+      localStorage.setItem('sentinel_settings', JSON.stringify(payload));
+      if (statusLbl) {
+        statusLbl.textContent = 'Configurazione salvata sul server';
+        statusLbl.style.color = 'var(--tone-ok-fg, #166534)';
+        statusLbl.style.display = 'inline';
+        setTimeout(() => { statusLbl.style.display = 'none'; }, 3000);
+      }
+    } else {
+      throw new Error(`HTTP ${res.status}`);
+    }
+  } catch (err) {
+    console.error("Errore salvataggio impostazioni su server:", err);
+    // Salva comunque in locale come fallback
+    localStorage.setItem('sentinel_settings', JSON.stringify(payload));
+    if (statusLbl) {
+      statusLbl.textContent = 'Errore salvataggio server (salvato in locale)';
+      statusLbl.style.color = 'var(--alert, #ef4444)';
+      statusLbl.style.display = 'inline';
+      setTimeout(() => { statusLbl.style.display = 'none'; }, 4000);
+    }
   }
 }
 
-function loadSettings() {
-  const stored = localStorage.getItem('sentinel_settings');
-  let data = stored ? JSON.parse(stored) : currentSettings;
+async function loadSettings() {
+  // 1. Prova a caricare le impostazioni reali dal server Jetson
+  try {
+    const res = await fetch('/api/settings');
+    if (res.ok) {
+      const serverData = await res.json();
+      if (serverData && typeof serverData === 'object') {
+        currentSettings = Object.assign(currentSettings, serverData);
+        localStorage.setItem('sentinel_settings', JSON.stringify(currentSettings));
+      }
+    }
+  } catch (e) {
+    console.warn("Impossibile caricare impostazioni dal server, uso cache locale:", e);
+    const stored = localStorage.getItem('sentinel_settings');
+    if (stored) {
+      try {
+        currentSettings = Object.assign(currentSettings, JSON.parse(stored));
+      } catch (_) {}
+    }
+  }
 
-  currentSettings = Object.assign(currentSettings, data);
   if (currentSettings.voice_gender && !currentSettings.voice_pack) {
     currentSettings.voice_pack = (currentSettings.voice_gender === 'female' || currentSettings.voice_gender === 'sami') ? 'sami' : 'carmelo';
   }
@@ -1106,19 +1169,16 @@ function loadSettings() {
   if (selTrack && currentSettings.active_track) selTrack.value = currentSettings.active_track;
 
   const rngVol = document.getElementById('rngVolume');
-  if (rngVol) {
+  if (rngVol && currentSettings.voice_volume !== undefined) {
     rngVol.value = currentSettings.voice_volume;
     updateVolumeLabel(currentSettings.voice_volume);
   }
 
-  const chkSiren = document.getElementById('chkSiren');
-  if (chkSiren) chkSiren.checked = currentSettings.siren_enabled;
-
   const numFaro = document.getElementById('numFaroSec');
-  if (numFaro) numFaro.value = currentSettings.faro_sec;
+  if (numFaro && currentSettings.faro_sec !== undefined) numFaro.value = currentSettings.faro_sec;
 
   const numGate = document.getElementById('numGateSec');
-  if (numGate) numGate.value = currentSettings.gate_sec;
+  if (numGate && currentSettings.gate_sec !== undefined) numGate.value = currentSettings.gate_sec;
 
   updateTrackLabel();
 }

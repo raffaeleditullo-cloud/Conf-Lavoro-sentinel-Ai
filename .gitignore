@@ -17,6 +17,9 @@ config/model_cache/*
 *.log
 .DS_Store
 Thumbs.db
+__pycache__/
+*.py[cod]
+serve.js
 
 # File password Mosquitto generato localmente da mosquitto_passwd
 mosquitto/config/pwfile

@@ -249,6 +249,24 @@ def get_audio_path(sound_id: str) -> str:
         pack_folder = os.path.join(AUDIO_BASE_DIR, "carmelo")
     return os.path.join(pack_folder, f"{sound_id}.mp3")
 
+def trigger_person_deterrence(camera: str):
+    """Trigger immediato faretto e voce vocale: latenza < 100ms dal primo frame."""
+    # 1. Accensione Faretto immediata
+    relay_channel = CAMERA_RELAY_MAP.get(camera, RELAY_CHANNEL_PIAZZALE)
+    if not is_in_cooldown(f"{camera}_faretto", cooldown_seconds=5.0):
+        logger.info(">>> AZIONE IMMEDIATA: Persona rilevata su '%s' -> Accensione Faretto (Relè Ch %d) per %ds", camera, relay_channel + 1, int(FARETTO_DURATION))
+        relay.accendi_faretto(channel=relay_channel, durata_secondi=FARETTO_DURATION)
+
+    # 2. Avviso Vocale Fanvil Multicast RTP immediato
+    if not is_in_cooldown(f"{camera}_audio", cooldown_seconds=AUDIO_COOLDOWN):
+        audio_file = get_audio_path("03_avviso_dissuasione")
+        volume = get_voice_volume()
+        logger.info(
+            ">>> AZIONE IMMEDIATA: Riproduzione avviso vocale '%s' per '%s' (multicast RTP %s:%d, volume %.0f%%)",
+            os.path.basename(audio_file), camera, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
+        )
+        speaker.play_audio_file(audio_file, volume_percent=volume)
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. LOGICA DI DECISIONE E AZIONE (RULES ENGINE)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -272,22 +290,8 @@ def handle_frigate_event(event_data: dict, topic: str):
     # Scenario A: RILEVAMENTO PERSONA (Varco pedonale, piazzale o carrabile)
     if label == "person":
         if event_type in ("new", "update"):
-            # 1. Accensione Faretto con antirimbalzo e prolungamento timer intelligente
-            relay_channel = CAMERA_RELAY_MAP.get(camera, RELAY_CHANNEL_PIAZZALE)
-            if not is_in_cooldown(f"{camera}_faretto", cooldown_seconds=5.0):
-                logger.info(">>> AZIONE: Persona rilevata su '%s' -> Accensione Faretto (Relè Canale %d) per %ds", camera, relay_channel + 1, int(FARETTO_DURATION))
-                relay.accendi_faretto(channel=relay_channel, durata_secondi=FARETTO_DURATION)
-
-            # 2. Avviso Vocale sull'Altoparlante Fanvil con cooldown dedicato (default 15s)
-            # Qualsiasi persona rilevata su varchi perimetrali o piazzale riceve avviso di dissuasione
-            if not is_in_cooldown(f"{camera}_audio", cooldown_seconds=AUDIO_COOLDOWN):
-                audio_file = get_audio_path("03_avviso_dissuasione")
-                volume = get_voice_volume()
-                logger.info(
-                    ">>> AZIONE: Riproduzione avviso vocale '%s' per '%s' (multicast RTP %s:%d, volume %.0f%%)",
-                    os.path.basename(audio_file), camera, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
-                )
-                speaker.play_audio_file(audio_file, volume_percent=volume)
+            # Attivazione deterrenza (faro + voce) se non già scattata dal trigger istantaneo
+            trigger_person_deterrence(camera)
 
             # 3. Archiviazione Snapshot sul NAS (una sola volta per ID evento, istantanea)
             if has_snapshot and mark_snapshot_archived(event_id):
@@ -497,6 +501,18 @@ def on_message(client, userdata, msg):
             # CONTROLLO TOPIC AUDIO RAPIDI (es. frigate/<cam>/audio/scream ON)
             if "/audio/" in topic and any(alarm in topic for alarm in ("scream", "yell", "fire_alarm")):
                 handle_audio_alarm(topic, text_payload)
+
+            # TRIGGER ISTANTANEO PERSONA: 'frigate/<camera>/person' con payload '1', '2'...
+            # Questo topic viene pubblicato da Frigate al PRIMISSIMO fotogramma utile (< 100ms),
+            # eliminando il ritardo di 4 secondi dovuto all'attesa del consolidamento di 'frigate/events'.
+            elif topic.startswith("frigate/") and topic.endswith("/person"):
+                try:
+                    count = int(text_payload.strip())
+                    if count > 0:
+                        cam_name = topic.split("/")[1]
+                        trigger_person_deterrence(cam_name)
+                except (ValueError, IndexError):
+                    pass
 
     # Scrittura su log JSON Lines (audit e replay)
     json_line = json.dumps(record, ensure_ascii=False, separators=(',', ':'))

@@ -298,14 +298,25 @@
           <!-- Filtro per telecamera. E' un select nativo di proposito: sul
                telefono apre il selettore di sistema, gia' comodo e accessibile.
                I valori corrispondono al campo 'camera' degli eventi di Frigate. -->
-          <div class="ev-filter-bar">
-            <label class="ev-filter-label" for="selEventCamera">Telecamera</label>
-            <select id="selEventCamera" class="ultra-input ev-filter-select" onchange="setEventFilter(this.value)">
-              <option value="all">Tutte le telecamere</option>
-              <option value="varco_carrabile">Varco Carrabile</option>
-              <option value="varco_pedonale">Varco Pedonale</option>
-              <option value="piazzale">Piazzale</option>
-            </select>
+          <!-- Barra Filtri per Telecamera e Tipo Oggetto (Persone / Veicoli) -->
+          <div class="ev-filter-bar" style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label class="ev-filter-label" for="selEventCamera">Telecamera</label>
+              <select id="selEventCamera" class="ultra-input ev-filter-select" onchange="setEventCameraFilter(this.value)">
+                <option value="all">Tutte le telecamere</option>
+                <option value="varco_carrabile">Varco Carrabile</option>
+                <option value="varco_pedonale">Varco Pedonale</option>
+                <option value="piazzale">Piazzale</option>
+              </select>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label class="ev-filter-label" for="selEventLabel">Tipo Oggetto</label>
+              <select id="selEventLabel" class="ultra-input ev-filter-select" onchange="setEventLabelFilter(this.value)">
+                <option value="all">Tutti i tipi</option>
+                <option value="person">Solo Persone</option>
+                <option value="vehicle">Solo Veicoli (Auto/Moto)</option>
+              </select>
+            </div>
           </div>
 
           <div class="table-scroll-wrap">
@@ -528,40 +539,17 @@
               <span class="status-beacon">Hardware collegato</span>
             </div>
 
-            <!-- Destinazione Output Audio (Reolink vs Fanvil - Solo Manutentore) -->
-            <div class="maintainer-only-block" style="margin-top:18px;">
-              <label class="setting-section-label">DESTINAZIONE OUTPUT AUDIO (HARDWARE)</label>
-              <select id="selAudioTarget" class="ultra-input" style="margin-bottom:14px; font-weight:600;">
-                <option value="cameras" selected>Altoparlanti Integrati Telecamere Reolink (Banco Collaudo)</option>
-                <option value="fanvil">Diffusore IP Fanvil A233 // 192.168.1.31 (Esterno)</option>
-              </select>
-            </div>
-
             <!-- Volume Altoparlante -->
-            <div style="margin-top:14px;">
+            <div style="margin-top:18px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <label class="setting-section-label" style="margin-bottom:0;">VOLUME DIFFUSIONE AUDIO</label>
-                <strong id="valVolume" class="setting-value is-accent">85%</strong>
+                <label class="setting-section-label" style="margin-bottom:0;">VOLUME DIFFUSIONE FANVIL (MULTICAST RTP)</label>
+                <strong id="valVolume" class="setting-value is-accent">70%</strong>
               </div>
-              <input type="range" id="rngVolume" min="10" max="100" value="85" class="tactical-slider" oninput="updateVolumeLabel(this.value)">
+              <input type="range" id="rngVolume" min="10" max="100" value="70" class="tactical-slider" oninput="updateVolumeLabel(this.value)">
               <div class="slider-legend">
-                <span>10% (Basso)</span>
+                <span>10% (Minimo)</span>
                 <span>50% (Medio)</span>
-                <span>100% (Dissuasione Max)</span>
-              </div>
-            </div>
-
-            <!-- Sirena Introduttiva -->
-            <div class="setting-box" style="margin-top:22px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <strong class="setting-title">Sirena Allarme Pre-Messaggio</strong>
-                  <p class="metric-sub">Emette un bitonale acustico per 3s prima del messaggio vocale</p>
-                </div>
-                <label class="tactical-switch">
-                  <input type="checkbox" id="chkSiren" checked>
-                  <span class="switch-slider"></span>
-                </label>
+                <span>100% (Massima Potenza)</span>
               </div>
             </div>
 

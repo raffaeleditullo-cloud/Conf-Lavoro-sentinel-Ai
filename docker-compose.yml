@@ -72,7 +72,8 @@ services:
       - ./storage/logs:/app/logs
       # Pacchetti audio ufficiali (carmelo e sami) residenti a bordo
       - ./orchestrator/audio:/app/audio:ro
-      - ./config:/config:ro
+      # Configurazione di runtime e stato detector_status.json (in scrittura)
+      - ./config:/config
     env_file:
       - .env
     depends_on:
