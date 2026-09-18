@@ -180,13 +180,15 @@ class FanvilSpeakerController:
 
     def build_command(self, abs_path: str, volume_float: float) -> list:
         """Costruisce il comando ffmpeg ottimizzato per streaming RTP a latenza ultra-bassa."""
+        # adelay=500|all=1 inserisce 500ms di silenzio iniziale per consentire all'altoparlante
+        # Fanvil di agganciare il flusso RTP e aprire l'amplificatore senza tagliare la prima parola.
         return [
             self.ffmpeg_bin,
             "-hide_banner", "-loglevel", "warning", "-nostdin",
             "-fflags", "nobuffer",
             "-re",
             "-i", abs_path,
-            "-af", f"volume={volume_float}",
+            "-af", f"adelay=500|all=1,volume={volume_float}",
             "-ac", "1",
             "-ar", "8000",
             "-acodec", "pcm_mulaw",

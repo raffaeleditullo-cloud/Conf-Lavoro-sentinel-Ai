@@ -249,21 +249,22 @@ def get_audio_path(sound_id: str) -> str:
         pack_folder = os.path.join(AUDIO_BASE_DIR, "carmelo")
     return os.path.join(pack_folder, f"{sound_id}.mp3")
 
-def trigger_person_deterrence(camera: str):
-    """Trigger immediato faretto e voce vocale: latenza < 100ms dal primo frame."""
+def trigger_person_deterrence(camera: str, zone: str = None):
+    """Trigger immediato faretto e voce vocale: latenza < 100ms dal primo frame con cooldown per zona."""
+    loc_key = zone if zone else camera
     # 1. Accensione Faretto immediata
     relay_channel = CAMERA_RELAY_MAP.get(camera, RELAY_CHANNEL_PIAZZALE)
-    if not is_in_cooldown(f"{camera}_faretto", cooldown_seconds=5.0):
-        logger.info(">>> AZIONE IMMEDIATA: Persona rilevata su '%s' -> Accensione Faretto (Relè Ch %d) per %ds", camera, relay_channel + 1, int(FARETTO_DURATION))
+    if not is_in_cooldown(f"{loc_key}_faretto", cooldown_seconds=5.0):
+        logger.info(">>> AZIONE IMMEDIATA: Persona rilevata su '%s' (loc: %s) -> Accensione Faretto (Relè Ch %d) per %ds", camera, loc_key, relay_channel + 1, int(FARETTO_DURATION))
         relay.accendi_faretto(channel=relay_channel, durata_secondi=FARETTO_DURATION)
 
-    # 2. Avviso Vocale Fanvil Multicast RTP immediato
-    if not is_in_cooldown(f"{camera}_audio", cooldown_seconds=AUDIO_COOLDOWN):
+    # 2. Avviso Vocale Fanvil Multicast RTP immediato con cooldown dedicato per zona/camera
+    if not is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=AUDIO_COOLDOWN):
         audio_file = get_audio_path("03_avviso_dissuasione")
         volume = get_voice_volume()
         logger.info(
-            ">>> AZIONE IMMEDIATA: Riproduzione avviso vocale '%s' per '%s' (multicast RTP %s:%d, volume %.0f%%)",
-            os.path.basename(audio_file), camera, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
+            ">>> AZIONE IMMEDIATA: Riproduzione avviso vocale '%s' per '%s' [loc: %s] (multicast RTP %s:%d, volume %.0f%%)",
+            os.path.basename(audio_file), camera, loc_key, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
         )
         speaker.play_audio_file(audio_file, volume_percent=volume)
 
@@ -283,6 +284,8 @@ def handle_frigate_event(event_data: dict, topic: str):
     is_false_positive = after.get("false_positive", False)
     has_snapshot = after.get("has_snapshot", False)
     has_clip = after.get("has_clip", False)
+    current_zones = after.get("current_zones", []) or after.get("entered_zones", [])
+    active_zone = current_zones[0] if current_zones else None
 
     if is_false_positive:
         return
@@ -290,18 +293,18 @@ def handle_frigate_event(event_data: dict, topic: str):
     # Scenario A: RILEVAMENTO PERSONA (Varco pedonale, piazzale o carrabile)
     if label == "person":
         if event_type in ("new", "update"):
-            # Attivazione deterrenza (faro + voce) se non già scattata dal trigger istantaneo
-            trigger_person_deterrence(camera)
+            # Attivazione deterrenza (faro + voce) con cooldown per zona
+            trigger_person_deterrence(camera, zone=active_zone)
 
             # 3. Archiviazione Snapshot sul NAS (una sola volta per ID evento, istantanea)
             if has_snapshot and mark_snapshot_archived(event_id):
                 nas.archive_snapshot(event_id=event_id, camera=camera, label=label)
 
         elif event_type == "end":
-            # 4. Archiviazione Clip Video sul NAS solo a conclusione dell'evento (risolve HTTP 400)
+            # 4. Archiviazione Clip Video sul NAS solo a conclusione dell'evento (attesa 6s per flush MP4 da Frigate)
             if has_clip and mark_clip_archived(event_id):
-                logger.info(">>> Evento concluso su '%s' (ID: %s). Avvio download clip video...", camera, event_id)
-                nas.archive_clip(event_id=event_id, camera=camera, label=label, delay_seconds=3.0)
+                logger.info(">>> Evento concluso su '%s' (ID: %s). Avvio download clip video (delay 6s)...", camera, event_id)
+                nas.archive_clip(event_id=event_id, camera=camera, label=label, delay_seconds=6.0)
 
     # Scenario B: RILEVAMENTO VEICOLO (Varco carrabile o piazzale)
     elif label in ("car", "truck", "motorcycle"):
@@ -311,7 +314,7 @@ def handle_frigate_event(event_data: dict, topic: str):
                 nas.archive_snapshot(event_id=event_id, camera=camera, label=label)
         elif event_type == "end":
             if has_clip and mark_clip_archived(event_id):
-                nas.archive_clip(event_id=event_id, camera=camera, label=label, delay_seconds=3.0)
+                nas.archive_clip(event_id=event_id, camera=camera, label=label, delay_seconds=6.0)
 
 def handle_lpr_update(lpr_data: dict):
     """Elabora le letture targa pubblicate su 'frigate/tracked_object_update'."""
@@ -466,10 +469,10 @@ def handle_rapid_person_topic(topic: str, payload_str: str):
     if is_active:
         cam_name = ZONE_CAMERA_MAP.get(target, target)
         logger.info(
-            ">>> TRIGGER IMMEDIATO PERSONA: intercettato topic '%s' (payload: '%s') -> telecamera '%s'",
-            topic, payload_str, cam_name
+            ">>> TRIGGER IMMEDIATO PERSONA: intercettato topic '%s' (payload: '%s') -> telecamera '%s' [loc: %s]",
+            topic, payload_str, cam_name, target
         )
-        trigger_person_deterrence(cam_name)
+        trigger_person_deterrence(cam_name, zone=target)
 
 def handle_frigate_review(review_data: dict):
     """Gestisce gli eventi review (Frigate 0.14+) per notifica o allerta tempestiva."""

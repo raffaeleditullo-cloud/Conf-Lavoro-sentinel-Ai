@@ -246,7 +246,8 @@ cameras:
       enabled: true
       width: 640
       height: 360
-      fps: 5
+      fps: 6
+      min_initialized: 1
 
     # ┌────────────────────────────────────────────────────────────────────────┐
     # │ NOTA TECNICA SULLA LETTURA TARGHE (QUESTIONE APERTA):                  │
@@ -288,7 +289,8 @@ cameras:
       enabled: true
       width: 640
       height: 360
-      fps: 5
+      fps: 6
+      min_initialized: 1
     face_recognition:
       enabled: false
 
@@ -317,7 +319,8 @@ cameras:
       enabled: true
       width: 640
       height: 360
-      fps: 5
+      fps: 6
+      min_initialized: 1
 
 # ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE PIAZZALE ══════
     zones:

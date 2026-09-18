@@ -23,3 +23,8 @@ serve.js
 
 # File password Mosquitto generato localmente da mosquitto_passwd
 mosquitto/config/pwfile
+
+# File di runtime configurazione e stato (modificati sul Jetson)
+config/system_settings.json
+config/detector_status.json
+
