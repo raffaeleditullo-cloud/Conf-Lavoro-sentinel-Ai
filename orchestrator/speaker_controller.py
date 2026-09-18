@@ -99,6 +99,7 @@ class FanvilSpeakerController:
 
         self.ffmpeg_bin = shutil.which("ffmpeg") or "ffmpeg"
         self.ffprobe_bin = shutil.which("ffprobe")
+        self._duration_cache = {}
 
         if shutil.which("ffmpeg") is None:
             logger.error(
@@ -136,7 +137,9 @@ class FanvilSpeakerController:
         return round(percent / 100.0, 3)
 
     def _probe_duration(self, abs_path: str):
-        """Restituisce la durata in secondi della traccia via ffprobe, o None."""
+        """Restituisce la durata in secondi della traccia via ffprobe (con cache in memoria)."""
+        if abs_path in self._duration_cache:
+            return self._duration_cache[abs_path]
         if not self.ffprobe_bin:
             return None
         try:
@@ -148,9 +151,11 @@ class FanvilSpeakerController:
                     abs_path,
                 ],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                timeout=10.0
+                timeout=5.0
             )
-            return float(probe.stdout.decode("utf-8", "ignore").strip())
+            val = float(probe.stdout.decode("utf-8", "ignore").strip())
+            self._duration_cache[abs_path] = val
+            return val
         except Exception:
             return None
 
@@ -174,10 +179,11 @@ class FanvilSpeakerController:
         return True
 
     def build_command(self, abs_path: str, volume_float: float) -> list:
-        """Costruisce il comando ffmpeg collaudato da Alessio sul dispositivo reale."""
+        """Costruisce il comando ffmpeg ottimizzato per streaming RTP a latenza ultra-bassa."""
         return [
             self.ffmpeg_bin,
             "-hide_banner", "-loglevel", "warning", "-nostdin",
+            "-fflags", "nobuffer",
             "-re",
             "-i", abs_path,
             "-af", f"volume={volume_float}",
@@ -185,6 +191,7 @@ class FanvilSpeakerController:
             "-ar", "8000",
             "-acodec", "pcm_mulaw",
             "-payload_type", "0",
+            "-fflags", "+flush_packets",
             "-f", "rtp",
             f"rtp://{self.multicast_ip}:{self.multicast_port}",
         ]

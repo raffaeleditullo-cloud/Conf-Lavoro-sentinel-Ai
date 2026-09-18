@@ -436,6 +436,56 @@ def handle_frigate_stats(stats: dict):
                 "updated_at": datetime.now(timezone.utc).isoformat()
             })
 
+ZONE_CAMERA_MAP = {
+    "zona_transito_pedoni": "varco_pedonale",
+    "zona_accesso_veicoli": "varco_carrabile",
+    "zona_parcheggio": "piazzale",
+    "zona_perimetro": "piazzale"
+}
+
+def handle_rapid_person_topic(topic: str, payload_str: str):
+    """
+    Intercetta all'istante qualsiasi notifica MQTT di presenza persona.
+    Gestisce conteggi numerici ("1", "2"), flag binari ("ON", "true"),
+    sia a livello di telecamera che a livello di singola zona.
+    """
+    parts = topic.split("/")
+    if len(parts) < 3:
+        return
+    target = parts[1]
+    clean_val = payload_str.strip().upper()
+    is_active = False
+    if clean_val in ("ON", "TRUE", "ACTIVE"):
+        is_active = True
+    else:
+        try:
+            is_active = float(clean_val) > 0
+        except ValueError:
+            pass
+
+    if is_active:
+        cam_name = ZONE_CAMERA_MAP.get(target, target)
+        logger.info(
+            ">>> TRIGGER IMMEDIATO PERSONA: intercettato topic '%s' (payload: '%s') -> telecamera '%s'",
+            topic, payload_str, cam_name
+        )
+        trigger_person_deterrence(cam_name)
+
+def handle_frigate_review(review_data: dict):
+    """Gestisce gli eventi review (Frigate 0.14+) per notifica o allerta tempestiva."""
+    if not isinstance(review_data, dict):
+        return
+    after = review_data.get("after", {})
+    if not after:
+        return
+    camera = after.get("camera", "piazzale")
+    severity = after.get("severity", "")
+    data = after.get("data", {})
+    objects = data.get("objects", [])
+    if "person" in objects or severity == "alert":
+        logger.info(">>> ALLERTA REVIEW FRIGATE: Persona rilevata su '%s' (severity: %s)", camera, severity)
+        trigger_person_deterrence(camera)
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. CALLBACK MQTT
 # ──────────────────────────────────────────────────────────────────────────────
@@ -489,6 +539,8 @@ def on_message(client, userdata, msg):
             # DISPATCHER EVENTI AL DECISION ENGINE
             if topic == "frigate/events":
                 handle_frigate_event(parsed_json, topic)
+            elif topic == "frigate/reviews":
+                handle_frigate_review(parsed_json)
             elif topic == "frigate/tracked_object_update":
                 handle_lpr_update(parsed_json)
             elif topic == "frigate/stats":
@@ -502,17 +554,9 @@ def on_message(client, userdata, msg):
             if "/audio/" in topic and any(alarm in topic for alarm in ("scream", "yell", "fire_alarm")):
                 handle_audio_alarm(topic, text_payload)
 
-            # TRIGGER ISTANTANEO PERSONA: 'frigate/<camera>/person' con payload '1', '2'...
-            # Questo topic viene pubblicato da Frigate al PRIMISSIMO fotogramma utile (< 100ms),
-            # eliminando il ritardo di 4 secondi dovuto all'attesa del consolidamento di 'frigate/events'.
-            elif topic.startswith("frigate/") and topic.endswith("/person"):
-                try:
-                    count = int(text_payload.strip())
-                    if count > 0:
-                        cam_name = topic.split("/")[1]
-                        trigger_person_deterrence(cam_name)
-                except (ValueError, IndexError):
-                    pass
+            # TRIGGER ISTANTANEO PERSONA (camera o zona, conteggio numerico o ON/OFF)
+            elif topic.startswith("frigate/") and "/person" in topic:
+                handle_rapid_person_topic(topic, text_payload)
 
     # Scrittura su log JSON Lines (audit e replay)
     json_line = json.dumps(record, ensure_ascii=False, separators=(',', ':'))

@@ -68,6 +68,8 @@ services:
     #   - l'API Frigate non e' piu' 'frigate:5000' ma 127.0.0.1:5000 (porta gia' pubblicata)
     network_mode: host
     volumes:
+      # Codice orchestratore montato direttamente dall'host per applicazione immediata modifiche
+      - ./orchestrator:/app
       # Registro eventi persistente sull'host con rotazione automatica (max 50MB)
       - ./storage/logs:/app/logs
       # Pacchetti audio ufficiali (carmelo e sami) residenti a bordo
