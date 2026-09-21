@@ -60,6 +60,12 @@ FARETTO_DURATION = float(os.environ.get("FARETTO_DURATION_SECONDS", "30.0"))
 AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "15.0"))
 SPEAKER_GLOBAL_COOLDOWN = float(os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20.0"))
 
+# Pezzettino 1: Filtro di Buonsenso per le Sagome (stile Jev / Calibrated Decision)
+# Scarta forme quadrate/larghe (es. sedie con giacca, scatoloni) e oggetti a ridosso dell'obiettivo
+HUMAN_RATIO_FILTER_ENABLED = os.environ.get("HUMAN_RATIO_FILTER_ENABLED", "true").lower() in ("true", "1", "yes")
+MIN_HUMAN_ASPECT_RATIO = float(os.environ.get("MIN_HUMAN_ASPECT_RATIO", "1.2"))
+MAX_PERSON_AREA_RATIO = float(os.environ.get("MAX_PERSON_AREA_RATIO", "0.45"))
+
 # Parametri Hardware
 RELAY_HOST = os.environ.get("RELAY_HOST", "192.168.1.30")
 RELAY_PORT = int(os.environ.get("RELAY_PORT", "4196"))
@@ -249,6 +255,52 @@ def get_audio_path(sound_id: str) -> str:
         pack_folder = os.path.join(AUDIO_BASE_DIR, "carmelo")
     return os.path.join(pack_folder, f"{sound_id}.mp3")
 
+def is_valid_human_proportions(box: list) -> bool:
+    """
+    Pezzettino 1: Filtro di Buonsenso per le Sagome (stile Jev / Calibrated Decision).
+    Verifica se il bounding box [ymin, xmin, ymax, xmax] ha proporzioni realistiche per un essere umano:
+    1. Aspect ratio: altezza / larghezza >= MIN_HUMAN_ASPECT_RATIO (default 1.2).
+       Un essere umano in piedi o che cammina e' slanciato verticalmente (ratio tipico 1.8 - 2.8).
+       Una sedia da ufficio, uno scatolone o un oggetto sul tavolo ha una forma quasi quadrata (ratio ~ 0.8 - 1.1).
+    2. Area massima: non occupa piu' del MAX_PERSON_AREA_RATIO (default 45%) dello schermo
+       (scarta oggetti giganti a ridosso dell'obiettivo sul tavolo).
+    """
+    if not HUMAN_RATIO_FILTER_ENABLED:
+        return True
+    if not box or len(box) != 4:
+        return True  # Fail-safe: se le coordinate non sono disponibili non blocchiamo
+
+    try:
+        ymin, xmin, ymax, xmax = [float(c) for c in box]
+        h = abs(ymax - ymin)
+        w = abs(xmax - xmin)
+        if w <= 0 or h <= 0:
+            return True
+
+        aspect_ratio = h / w
+
+        # Se le coordinate sono normalizzate (0.0 - 1.0):
+        if ymax <= 1.0 and xmax <= 1.0:
+            area = h * w
+            if area > MAX_PERSON_AREA_RATIO:
+                logger.info(
+                    ">>> [FILTRO SAGOMA] Oggetto scartato: occupa il %.1f%% dello schermo (> %.0f%%) a ridosso dell'obiettivo.",
+                    area * 100, MAX_PERSON_AREA_RATIO * 100
+                )
+                return False
+
+        if aspect_ratio < MIN_HUMAN_ASPECT_RATIO:
+            logger.info(
+                ">>> [FILTRO SAGOMA] Sagoma scartata: proporzioni non umane (H/W = %.2f < %.2f) - probabile sedia, scatola o riflesso.",
+                aspect_ratio, MIN_HUMAN_ASPECT_RATIO
+            )
+            return False
+
+        return True
+    except Exception as e:
+        logger.warning("Avviso calcolo proporzioni sagoma: %s", e)
+        return True
+
 def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: float = None):
     """
     Trigger immediato deterrenza (Faretto + Voce Fanvil):
@@ -323,6 +375,11 @@ def handle_frigate_event(event_data: dict, topic: str):
     # Scenario A: RILEVAMENTO PERSONA (Varco pedonale, piazzale o carrabile)
     if label == "person":
         if event_type in ("new", "update"):
+            box = after.get("box", [])
+            # Pezzettino 1: verifica che la sagoma abbia proporzioni umane (scarta sedie sul tavolo)
+            if not is_valid_human_proportions(box):
+                return
+
             event_time = after.get("start_time") or after.get("frame_time")
             # Attivazione deterrenza (faro + voce) con cooldown per zona e cronometro
             trigger_person_deterrence(camera, zone=active_zone, event_timestamp=event_time)
@@ -499,11 +556,16 @@ def handle_rapid_person_topic(topic: str, payload_str: str):
 
     if is_active:
         cam_name = ZONE_CAMERA_MAP.get(target, target)
-        logger.info(
-            ">>> TRIGGER IMMEDIATO PERSONA: intercettato topic '%s' (payload: '%s') -> telecamera '%s' [loc: %s]",
-            topic, payload_str, cam_name, target
-        )
-        trigger_person_deterrence(cam_name, zone=target)
+        if not HUMAN_RATIO_FILTER_ENABLED:
+            logger.info(
+                ">>> TRIGGER IMMEDIATO PERSONA: intercettato topic '%s' (payload: '%s') -> telecamera '%s' [loc: %s]",
+                topic, payload_str, cam_name, target
+            )
+            trigger_person_deterrence(cam_name, zone=target)
+        else:
+            # Con il filtro proporzioni umane attivo, il trigger audio viene convalidato da frigate/events
+            # che possiede le coordinate spaziali del bounding box (box) per scartare sedie e forme quadrate.
+            logger.debug("Notifica rapida '%s' ricevuta: convalida sagoma delegata a frigate/events", topic)
 
 def handle_frigate_review(review_data: dict):
     """Gestisce gli eventi review (Frigate 0.14+) per notifica o allerta tempestiva."""
