@@ -57,7 +57,7 @@ VOICE_PACK = os.environ.get("SENTINEL_VOICE_PACK", "carmelo").lower()
 
 # Parametri temporizzazioni
 FARETTO_DURATION = float(os.environ.get("FARETTO_DURATION_SECONDS", "30.0"))
-AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "15.0"))
+AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "90.0"))
 
 # Parametri Hardware
 RELAY_HOST = os.environ.get("RELAY_HOST", "192.168.1.30")

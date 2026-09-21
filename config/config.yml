@@ -188,8 +188,8 @@ objects:
     - truck
   filters:
     person:
-      min_score: 0.55
-      threshold: 0.70
+      min_score: 0.60
+      threshold: 0.75
     car:
       min_score: 0.55
       threshold: 0.70
@@ -247,7 +247,7 @@ cameras:
       width: 640
       height: 360
       fps: 6
-      min_initialized: 1
+      min_initialized: 2
 
     # ┌────────────────────────────────────────────────────────────────────────┐
     # │ NOTA TECNICA SULLA LETTURA TARGHE (QUESTIONE APERTA):                  │
@@ -290,7 +290,7 @@ cameras:
       width: 640
       height: 360
       fps: 6
-      min_initialized: 1
+      min_initialized: 2
     face_recognition:
       enabled: false
 
@@ -320,7 +320,7 @@ cameras:
       width: 640
       height: 360
       fps: 6
-      min_initialized: 1
+      min_initialized: 2
 
 # ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE PIAZZALE ══════
     zones:
