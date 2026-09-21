@@ -95,6 +95,8 @@ services:
     # host la sezione 'ports:' non e' ammessa e non serve.
     network_mode: host
     volumes:
+      # Codice interfaccia montato dall'host per modifiche e aggiornamenti immediati
+      - ./dashboard:/app
       - ./config:/config
       # Driver hardware condivisi con l'orchestratore (relè Modbus + altoparlante Fanvil).
       # Senza questo montaggio server.py non riesce a importarli e i comandi manuali
