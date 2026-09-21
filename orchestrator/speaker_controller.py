@@ -100,6 +100,8 @@ class FanvilSpeakerController:
         self.ffmpeg_bin = shutil.which("ffmpeg") or "ffmpeg"
         self.ffprobe_bin = shutil.which("ffprobe")
         self._duration_cache = {}
+        # Ritardo di pre-roll audio (default sicuro: 300ms concordato con Alessio)
+        self.rtp_delay_ms = int(os.environ.get("FANVIL_RTP_DELAY_MS", "300"))
 
         if shutil.which("ffmpeg") is None:
             logger.error(
@@ -107,10 +109,13 @@ class FanvilSpeakerController:
                 "Aggiungere 'ffmpeg' ai pacchetti apt-get del Dockerfile e ricostruire l'immagine."
             )
 
+        # Precarica le durate di tutti gli MP3 per azzerare la latenza ffprobe durante gli allarmi
+        self._preload_audio_durations()
+
         logger.info(
             "Driver Fanvil A233 in modalita' MULTICAST RTP -> rtp://%s:%d "
-            "(G.711 mu-law, 8 kHz mono, volume predefinito %.0f%%)",
-            self.multicast_ip, self.multicast_port, self.default_volume_percent
+            "(G.711 mu-law, 8 kHz mono, volume predefinito %.0f%%, pre-roll delay %d ms)",
+            self.multicast_ip, self.multicast_port, self.default_volume_percent, self.rtp_delay_ms
         )
 
     # ──────────────────────────────────────────────────────────────────────
@@ -135,6 +140,26 @@ class FanvilSpeakerController:
 
         percent = max(0.0, min(100.0, percent))
         return round(percent / 100.0, 3)
+
+    def _preload_audio_durations(self):
+        """Pre-carica in memoria le durate di tutti i file MP3 noti all'avvio per eliminare la latenza ffprobe a runtime."""
+        audio_dirs = [
+            os.environ.get("AUDIO_DIR", "/app/audio"),
+            os.path.join(os.path.dirname(__file__), "audio")
+        ]
+        count = 0
+        for base_dir in audio_dirs:
+            if not os.path.exists(base_dir):
+                continue
+            for root, _, files in os.walk(base_dir):
+                for f in files:
+                    if f.lower().endswith(".mp3"):
+                        full_path = os.path.abspath(os.path.join(root, f))
+                        dur = self._probe_duration(full_path)
+                        if dur:
+                            count += 1
+        if count > 0:
+            logger.info("Pre-caricate in memoria le durate di %d file audio MP3 (zero latenza ffprobe).", count)
 
     def _probe_duration(self, abs_path: str):
         """Restituisce la durata in secondi della traccia via ffprobe (con cache in memoria)."""
@@ -181,16 +206,17 @@ class FanvilSpeakerController:
     def build_command(self, abs_path: str, volume_float: float) -> list:
         """
         Costruisce il comando ffmpeg per lo streaming RTP multicast verso Fanvil A233.
-        Usa adelay=800|800 per inserire 800ms di silenzio digitale all'inizio del flusso:
-        questo concede all'altoparlante il tempo hardware necessario per sincronizzare
-        il jitter buffer e aprire l'amplificatore, evitando che la prima parola venga tagliata.
+        Usa adelay={delay}|{delay} (default 300ms concordato con Alessio) per concedere
+        all'altoparlante il tempo hardware di aprire l'amplificatore senza tagliare la prima parola,
+        risparmiando 500ms rispetto al vecchio valore di 800ms.
         """
+        delay = self.rtp_delay_ms
         return [
             self.ffmpeg_bin,
             "-hide_banner", "-loglevel", "warning", "-nostdin",
             "-re",
             "-i", abs_path,
-            "-af", f"adelay=800|800,volume={volume_float}",
+            "-af", f"adelay={delay}|{delay},volume={volume_float}",
             "-ac", "1",
             "-ar", "8000",
             "-acodec", "pcm_mulaw",
@@ -271,8 +297,9 @@ class FanvilSpeakerController:
             with self._process_lock:
                 self._stop_requested = False
             volume_float = self._volume_to_float(volume_percent)
-            duration = self._probe_duration(abs_path)
-            timeout = (duration + PLAY_TIMEOUT_MARGIN) if duration else PLAY_TIMEOUT_FALLBACK
+            # Recupera durata dalla cache in memoria; se non presente usa fallback a 10s senza bloccare su ffprobe
+            duration = self._duration_cache.get(abs_path)
+            timeout = (duration + PLAY_TIMEOUT_MARGIN) if duration else 20.0
             command = self.build_command(abs_path, volume_float)
 
             logger.info(

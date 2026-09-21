@@ -78,8 +78,6 @@ class UgreenNASArchiver:
                         logger.warning("Frigate snapshot HTTP %d per %s", res.status_code, snapshot_url)
             except Exception as exc:
                 logger.error("Errore durante archiviazione snapshot %s: %s", filename, exc)
-            finally:
-                gc.collect()
 
         t = threading.Thread(target=_snapshot_worker, daemon=True)
         t.start()
@@ -107,7 +105,6 @@ class UgreenNASArchiver:
                             success = self._stream_to_smb(remote_cam_dir, filename, res)
                             if not success:
                                 self._stream_to_local_fallback(filename, res)
-                            gc.collect()
                             return
                         elif res.status_code in (400, 404):
                             logger.info("Clip non ancora pronta su Frigate (HTTP %d, tentativo %d/%d). Attendo 3s...", res.status_code, attempt, max_retries)
@@ -118,8 +115,6 @@ class UgreenNASArchiver:
                 except Exception as exc:
                     logger.error("Errore durante streaming clip %s (tentativo %d): %s", filename, attempt, exc)
                     time.sleep(2.0)
-                finally:
-                    gc.collect()
 
             logger.warning("Clip per l'evento %s non disponibile dopo %d tentativi.", event_id, max_retries)
 

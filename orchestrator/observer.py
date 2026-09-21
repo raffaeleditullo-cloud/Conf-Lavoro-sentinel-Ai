@@ -57,7 +57,8 @@ VOICE_PACK = os.environ.get("SENTINEL_VOICE_PACK", "carmelo").lower()
 
 # Parametri temporizzazioni
 FARETTO_DURATION = float(os.environ.get("FARETTO_DURATION_SECONDS", "30.0"))
-AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "90.0"))
+AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "15.0"))
+SPEAKER_GLOBAL_COOLDOWN = float(os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "60.0"))
 
 # Parametri Hardware
 RELAY_HOST = os.environ.get("RELAY_HOST", "192.168.1.30")
@@ -201,44 +202,43 @@ def mark_clip_archived(event_id: str) -> bool:
     archived_clips.add(event_id)
     return True
 
-def get_voice_pack() -> str:
-    """Restituisce il pacchetto vocale attivo, verificando dinamicamente system_settings.json o fallback su env."""
+_settings_cache = {}
+_settings_mtime = 0.0
+
+def _get_cached_settings() -> dict:
+    """Carica system_settings.json con cache in RAM; rilegge da disco solo se il file viene modificato."""
+    global _settings_cache, _settings_mtime
     settings_file = os.environ.get("SETTINGS_FILE", "/config/system_settings.json")
     if os.path.exists(settings_file):
         try:
-            with open(settings_file, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-                pack = cfg.get("voice_pack", cfg.get("voice_gender", VOICE_PACK)).lower()
-                if pack in ("carmelo", "male"):
-                    return "carmelo"
-                elif pack in ("sami", "female"):
-                    return "sami"
-                return pack
+            mtime = os.path.getmtime(settings_file)
+            if mtime != _settings_mtime:
+                with open(settings_file, "r", encoding="utf-8") as f:
+                    _settings_cache = json.load(f)
+                _settings_mtime = mtime
         except Exception:
             pass
-    return VOICE_PACK
+    return _settings_cache
+
+def get_voice_pack() -> str:
+    """Restituisce il pacchetto vocale attivo (lettura da RAM cache a zero I/O)."""
+    cfg = _get_cached_settings()
+    pack = cfg.get("voice_pack", cfg.get("voice_gender", VOICE_PACK)).lower()
+    if pack in ("carmelo", "male"):
+        return "carmelo"
+    elif pack in ("sami", "female"):
+        return "sami"
+    return pack
 
 def get_voice_volume() -> float:
-    """
-    Restituisce il volume di diffusione corrente in percentuale (0-100).
-
-    Fonte primaria: 'voice_volume' di system_settings.json, cioe' il cursore che
-    l'operatore muove dalla dashboard; la lettura e' fatta a ogni annuncio, quindi
-    una modifica ha effetto immediato senza riavviare l'orchestratore.
-    Fonte di ripiego: FANVIL_DEFAULT_VOLUME (default 70%).
-    """
-    settings_file = os.environ.get("SETTINGS_FILE", "/config/system_settings.json")
-    if os.path.exists(settings_file):
+    """Restituisce il volume di diffusione corrente in percentuale (lettura da RAM cache a zero I/O)."""
+    cfg = _get_cached_settings()
+    value = cfg.get("voice_volume")
+    if value is not None:
         try:
-            with open(settings_file, "r", encoding="utf-8") as f:
-                value = json.load(f).get("voice_volume")
-            if value is not None:
-                return max(0.0, min(100.0, float(value)))
-        except Exception as err:
-            logger.warning(
-                "Volume non leggibile da '%s' (%s): uso il valore predefinito %.0f%%.",
-                settings_file, err, FANVIL_DEFAULT_VOLUME
-            )
+            return max(0.0, min(100.0, float(value)))
+        except (ValueError, TypeError):
+            pass
     return FANVIL_DEFAULT_VOLUME
 
 def get_audio_path(sound_id: str) -> str:
@@ -249,24 +249,54 @@ def get_audio_path(sound_id: str) -> str:
         pack_folder = os.path.join(AUDIO_BASE_DIR, "carmelo")
     return os.path.join(pack_folder, f"{sound_id}.mp3")
 
-def trigger_person_deterrence(camera: str, zone: str = None):
-    """Trigger immediato faretto e voce vocale: latenza < 100ms dal primo frame con cooldown per zona."""
+def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: float = None):
+    """
+    Trigger immediato deterrenza (Faretto + Voce Fanvil):
+    1. Avvio immediato audio senza attendere socket Modbus.
+    2. Cooldown locale per telecamera/zona + Cooldown GLOBALE per altoparlante (anti-eco su più camere).
+    3. Cronometro latenza software stampato nei log per verifica oggettiva dei millisecondi.
+    4. Accensione faretto in thread separato per azzerare contese socket su MQTT loop.
+    """
+    now = time.time()
     loc_key = zone if zone else camera
-    # 1. Accensione Faretto immediata
-    relay_channel = CAMERA_RELAY_MAP.get(camera, RELAY_CHANNEL_PIAZZALE)
-    if not is_in_cooldown(f"{loc_key}_faretto", cooldown_seconds=5.0):
-        logger.info(">>> AZIONE IMMEDIATA: Persona rilevata su '%s' (loc: %s) -> Accensione Faretto (Relè Ch %d) per %ds", camera, loc_key, relay_channel + 1, int(FARETTO_DURATION))
-        relay.accendi_faretto(channel=relay_channel, durata_secondi=FARETTO_DURATION)
 
-    # 2. Avviso Vocale Fanvil Multicast RTP immediato con cooldown dedicato per zona/camera
-    if not is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=AUDIO_COOLDOWN):
+    # Calcolo cronometro latenza software
+    latency_str = ""
+    if event_timestamp:
+        try:
+            latency_ms = (now - float(event_timestamp)) * 1000.0
+            latency_str = f" [Latenza software: {latency_ms:.1f}ms]"
+        except Exception:
+            pass
+
+    # 1. Avviso Vocale Fanvil Multicast RTP immediato (prioritario)
+    in_global_cd = is_in_cooldown("global_speaker_audio", cooldown_seconds=SPEAKER_GLOBAL_COOLDOWN)
+    in_local_cd = is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=AUDIO_COOLDOWN)
+
+    if not in_global_cd and not in_local_cd:
         audio_file = get_audio_path("03_avviso_dissuasione")
         volume = get_voice_volume()
         logger.info(
-            ">>> AZIONE IMMEDIATA: Riproduzione avviso vocale '%s' per '%s' [loc: %s] (multicast RTP %s:%d, volume %.0f%%)",
-            os.path.basename(audio_file), camera, loc_key, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
+            ">>> AZIONE IMMEDIATA AUDIO: Riproduzione avviso vocale '%s' per '%s' [loc: %s]%s (multicast RTP %s:%d, volume %.0f%%)",
+            os.path.basename(audio_file), camera, loc_key, latency_str, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
         )
         speaker.play_audio_file(audio_file, volume_percent=volume)
+    else:
+        if in_global_cd:
+            logger.info(">>> Audio dissuasione per '%s' soppresso da Cooldown Globale Speaker (%ds)", camera, int(SPEAKER_GLOBAL_COOLDOWN))
+        elif in_local_cd:
+            logger.info(">>> Audio dissuasione per '%s' [loc: %s] soppresso da Cooldown Locale (%ds)", camera, loc_key, int(AUDIO_COOLDOWN))
+
+    # 2. Accensione Faretto immediata (eseguita in thread per non bloccare mai il loop MQTT con socket Modbus)
+    relay_channel = CAMERA_RELAY_MAP.get(camera, RELAY_CHANNEL_PIAZZALE)
+    if not is_in_cooldown(f"{loc_key}_faretto", cooldown_seconds=5.0):
+        logger.info(">>> AZIONE IMMEDIATA FARETTO: Persona su '%s' [loc: %s] -> Relè Ch %d per %ds", camera, loc_key, relay_channel + 1, int(FARETTO_DURATION))
+        threading.Thread(
+            target=relay.accendi_faretto,
+            kwargs={"channel": relay_channel, "durata_secondi": FARETTO_DURATION},
+            name="RelayFarettoTrigger",
+            daemon=True
+        ).start()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. LOGICA DI DECISIONE E AZIONE (RULES ENGINE)
@@ -293,8 +323,9 @@ def handle_frigate_event(event_data: dict, topic: str):
     # Scenario A: RILEVAMENTO PERSONA (Varco pedonale, piazzale o carrabile)
     if label == "person":
         if event_type in ("new", "update"):
-            # Attivazione deterrenza (faro + voce) con cooldown per zona
-            trigger_person_deterrence(camera, zone=active_zone)
+            event_time = after.get("start_time") or after.get("frame_time")
+            # Attivazione deterrenza (faro + voce) con cooldown per zona e cronometro
+            trigger_person_deterrence(camera, zone=active_zone, event_timestamp=event_time)
 
             # 3. Archiviazione Snapshot sul NAS (una sola volta per ID evento, istantanea)
             if has_snapshot and mark_snapshot_archived(event_id):
@@ -486,8 +517,9 @@ def handle_frigate_review(review_data: dict):
     data = after.get("data", {})
     objects = data.get("objects", [])
     if "person" in objects or severity == "alert":
+        event_time = after.get("start_time")
         logger.info(">>> ALLERTA REVIEW FRIGATE: Persona rilevata su '%s' (severity: %s)", camera, severity)
-        trigger_person_deterrence(camera)
+        trigger_person_deterrence(camera, event_timestamp=event_time)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. CALLBACK MQTT
