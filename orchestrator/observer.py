@@ -67,6 +67,11 @@ HUMAN_RATIO_FILTER_ENABLED = os.environ.get("HUMAN_RATIO_FILTER_ENABLED", "true"
 MIN_HUMAN_ASPECT_RATIO = float(os.environ.get("MIN_HUMAN_ASPECT_RATIO", "1.2"))
 MAX_PERSON_AREA_RATIO = float(os.environ.get("MAX_PERSON_AREA_RATIO", "0.45"))
 
+# Pezzettino 2: Filtro di Movimento Dinamico & Traiettoria (Early Threat / Anti-Static)
+# Sopprime gli allarmi se la sagoma rimane ferma o ha oscillazioni minime (< 2.5% schermo)
+MOVEMENT_FILTER_ENABLED = os.environ.get("MOVEMENT_FILTER_ENABLED", "true").lower() in ("true", "1", "yes")
+MIN_MOVEMENT_DISTANCE = float(os.environ.get("MIN_MOVEMENT_DISTANCE", "0.025"))
+
 # Parametri Hardware
 RELAY_HOST = os.environ.get("RELAY_HOST", "192.168.1.30")
 RELAY_PORT = int(os.environ.get("RELAY_PORT", "4196"))
@@ -302,6 +307,75 @@ def is_valid_human_proportions(box: list) -> bool:
         logger.warning("Avviso calcolo proporzioni sagoma: %s", e)
         return True
 
+# Cache di tracciamento posizioni per Pezzettino 2 (Dynamic Movement)
+_track_positions = {}
+_track_lock = threading.Lock()
+
+def is_dynamic_movement(event_id: str, box: list, event_type: str) -> bool:
+    """
+    Pezzettino 2: Filtro di Movimento Dinamico & Traiettoria (Anti-Oggetti Statici).
+    Verifica se la sagoma rilevata sta compiendo uno spostamento effettivo nell'inquadratura:
+    - 'new': Primo frame di apparizione -> memorizza posizione iniziale e autorizza (priorità massima).
+    - 'update': Calcola lo spostamento euclideo normalizzato del centroide del bounding box.
+      Se la sagoma e' ferma (es. sedia, cappotto, scatola) o vibra leggermente sul posto (delta < MIN_MOVEMENT_DISTANCE),
+      sopprime i trigger ripetuti.
+    - 'end': Pulisce la memoria del tracciamento per evitare memory leak.
+    """
+    if not MOVEMENT_FILTER_ENABLED:
+        return True
+    if not event_id:
+        return True
+
+    with _track_lock:
+        if event_type == "end":
+            _track_positions.pop(event_id, None)
+            return True
+
+        if not box or len(box) != 4:
+            return True
+
+        try:
+            ymin, xmin, ymax, xmax = [float(c) for c in box]
+            cx = (xmin + xmax) / 2.0
+            cy = (ymin + ymax) / 2.0
+            now = time.time()
+
+            if event_id not in _track_positions or event_type == "new":
+                _track_positions[event_id] = {
+                    "last_center": (cx, cy),
+                    "first_center": (cx, cy),
+                    "first_time": now,
+                    "updates_count": 0,
+                    "total_movement": 0.0,
+                    "triggered": False,
+                }
+                return True
+
+            track = _track_positions[event_id]
+            last_cx, last_cy = track["last_center"]
+            first_cx, first_cy = track["first_center"]
+
+            # Distanza istantanea dall'ultimo frame e dall'inizio
+            step_distance = ((cx - last_cx) ** 2 + (cy - last_cy) ** 2) ** 0.5
+            total_displacement = ((cx - first_cx) ** 2 + (cy - first_cy) ** 2) ** 0.5
+
+            track["last_center"] = (cx, cy)
+            track["updates_count"] += 1
+            track["total_movement"] += step_distance
+
+            # Se l'oggetto ha gia' prodotto un trigger e ora e' praticamente immobile:
+            if track["updates_count"] >= 3 and total_displacement < MIN_MOVEMENT_DISTANCE:
+                logger.debug(
+                    ">>> [FILTRO MOVIMENTO] Sagoma '%s' statica (spostamento totale %.3f < %.3f): trigger soppresso.",
+                    event_id[:8], total_displacement, MIN_MOVEMENT_DISTANCE
+                )
+                return False
+
+            return True
+        except Exception as e:
+            logger.warning("Avviso calcolo movimento dinamico: %s", e)
+            return True
+
 def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: float = None):
     """
     Trigger immediato deterrenza (Faretto + Voce Fanvil):
@@ -381,6 +455,10 @@ def handle_frigate_event(event_data: dict, topic: str):
             if not is_valid_human_proportions(box):
                 return
 
+            # Pezzettino 2: verifica che la sagoma compia un movimento dinamico effettivo (scarta oggetti statici)
+            if not is_dynamic_movement(event_id, box, event_type):
+                return
+
             event_time = after.get("start_time") or after.get("frame_time")
             # Attivazione deterrenza (faro + voce) con cooldown per zona e cronometro
             trigger_person_deterrence(camera, zone=active_zone, event_timestamp=event_time)
@@ -390,6 +468,9 @@ def handle_frigate_event(event_data: dict, topic: str):
                 nas.archive_snapshot(event_id=event_id, camera=camera, label=label)
 
         elif event_type == "end":
+            # Pulizia tracciamento movimento dinamico per questo evento
+            is_dynamic_movement(event_id, [], "end")
+
             # 4. Archiviazione Clip Video sul NAS solo a conclusione dell'evento (attesa 6s per flush MP4 da Frigate)
             if has_clip and mark_clip_archived(event_id):
                 logger.info(">>> Evento concluso su '%s' (ID: %s). Avvio download clip video (delay 6s)...", camera, event_id)
