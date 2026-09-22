@@ -81,6 +81,8 @@ update_or_add "MAX_PERSON_AREA_RATIO" "0.45"
 update_or_add "MOVEMENT_FILTER_ENABLED" "true"
 update_or_add "MIN_MOVEMENT_DISTANCE" "0.025"
 update_or_add "JEV_DECIDER_ENABLED" "true"
+update_or_add "USE_REOLINK_SPOTLIGHT" "true"
+update_or_add "USE_EXTERNAL_RELAY_LIGHT" "false"
 
 echo "[3/4] Mappatura flussi telecamere ambiente reale (indicazioni Alessio)..."
 # Telecamera 1: Piazzale Esterno (.22)

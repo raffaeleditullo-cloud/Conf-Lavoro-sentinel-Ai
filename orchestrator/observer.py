@@ -38,6 +38,7 @@ from speaker_controller import FanvilSpeakerController
 from nas_archiver import UgreenNASArchiver
 from jev_decider import jev_decider
 from identikit_profiler import identikit_profiler
+from reolink_spotlight import reolink_spotlight
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. PARAMETRI DI RUNTIME
@@ -54,8 +55,10 @@ AUDIO_BASE_DIR = os.environ.get("AUDIO_DIR", "/app/audio")
 # Selezione pacchetto vocale ('carmelo' o 'sami')
 VOICE_PACK = os.environ.get("SENTINEL_VOICE_PACK", "carmelo").lower()
 
-# Parametri temporizzazioni
+# Parametri temporizzazioni e illuminazione
 FARETTO_DURATION = float(os.environ.get("FARETTO_DURATION_SECONDS", "30.0"))
+USE_REOLINK_SPOTLIGHT = os.environ.get("USE_REOLINK_SPOTLIGHT", "true").lower() in ("true", "1", "yes")
+USE_EXTERNAL_RELAY_LIGHT = os.environ.get("USE_EXTERNAL_RELAY_LIGHT", "false").lower() in ("true", "1", "yes")
 AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "15.0"))
 SPEAKER_GLOBAL_COOLDOWN = float(os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20.0"))
 
@@ -416,16 +419,22 @@ def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: fl
         elif in_local_cd:
             logger.info(">>> Audio dissuasione per '%s' [loc: %s] soppresso da Cooldown Locale (%ds)", camera, loc_key, int(AUDIO_COOLDOWN))
 
-    # 2. Accensione Faretto immediata (eseguita in thread per non bloccare mai il loop MQTT con socket Modbus)
-    relay_channel = CAMERA_RELAY_MAP.get(camera, RELAY_CHANNEL_PIAZZALE)
-    if not is_in_cooldown(f"{loc_key}_faretto", cooldown_seconds=5.0):
-        logger.info(">>> AZIONE IMMEDIATA FARETTO: Persona su '%s' [loc: %s] -> Relè Ch %d per %ds", camera, loc_key, relay_channel + 1, int(FARETTO_DURATION))
-        threading.Thread(
-            target=relay.accendi_faretto,
-            kwargs={"channel": relay_channel, "durata_secondi": FARETTO_DURATION},
-            name="RelayFarettoTrigger",
-            daemon=True
-        ).start()
+    # 2. Accensione Fari LED integrati Reolink (Spotlight) + opzionale Relè
+    if not is_in_cooldown(f"{loc_key}_faro", cooldown_seconds=5.0):
+        # A. Fari LED bianchi integrati Reolink (senza fili o relè esterni)
+        if USE_REOLINK_SPOTLIGHT:
+            reolink_spotlight.trigger_spotlight(camera, duration_seconds=FARETTO_DURATION)
+
+        # B. Relè esterno (attivato solo se USE_EXTERNAL_RELAY_LIGHT=true)
+        if USE_EXTERNAL_RELAY_LIGHT:
+            relay_channel = CAMERA_RELAY_MAP.get(camera, RELAY_CHANNEL_PIAZZALE)
+            logger.info(">>> AZIONE FARETTO RELÈ: Persona su '%s' [loc: %s] -> Relè Ch %d per %ds", camera, loc_key, relay_channel + 1, int(FARETTO_DURATION))
+            threading.Thread(
+                target=relay.accendi_faretto,
+                kwargs={"channel": relay_channel, "durata_secondi": FARETTO_DURATION},
+                name="RelayFarettoTrigger",
+                daemon=True
+            ).start()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. LOGICA DI DECISIONE E AZIONE (RULES ENGINE)
