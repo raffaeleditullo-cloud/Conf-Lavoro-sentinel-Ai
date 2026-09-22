@@ -238,7 +238,7 @@ cameras:
           roles:
             - record
         - path: rtsp://127.0.0.1:8554/varco_carrabile_sub
-          input_args: preset-rtsp-restream -fflags nobuffer -flags low_delay
+          input_args: preset-rtsp-restream
           roles:
             - detect
             - audio
@@ -281,7 +281,7 @@ cameras:
           roles:
             - record
         - path: rtsp://127.0.0.1:8554/varco_pedonale_sub
-          input_args: preset-rtsp-restream -fflags nobuffer -flags low_delay
+          input_args: preset-rtsp-restream
           roles:
             - detect
             - audio
@@ -311,7 +311,7 @@ cameras:
           roles:
             - record
         - path: rtsp://127.0.0.1:8554/piazzale_sub
-          input_args: preset-rtsp-restream -fflags nobuffer -flags low_delay
+          input_args: preset-rtsp-restream
           roles:
             - detect
             - audio
