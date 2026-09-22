@@ -42,12 +42,7 @@ from identikit_profiler import identikit_profiler
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. PARAMETRI DI RUNTIME
 # ──────────────────────────────────────────────────────────────────────────────
-# Host di default (sul Jetson 'network_mode: host' non risolve i nomi container, usa 127.0.0.1)
-def is_local_runtime() -> bool:
-    return True
-
-DEFAULT_HOST = "127.0.0.1" if is_local_runtime() else "mosquitto"
-MQTT_HOST = os.environ.get("FRIGATE_MQTT_HOST", DEFAULT_HOST)
+MQTT_HOST_PREFERRED = os.environ.get("FRIGATE_MQTT_HOST", os.environ.get("MQTT_HOST", "mosquitto"))
 MQTT_PORT = int(os.environ.get("FRIGATE_MQTT_PORT", "1883"))
 MQTT_USER = os.environ.get("FRIGATE_MQTT_USER", "sentinel")
 MQTT_PASSWORD = os.environ.get("FRIGATE_MQTT_PASSWORD", "")
