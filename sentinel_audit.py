@@ -2,15 +2,16 @@
 # -*- coding: utf-8 -*-
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║          SENTINEL AI — AUDIT DIAGNOSTICO COMPLETO v1.0                      ║
-║          Da eseguire sul PC collegato alla rete del cantiere                 ║
+║          SENTINEL AI — AUDIT DIAGNOSTICO COMPLETO v1.1                      ║
+║          Funziona sia dalla Jetson che da PC remoto sulla stessa LAN        ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  ISTRUZIONI:                                                                 ║
-║  1. Copia questo file su una chiavetta USB                                   ║
-║  2. Sul PC di Alessio: doppio clic su sentinel_audit.py                      ║
-║     (oppure: python sentinel_audit.py)                                       ║
-║  3. Inserisci l'IP della Jetson quando richiesto                             ║
-║  4. Lo script girerà in automatico ~3 minuti e produrrà un report HTML       ║
+║  MODALITÀ A — direttamente sulla Jetson (consigliata):                       ║
+║    python3 sentinel_audit.py                                                 ║
+║    → inserire 127.0.0.1 come IP quando richiesto                             ║
+║  MODALITÀ B — da PC Windows remoto sulla stessa LAN:                         ║
+║    python sentinel_audit.py                                                  ║
+║    → inserire l'IP della Jetson (es. 192.168.1.10)                           ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
 
@@ -35,13 +36,22 @@ import tempfile
 from collections import defaultdict
 
 # ─────────────────────────────────────────────────────────────────────────────
+# RILEVAMENTO AUTOMATICO MODALITÀ: ON-JETSON vs PC REMOTO
+# ─────────────────────────────────────────────────────────────────────────────
+_is_tegra = "tegra" in platform.release().lower() or "jetson" in platform.release().lower()
+_is_linux = platform.system() == "Linux"
+IS_ON_JETSON = _is_linux and _is_tegra  # True quando lo script gira direttamente sulla Jetson
+
+SENTINEL_PATH   = "/home/alessio/sentinel-ai"   # Percorso progetto sulla Jetson
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CONFIGURAZIONE — Alessio può modificare questi valori se la rete è diversa
 # ─────────────────────────────────────────────────────────────────────────────
-DEFAULT_JETSON_IP   = "192.168.1.100"   # IP della Jetson sulla LAN
-FRIGATE_API_PORT    = 8971              # Porta HTTPS Frigate (LAN)
-FRIGATE_API_PORT_IN = 5000              # Porta HTTP interna (solo localhost Jetson)
-GO2RTC_API_PORT     = 1984             # Porta API go2rtc
-MQTT_PORT           = 1883             # Porta MQTT (Mosquitto, solo localhost Jetson)
+DEFAULT_JETSON_IP   = "192.168.1.10"    # IP della Jetson sulla LAN
+FRIGATE_API_PORT    = 8971              # Porta HTTPS Frigate (LAN, con auth)
+FRIGATE_API_PORT_IN = 5000              # Porta HTTP interna (solo 127.0.0.1, senza auth)
+GO2RTC_API_PORT     = 1984             # Porta API go2rtc (solo dentro container)
+MQTT_PORT           = 1883             # Porta MQTT (Mosquitto, solo 127.0.0.1)
 RELAY_HOST          = "192.168.1.30"   # IP scheda relè Waveshare
 RELAY_PORT          = 4196             # Porta Modbus TCP relè
 SPEAKER_HOST        = "192.168.1.31"   # IP altoparlante Fanvil A233
@@ -159,13 +169,19 @@ def check_environment(jetson_ip):
     info(f"Jetson IP impostato: {jetson_ip}")
     info(f"Data/Ora audit: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
+    if IS_ON_JETSON:
+        ok("Modalità: ON-JETSON — accesso diretto ai servizi locali (127.0.0.1)")
+    else:
+        info("Modalità: PC REMOTO — accesso via rete LAN all'IP Jetson")
+
     # Verifica librerie opzionali
     for lib in ["requests", "paho.mqtt.client"]:
         try:
             __import__(lib)
             ok(f"Libreria disponibile: {lib}")
         except ImportError:
-            warn(f"Libreria NON installata: {lib}", "Alcune verifiche useranno il fallback HTTP nativo")
+            hint = "Installa con: pip3 install paho-mqtt" if lib == "paho.mqtt.client" else ""
+            warn(f"Libreria NON installata: {lib}", hint)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -174,17 +190,19 @@ def check_environment(jetson_ip):
 def check_network(jetson_ip):
     section("CONNETTIVITÀ DI RETE", "🌐")
 
-    # Ping Jetson
-    reachable, out = ping(jetson_ip)
-    if reachable:
-        ok(f"Jetson raggiungibile via ping ({jetson_ip})")
+    if IS_ON_JETSON:
+        ok("Esecuzione sulla Jetson — connettività locale verificata automaticamente")
     else:
-        fail(f"Jetson NON risponde al ping ({jetson_ip})", out.strip())
+        # Ping Jetson solo se siamo su PC remoto
+        reachable, out = ping(jetson_ip)
+        if reachable:
+            ok(f"Jetson raggiungibile via ping ({jetson_ip})")
+        else:
+            fail(f"Jetson NON risponde al ping ({jetson_ip})", out.strip())
 
-    # Porte servizi Jetson
+    # Porte servizi Jetson (go2rtc:1984 è solo interna al container, non testabile da fuori)
     services = [
         ("Frigate Web (8971)", jetson_ip, 8971),
-        ("go2rtc API (1984)",  jetson_ip, 1984),
         ("RTSP go2rtc (8554)", jetson_ip, 8554),
     ]
     for name, host, port in services:
@@ -192,6 +210,9 @@ def check_network(jetson_ip):
             ok(f"Porta aperta: {name}")
         else:
             fail(f"Porta CHIUSA: {name}", f"TCP {host}:{port} non raggiungibile")
+
+    # go2rtc API porta 1984 è interna al container frigate — non esposta verso l'host
+    info("go2rtc API (1984): accessibile solo dentro il container — verificata con docker exec")
 
     # Relay
     if tcp_reachable(RELAY_HOST, RELAY_PORT):
@@ -222,11 +243,18 @@ def check_network(jetson_ip):
 def check_frigate(jetson_ip):
     section("FRIGATE — STATO SISTEMA", "🎯")
 
-    # Stats generali
-    code, body = http_get(jetson_ip, FRIGATE_API_PORT, "/api/stats", use_https=True)
-    if code is None:
-        # Prova HTTP senza auth (se connesso direttamente alla Jetson)
-        code, body = http_get(jetson_ip, FRIGATE_API_PORT, "/api/stats", use_https=False)
+    # Se siamo sulla Jetson usiamo direttamente la porta interna 5000 (senza auth)
+    # Se siamo su PC remoto usiamo la porta 8971 HTTPS (con auth — potrebbe dare 401)
+    if IS_ON_JETSON:
+        code, body = http_get("127.0.0.1", FRIGATE_API_PORT_IN, "/api/stats", use_https=False)
+        info("Accesso Frigate via porta interna 127.0.0.1:5000 (senza autenticazione)")
+    else:
+        code, body = http_get(jetson_ip, FRIGATE_API_PORT, "/api/stats", use_https=True)
+        if code is None or code == 401:
+            # Ultima speranza: porta 5000 sull'IP esterno (funziona solo se il firewall lo permette)
+            code2, body2 = http_get(jetson_ip, FRIGATE_API_PORT_IN, "/api/stats", use_https=False)
+            if code2 == 200:
+                code, body = code2, body2
 
     if code == 200:
         try:
@@ -236,9 +264,7 @@ def check_frigate(jetson_ip):
             # Detector
             detectors = stats.get("detectors", {})
             for det_name, det_data in detectors.items():
-                inf_speed = det_data.get("detection_start", 0)
                 inf_ms = det_data.get("inference_speed", 0)
-                det_enabled = not det_data.get("pid", 0) == 0
                 if inf_ms > 0:
                     ok(f"Detector '{det_name}': inference {inf_ms:.1f} ms")
                     if inf_ms > 50:
@@ -249,7 +275,6 @@ def check_frigate(jetson_ip):
             # CPU / GPU
             service_stats = stats.get("service", {})
             cpu_usage = service_stats.get("cpu_usage", {})
-            gpu_usage = stats.get("gpu_usage", {})
             info(f"Frigate uptime: {service_stats.get('uptime', 'N/D')}s")
             for proc, pct in cpu_usage.items():
                 pct_val = pct.get("cpu", 0) if isinstance(pct, dict) else pct
@@ -274,7 +299,9 @@ def check_frigate(jetson_ip):
         except json.JSONDecodeError:
             warn("Frigate risponde ma JSON non parsabile", body[:200])
     elif code == 401:
-        warn("Frigate richiede autenticazione (401)", "Prova ad accedere da localhost della Jetson")
+        fail("Frigate richiede autenticazione (401)",
+             "Da PC remoto non possiamo accedere senza credenziali. "
+             "Esegui lo script direttamente sulla Jetson con python3 sentinel_audit.py")
     elif code is None:
         fail("Frigate NON risponde", f"Errore: {body}")
     else:
@@ -401,9 +428,30 @@ def check_frigate_events(jetson_ip):
 def check_go2rtc(jetson_ip):
     section("GO2RTC — STREAM HEALTH", "📡")
 
-    code, body = http_get(jetson_ip, GO2RTC_API_PORT, "/api/streams")
-    if code != 200:
-        fail("go2rtc API non risponde", f"HTTP {code}: {str(body)[:100]}")
+    body = None
+    if IS_ON_JETSON:
+        # go2rtc gira dentro il container frigate sulla porta 1984 — accesso via docker exec
+        try:
+            r = subprocess.run(
+                ["docker", "exec", "frigate",
+                 "wget", "-qO-", "http://localhost:1984/api/streams"],
+                capture_output=True, text=True, timeout=10,
+                cwd=SENTINEL_PATH
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                body = r.stdout.strip()
+                ok("go2rtc API raggiunta via docker exec (interno container)")
+            else:
+                fail("go2rtc API non risponde via docker exec", r.stderr[:100])
+                return
+        except Exception as e:
+            fail("Errore docker exec go2rtc", str(e))
+            return
+    else:
+        # Da PC remoto: go2rtc port 1984 non è esposta — non possiamo accedere
+        warn("go2rtc API (porta 1984) non esposta dalla Jetson verso l'esterno",
+             "È accessibile solo dall'interno del container. "
+             "Esegui lo script direttamente sulla Jetson per questa verifica.")
         return
 
     try:
@@ -430,9 +478,7 @@ def check_go2rtc(jetson_ip):
                 continue
 
             prod = producers[0]
-            state = prod.get("url", "?")
             recv_bytes = prod.get("recv", 0)
-            send_bytes = prod.get("send", 0)
 
             if recv_bytes == 0:
                 fail(f"Stream {stream_name}: 0 byte ricevuti dalla sorgente", "Camera offline o URL sbagliato")
@@ -442,12 +488,7 @@ def check_go2rtc(jetson_ip):
                 recv_mb = recv_bytes / 1_000_000
                 ok(f"Stream {stream_name}: {recv_mb:.1f} MB ricevuti, {len(consumers)} consumer attivi")
 
-            # Verifica consumer Frigate
-            frigate_consumers = [c for c in consumers if "frigate" in str(c).lower()
-                                 or "rtsp" in str(c.get("url", "")).lower()]
-            if not frigate_consumers and consumers:
-                info(f"  Consumer {stream_name}: {len(consumers)} client connessi")
-            elif not consumers:
+            if not consumers:
                 warn(f"  Nessun consumer su {stream_name}", "Frigate potrebbe non aver agganciato il flusso")
 
     except Exception as e:
@@ -460,21 +501,24 @@ def check_go2rtc(jetson_ip):
 def check_mqtt_live(jetson_ip):
     section(f"MQTT LIVE — {MQTT_MONITOR_SECONDS}s DI ASCOLTO EVENTI", "📨")
 
-    # MQTT è esposto solo su localhost della Jetson — proviamo via TCP diretto
-    # (funziona se Alessio è collegato con VPN o shell SSH con port-forward)
-    if not tcp_reachable(jetson_ip, MQTT_PORT, timeout=2):
-        warn(f"MQTT ({jetson_ip}:{MQTT_PORT}) non raggiungibile da questo PC",
-             "Mosquitto è legato a 127.0.0.1 sulla Jetson — normale se non hai SSH tunnel. "
-             "Salta il monitoraggio MQTT live e usa i log Docker.")
-        info("Per abilitare il monitoraggio MQTT da remoto, esegui sulla Jetson:")
-        info("  ssh -L 1883:127.0.0.1:1883 alessio@JETSON_IP")
-        info("  Poi rilancia questo script con JETSON_IP=127.0.0.1")
+    # Mosquitto è legato a 127.0.0.1:1883 — raggiungibile direttamente solo dalla Jetson
+    mqtt_host = "127.0.0.1" if IS_ON_JETSON else jetson_ip
+
+    if not tcp_reachable(mqtt_host, MQTT_PORT, timeout=2):
+        if IS_ON_JETSON:
+            fail(f"MQTT non raggiungibile su 127.0.0.1:{MQTT_PORT}",
+                 "Mosquitto potrebbe essere spento — controlla con: docker compose logs mosquitto")
+        else:
+            warn(f"MQTT ({jetson_ip}:{MQTT_PORT}) non raggiungibile da PC remoto",
+                 "Mosquitto è legato a 127.0.0.1 sulla Jetson. "
+                 "Esegui lo script direttamente sulla Jetson per il monitoraggio live.")
         return
 
     try:
         import paho.mqtt.client as mqtt_client
     except ImportError:
-        warn("paho-mqtt non installato", "Installa con: pip install paho-mqtt")
+        warn("paho-mqtt non installato",
+             "Installa con: pip3 install paho-mqtt  — poi rilancia l'audit")
         return
 
     events_received = []
@@ -507,7 +551,7 @@ def check_mqtt_live(jetson_ip):
     client.on_message = on_message
 
     try:
-        client.connect(jetson_ip, MQTT_PORT, keepalive=60)
+        client.connect(mqtt_host, MQTT_PORT, keepalive=60)
         client.loop_start()
 
         if not connected_flag.wait(timeout=5):
@@ -594,30 +638,48 @@ def check_mqtt_live(jetson_ip):
 def check_orchestrator_logs(jetson_ip):
     section("ORCHESTRATORE — VERIFICA LOG LATENZA", "⚙️")
 
-    # Prova a ottenere log orchestratore via SSH (se ssh è disponibile)
-    ssh_available = False
-    try:
-        r = subprocess.run(["ssh", "-o", "ConnectTimeout=3",
-                            "-o", "StrictHostKeyChecking=no",
-                            f"alessio@{jetson_ip}",
-                            "docker compose -f /home/alessio/sentinel-ai/docker-compose.yml "
-                            "logs --tail=200 orchestrator 2>&1 | tail -200"],
-                           capture_output=True, text=True, timeout=10)
-        if r.returncode == 0 and r.stdout.strip():
-            ssh_available = True
-            analyze_orchestrator_log_text(r.stdout)
-        else:
-            warn("SSH alla Jetson non disponibile o nessun output",
-                 "Verifica che ssh sia installato e che la chiave sia configurata")
-    except FileNotFoundError:
-        warn("ssh non trovato su questo PC", "Installa OpenSSH o usa PuTTY per controllare i log manualmente")
-    except subprocess.TimeoutExpired:
-        warn("SSH timeout", f"Jetson {jetson_ip} non raggiungibile via SSH")
-    except Exception as e:
-        warn("Errore SSH", str(e))
+    log_text = None
 
-    if not ssh_available:
-        info("Comando da eseguire manualmente sulla Jetson per controllare i log:")
+    if IS_ON_JETSON:
+        # Sulla Jetson eseguiamo docker compose direttamente
+        try:
+            r = subprocess.run(
+                ["docker", "compose", "logs", "--tail=300", "orchestrator"],
+                capture_output=True, text=True, timeout=15,
+                cwd=SENTINEL_PATH
+            )
+            if r.returncode == 0 and (r.stdout.strip() or r.stderr.strip()):
+                log_text = r.stdout + r.stderr
+                ok("Log orchestratore letti via docker compose")
+            else:
+                warn("Nessun log dall'orchestratore", "Container non avviato?")
+        except Exception as e:
+            warn("Errore lettura log orchestratore", str(e))
+    else:
+        # Da PC remoto: prova SSH
+        try:
+            r = subprocess.run(
+                ["ssh", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no",
+                 f"alessio@{jetson_ip}",
+                 f"docker compose -f {SENTINEL_PATH}/docker-compose.yml "
+                 "logs --tail=200 orchestrator 2>&1"],
+                capture_output=True, text=True, timeout=10
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                log_text = r.stdout
+                ok("Log orchestratore letti via SSH")
+            else:
+                warn("SSH non disponibile o nessun output")
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            warn("SSH non disponibile da questo PC",
+                 "Esegui lo script sulla Jetson per leggere i log in automatico")
+        except Exception as e:
+            warn("Errore SSH", str(e))
+
+    if log_text:
+        analyze_orchestrator_log_text(log_text)
+    else:
+        info("Comando da eseguire manualmente sulla Jetson:")
         info("  docker compose logs --tail=200 orchestrator | grep -E 'Latenza|ERROR|WARNING|WARN'")
         info("Cerca la riga [Latenza software: Xms] — se X < 50ms l'orchestratore è ottimale")
 
@@ -734,63 +796,73 @@ def check_relay_and_speaker(jetson_ip):
 def check_audio_files(jetson_ip):
     section("FILE AUDIO — INVENTARIO PACCHETTI VOCALI", "🔊")
 
-    audio_path = "/home/alessio/sentinel-ai/orchestrator/audio"
-    expected_files = [f"0{i}_{name}.mp3" for i in range(1, 6)
-                      for name in ["*"]]  # wildcard
+    audio_path = f"{SENTINEL_PATH}/orchestrator/audio"
+    cmd_find = (
+        f"find {audio_path} -name '*.mp3' | sort && "
+        f"echo '---DURATIONS---' && "
+        f"find {audio_path} -name '*.mp3' | sort | "
+        f"xargs -I{{}} sh -c 'echo -n \"{{}}: \" && "
+        f"ffprobe -v quiet -show_entries format=duration -of csv=p=0 {{}} 2>/dev/null'"
+    )
 
-    try:
-        r = subprocess.run(
-            ["ssh", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no",
-             f"alessio@{jetson_ip}",
-             f"find {audio_path} -name '*.mp3' | sort && "
-             f"echo '---DURATIONS---' && "
-             f"find {audio_path} -name '*.mp3' | sort | "
-             f"xargs -I{{}} sh -c 'echo -n \"{{}}: \" && ffprobe -v quiet -show_entries format=duration -of csv=p=0 {{}} 2>/dev/null'"],
-            capture_output=True, text=True, timeout=15
-        )
-        if r.returncode == 0 and r.stdout.strip():
-            lines = r.stdout.strip().split("\n")
-            section_audio = [l for l in lines if ".mp3" in l]
-            info(f"File audio trovati: {len(section_audio)}")
+    output = None
+    if IS_ON_JETSON:
+        try:
+            r = subprocess.run(cmd_find, shell=True, capture_output=True, text=True, timeout=15)
+            if r.stdout.strip():
+                output = r.stdout.strip()
+                ok("Inventario file audio completato")
+        except Exception as e:
+            warn("Errore inventario audio", str(e))
+    else:
+        try:
+            r = subprocess.run(
+                ["ssh", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no",
+                 f"alessio@{jetson_ip}", cmd_find],
+                capture_output=True, text=True, timeout=15
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                output = r.stdout.strip()
+        except Exception as e:
+            warn("Verifica file audio saltata (SSH non disponibile)", f"Controlla: ls -la {audio_path}/")
 
-            packs = defaultdict(list)
-            for line in lines:
-                if ".mp3" in line and "DURATIONS" not in line:
-                    parts = line.split("/")
-                    if len(parts) >= 2:
-                        pack = parts[-2]
-                        fname = parts[-1]
-                        packs[pack].append(fname)
+    if not output:
+        warn("Impossibile leggere file audio",
+             f"Controlla manualmente: ls -la {audio_path}/carmelo/ {audio_path}/sami/")
+        return
 
-            for pack, files in packs.items():
-                info(f"  Pack '{pack}': {len(files)} file — {', '.join(sorted(files))}")
+    lines = output.split("\n")
+    packs = defaultdict(list)
+    for line in lines:
+        if ".mp3" in line and "DURATIONS" not in line and ":" not in line.split("/")[-1]:
+            parts = line.split("/")
+            if len(parts) >= 2:
+                pack = parts[-2]
+                fname = parts[-1]
+                packs[pack].append(fname)
 
-                # Verifica file 01-05
-                expected = [f"0{i}" for i in range(1, 6)]
-                for exp in expected:
-                    found = any(f.startswith(exp) for f in files)
-                    if not found:
-                        warn(f"  Pack '{pack}': manca il file {exp}_*.mp3")
-                    else:
-                        ok(f"  Pack '{pack}': {exp}_*.mp3 ✓")
+    info(f"Pack audio trovati: {list(packs.keys())}")
+    for pack, files in packs.items():
+        info(f"  Pack '{pack}': {len(files)} file — {', '.join(sorted(files))}")
+        for exp in [f"0{i}" for i in range(1, 6)]:
+            found = any(f.startswith(exp) for f in files)
+            if not found:
+                warn(f"  Pack '{pack}': manca il file {exp}_*.mp3")
+            else:
+                ok(f"  Pack '{pack}': {exp}_*.mp3 ✓")
 
-            # Verifica durata 03 (dovrebbe essere ~4.4s — se > 3s avvisa)
-            for line in lines:
-                if "03_" in line and ".mp3:" in line:
-                    try:
-                        duration = float(line.split(":")[-1].strip())
-                        if duration > 3.0:
-                            warn(f"Audio 03 dura {duration:.1f}s",
-                                 "Versione 'sprint' da 2.2s non ancora creata — da fare nel prossimo pezzettino")
-                        else:
-                            ok(f"Audio 03: {duration:.1f}s (versione sprint già presente)")
-                    except Exception:
-                        pass
-        else:
-            warn("SSH non disponibile — impossibile verificare file audio",
-                 f"Controlla manualmente: ls -la {audio_path}/")
-    except Exception as e:
-        warn("Verifica file audio saltata", str(e))
+    # Verifica durata 03
+    for line in lines:
+        if "03_" in line and ".mp3:" in line:
+            try:
+                duration = float(line.split(":")[-1].strip())
+                if duration > 3.0:
+                    warn(f"Audio 03 dura {duration:.1f}s",
+                         "Versione 'sprint' da 2.2s non ancora creata — da fare nel prossimo pezzettino")
+                else:
+                    ok(f"Audio 03: {duration:.1f}s (versione sprint già presente)")
+            except Exception:
+                pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -799,70 +871,107 @@ def check_audio_files(jetson_ip):
 def check_critical_config(jetson_ip):
     section("CONFIGURAZIONE CRITICA — .ENV E CONFIG.YML", "⚙️")
 
-    # Leggi .env dalla Jetson via SSH
-    try:
-        r = subprocess.run(
-            ["ssh", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no",
-             f"alessio@{jetson_ip}",
-             "cat /home/alessio/sentinel-ai/.env 2>/dev/null || echo 'FILE_NOT_FOUND'"],
-            capture_output=True, text=True, timeout=8
-        )
-        if r.returncode == 0 and "FILE_NOT_FOUND" not in r.stdout:
-            env_text = r.stdout
+    env_path    = f"{SENTINEL_PATH}/.env"
+    config_path = f"{SENTINEL_PATH}/config/config.yml"
 
-            def get_env(key):
-                m = re.search(rf"^{re.escape(key)}\s*=\s*(.+)$", env_text, re.MULTILINE)
-                return m.group(1).strip() if m else None
+    env_text = None
+    if IS_ON_JETSON:
+        # Leggi direttamente i file locali
+        try:
+            if os.path.exists(env_path):
+                with open(env_path, "r") as f:
+                    env_text = f.read()
+                ok(f".env trovato e letto: {env_path}")
+            else:
+                fail(f".env NON trovato in {env_path}")
+        except Exception as e:
+            warn("Errore lettura .env", str(e))
+    else:
+        # Da PC remoto: SSH
+        try:
+            r = subprocess.run(
+                ["ssh", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no",
+                 f"alessio@{jetson_ip}",
+                 f"cat {env_path} 2>/dev/null || echo 'FILE_NOT_FOUND'"],
+                capture_output=True, text=True, timeout=8
+            )
+            if r.returncode == 0 and "FILE_NOT_FOUND" not in r.stdout:
+                env_text = r.stdout
+        except Exception as e:
+            warn("SSH non disponibile — impossibile leggere .env", str(e))
 
-            checks = [
-                ("HUMAN_RATIO_FILTER_ENABLED", "true",  "Filtro proporzioni umane"),
-                ("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20", "Cooldown globale speaker"),
-                ("FANVIL_RTP_DELAY_MS", "300",           "Pre-roll audio Fanvil"),
-                ("AUDIO_COOLDOWN_SECONDS", "15",         "Cooldown locale per camera"),
-            ]
-            for key, expected, label in checks:
-                val = get_env(key)
-                if val is None:
-                    warn(f".env: {label} ({key}) NON TROVATA", "Potrebbe usare il valore di default del codice")
-                elif val.lower() == expected.lower():
-                    ok(f".env: {label} = {val} ✓")
+    if env_text:
+        def get_env(key):
+            m = re.search(rf"^{re.escape(key)}\s*=\s*(.+)$", env_text, re.MULTILINE)
+            return m.group(1).strip() if m else None
+
+        checks = [
+            ("HUMAN_RATIO_FILTER_ENABLED", "true",  "Filtro proporzioni umane"),
+            ("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20", "Cooldown globale speaker"),
+            ("FANVIL_RTP_DELAY_MS", "300",           "Pre-roll audio Fanvil"),
+            ("AUDIO_COOLDOWN_SECONDS", "15",         "Cooldown locale per camera"),
+        ]
+        for key, expected, label in checks:
+            val = get_env(key)
+            if val is None:
+                warn(f".env: {label} ({key}) NON TROVATA", "Potrebbe usare il valore di default del codice")
+            elif val.lower() == expected.lower():
+                ok(f".env: {label} = {val} ✓")
+            else:
+                warn(f".env: {label} = {val} (atteso: {expected})", f"Chiave: {key}")
+
+        # URL telecamere
+        for cam in ["VARCO_CARRABILE", "VARCO_PEDONALE", "PIAZZALE"]:
+            sub_url = get_env(f"FRIGATE_CAM_{cam}_SUB_URL") or ""
+            if "ffmpeg:http" in sub_url or "flv?" in sub_url:
+                if cam == "VARCO_CARRABILE":
+                    fail(f".env: {cam} sub URL è ancora HTTP-FLV (test fallito)",
+                         "Ripristinare con: rtsp://admin:PASS@192.168.1.20:554/h264Preview_01_sub")
                 else:
-                    warn(f".env: {label} = {val} (atteso: {expected})", f"Chiave: {key}")
+                    warn(f".env: {cam} sub URL usa HTTP-FLV", sub_url[:80])
+            elif "rtsp://" in sub_url:
+                ok(f".env: {cam} sub URL = RTSP ✓")
+            else:
+                warn(f".env: {cam} sub URL formato inatteso", sub_url[:80])
+    else:
+        warn("Impossibile leggere .env — verifica manuale richiesta")
 
-            # Controlla URL telecamere — segnala se ancora con HTTP-FLV di test
-            for cam in ["VARCO_CARRABILE", "VARCO_PEDONALE", "PIAZZALE"]:
-                sub_url = get_env(f"FRIGATE_CAM_{cam}_SUB_URL") or ""
-                if "ffmpeg:http" in sub_url or "flv?" in sub_url:
-                    if cam == "VARCO_CARRABILE":
-                        fail(f".env: {cam} sub URL è ancora HTTP-FLV (test fallito)",
-                             "Ripristinare con: rtsp://admin:PASS@192.168.1.20:554/h264Preview_01_sub")
-                    else:
-                        warn(f".env: {cam} sub URL usa HTTP-FLV", sub_url[:80])
-                elif "rtsp://" in sub_url:
-                    ok(f".env: {cam} sub URL = RTSP ✓")
-                else:
-                    warn(f".env: {cam} sub URL formato inatteso", sub_url[:80])
-
-            # Verifica input_args in config.yml
+    # Verifica input_args in config.yml
+    config_text = None
+    if IS_ON_JETSON:
+        try:
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    config_text = f.read()
+        except Exception:
+            pass
+    else:
+        try:
             r2 = subprocess.run(
                 ["ssh", "-o", "ConnectTimeout=3", "-o", "StrictHostKeyChecking=no",
                  f"alessio@{jetson_ip}",
-                 "grep 'input_args' /home/alessio/sentinel-ai/config/config.yml"],
+                 f"grep 'input_args' {config_path}"],
                 capture_output=True, text=True, timeout=8
             )
             if r2.returncode == 0:
-                for line in r2.stdout.splitlines():
-                    if "nobuffer" in line or "low_delay" in line:
-                        fail(f"config.yml: input_args contiene flag non supportati!",
-                             line.strip() + " — Eseguire git pull sulla Jetson")
-                    elif "preset-rtsp-restream" in line:
-                        ok(f"config.yml: input_args = preset-rtsp-restream ✓")
+                config_text = r2.stdout
+        except Exception:
+            pass
 
-        else:
-            warn("SSH non disponibile — impossibile leggere .env dalla Jetson",
-                 "Controlla manualmente i parametri critici elencati sopra")
-    except Exception as e:
-        warn("Verifica configurazione saltata", str(e))
+    if config_text:
+        bad_flags = False
+        for line in config_text.splitlines():
+            if "input_args" in line:
+                if "nobuffer" in line or "low_delay" in line:
+                    fail("config.yml: input_args contiene flag non supportati!",
+                         line.strip() + " — Eseguire: git pull && docker compose up -d --force-recreate frigate")
+                    bad_flags = True
+                elif "preset-rtsp-restream" in line:
+                    ok("config.yml: input_args = preset-rtsp-restream ✓")
+        if not bad_flags:
+            ok("config.yml: nessun flag non supportato in input_args ✓")
+    else:
+        info("config.yml non verificato — controlla manualmente con grep 'input_args' config/config.yml")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -971,14 +1080,23 @@ def generate_html_report():
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     print("╔══════════════════════════════════════════════════════════════╗")
-    print("║     SENTINEL AI — AUDIT DIAGNOSTICO COMPLETO v1.0           ║")
+    print("║     SENTINEL AI — AUDIT DIAGNOSTICO COMPLETO v1.1           ║")
     print("╚══════════════════════════════════════════════════════════════╝")
     print()
 
-    # Chiedi IP Jetson
-    print(f"  IP Jetson di default: {DEFAULT_JETSON_IP}")
-    user_ip = input(f"  Inserisci IP Jetson (Invio per usare {DEFAULT_JETSON_IP}): ").strip()
-    jetson_ip = user_ip if user_ip else DEFAULT_JETSON_IP
+    if IS_ON_JETSON:
+        print("  🟢 Modalità rilevata: ON-JETSON")
+        print("     → accesso diretto a Frigate:5000, MQTT:127.0.0.1, docker, file .env")
+        print()
+        default_ip = "127.0.0.1"
+    else:
+        print("  🔵 Modalità rilevata: PC REMOTO")
+        print("     → accesso via rete LAN all'IP della Jetson")
+        print()
+        default_ip = DEFAULT_JETSON_IP
+
+    user_ip = input(f"  Inserisci IP Jetson (Invio per usare {default_ip}): ").strip()
+    jetson_ip = user_ip if user_ip else default_ip
     report["jetson_ip"] = jetson_ip
 
     print(f"\n  ✔ Jetson IP impostato: {jetson_ip}")
