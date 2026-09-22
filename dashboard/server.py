@@ -260,11 +260,32 @@ def get_jetson_metrics():
 
     metrics["devices"]["relay_modbus"] = check_socket(os.environ.get("RELAY_HOST", "192.168.1.30"), int(os.environ.get("RELAY_PORT", "4196")))
     metrics["devices"]["nas_ugreen"] = check_socket(os.environ.get("NAS_IP", "192.168.1.11"), 445)
-    metrics["devices"]["cam1"] = check_socket("192.168.20.11", 554)
-    metrics["devices"]["cam2"] = check_socket("192.168.20.12", 554)
-    metrics["devices"]["cam3"] = check_socket("192.168.20.13", 554)
+    metrics["devices"]["cam1"] = check_socket(os.environ.get("CAM_PIAZZALE_IP", "192.168.1.20"), 554)
+    metrics["devices"]["cam2"] = check_socket(os.environ.get("CAM_MAGAZZINO_IP", "192.168.1.21"), 554)
+    metrics["devices"]["cam3"] = check_socket(os.environ.get("CAM_CORRIDOIO_IP", "192.168.1.22"), 554)
 
     return metrics
+
+LOGS_DIR = os.environ.get("LOG_DIR", "/app/logs" if os.path.isdir("/app/logs") else os.path.abspath(os.path.join(BASE_DIR, "..", "storage", "logs")))
+
+def read_recent_identikits(limit=15):
+    """Legge le schede identikit forensi generate da identikit_profiler.py."""
+    if not os.path.isdir(LOGS_DIR):
+        return []
+    cards = []
+    try:
+        files = [f for f in os.listdir(LOGS_DIR) if f.startswith("identikit_") and f.endswith(".json")]
+        files.sort(key=lambda x: os.path.getmtime(os.path.join(LOGS_DIR, x)), reverse=True)
+        for fname in files[:limit]:
+            fpath = os.path.join(LOGS_DIR, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    cards.append(json.load(f))
+            except Exception:
+                pass
+    except Exception as e:
+        logger.debug("Errore lettura identikit: %s", e)
+    return cards
 
 def resolve_audio_path(pack, track):
     """
@@ -564,6 +585,11 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         # API Eventi Reali da database SQLite Frigate (sola lettura)
         elif parsed.path == "/api/events":
             self._send_json(read_recent_events(limit=25))
+            return
+
+        # API Schede Identikit Forensi generate dall'Orchestratore JEV
+        elif parsed.path == "/api/identikit":
+            self._send_json(read_recent_identikits(limit=15))
             return
 
         # API Proxy Media Eventi (Snapshot e Clip MP4) da Frigate

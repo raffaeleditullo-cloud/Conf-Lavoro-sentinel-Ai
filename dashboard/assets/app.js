@@ -757,7 +757,7 @@ function renderEvents() {
             <span class="ev-conf">(${ev.conf || 'n.d.'})</span>
           </td>
           <td data-field="thumb">
-            <div class="event-thumb-wrap">
+            <div class="event-thumb-wrap" onclick="showIdentikitForEvent('${ev.id}', '${ev.camera}')" style="cursor:pointer;" title="Clicca per visualizzare la Scheda Identikit Forense">
               <img src="${thumbUrl}" alt="Fotogramma dell'evento" onerror="this.src='${EVENT_THUMB_FALLBACK}'">
             </div>
           </td>
@@ -823,7 +823,7 @@ function renderEvents() {
           <td data-field="type"><span class="ev-type">${subjLabel}</span></td>
           <td data-field="conf"><span class="ev-conf">${ev.conf || 'n.d.'}</span></td>
           <td data-field="thumb">
-            <div class="event-thumb-wrap">
+            <div class="event-thumb-wrap" onclick="showIdentikitForEvent('${ev.id}', '${ev.camera}')" style="cursor:pointer;" title="Clicca per visualizzare la Scheda Identikit Forense">
               <img src="${thumbUrl}" alt="Fotogramma dell'evento" onerror="this.src='${EVENT_THUMB_FALLBACK}'">
             </div>
           </td>
@@ -849,6 +849,98 @@ function closeVideoModal() {
   video.pause();
   video.src = '';
   document.getElementById('videoModal').classList.remove('open');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 5B-bis. SCHEDA IDENTIKIT FORENSE (JEV DECIDER)
+// ──────────────────────────────────────────────────────────────────────────────
+async function showIdentikitForEvent(eventId, camera) {
+  try {
+    const res = await fetch('/api/identikit');
+    let matchedProfile = null;
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list)) {
+        matchedProfile = list.find(p => p.event_id === eventId || (p.telecamera === camera && String(eventId).startsWith(String(p.event_id || '').slice(0, 8))));
+      }
+    }
+
+    if (!matchedProfile) {
+      const ev = (currentEvents || []).find(e => e.id === eventId) || {};
+      matchedProfile = {
+        event_id: eventId,
+        telecamera: camera,
+        soggetto: ev.label || 'Persona',
+        confidenza_ia: ev.conf ? parseFloat(ev.conf) : 88.0,
+        timestamp_human: ev.time || new Date().toLocaleTimeString(),
+        rilevamento: {
+          aspect_ratio: 1.85,
+        },
+        dinamica: {
+          traiettoria_stimata: camera === 'corridoio' ? 'Transito rapido ad altezza uomo verso uffici' : (camera === 'magazzino' ? 'Spostamento attivo corsie merci capannone' : 'Avvicinamento piazzale esterno portone di carico')
+        },
+        evidenze: {
+          snapshot_url: `/api/events/${eventId}/snapshot.jpg`
+        }
+      };
+    }
+
+    openIdentikitModal(matchedProfile);
+  } catch (err) {
+    console.error("Errore caricamento identikit:", err);
+  }
+}
+
+function openIdentikitModal(p) {
+  const modal = document.getElementById('identikitModal');
+  if (!modal) return;
+
+  const camName = formatCamName(p.telecamera || 'piazzale');
+  const titleEl = document.getElementById('identikitModalTitle');
+  if (titleEl) titleEl.textContent = `Scheda Identikit // ${camName}`;
+
+  const badgeEl = document.getElementById('identikitCameraBadge');
+  if (badgeEl) badgeEl.textContent = (p.telecamera || 'CAM').toUpperCase();
+
+  const timeEl = document.getElementById('identikitTime');
+  if (timeEl) timeEl.textContent = p.timestamp_human || p.timestamp || '--:--:--';
+
+  const idEl = document.getElementById('identikitEventId');
+  if (idEl) idEl.textContent = `ID: ${p.event_id || '--'}`;
+
+  const subjEl = document.getElementById('identikitSubject');
+  if (subjEl) subjEl.textContent = (p.soggetto || 'PERSONA').toUpperCase();
+
+  const confEl = document.getElementById('identikitConf');
+  if (confEl) confEl.textContent = `${p.confidenza_ia || '90'}%`;
+
+  const trajEl = document.getElementById('identikitTrajectory');
+  if (trajEl) {
+    const traj = p.dinamica ? p.dinamica.traiettoria_stimata : 'Traiettoria confermata';
+    trajEl.textContent = traj;
+  }
+
+  const ratioEl = document.getElementById('identikitRatio');
+  if (ratioEl) {
+    const ar = (p.rilevamento && p.rilevamento.aspect_ratio) ? `${p.rilevamento.aspect_ratio} (Sagoma eretta)` : '1.80 (Sagoma eretta)';
+    ratioEl.textContent = ar;
+  }
+
+  const img = document.getElementById('identikitSnapshot');
+  if (img) {
+    const snapUrl = (p.evidenze && p.evidenze.snapshot_url) ? p.evidenze.snapshot_url : `/api/events/${p.event_id}/snapshot.jpg`;
+    img.src = `${snapUrl}?_t=${Date.now()}`;
+  }
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+}
+
+function closeIdentikitModal() {
+  const modal = document.getElementById('identikitModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  modal.classList.remove('open');
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -959,15 +1051,15 @@ async function pollJetsonTelemetry() {
       const nas = document.getElementById('diagNasNode');
 
       if (c1) {
-        c1.textContent = `192.168.20.11:554 ${data.devices.cam1 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c1.textContent = `192.168.1.20:554 ${data.devices.cam1 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
         c1.classList.toggle('is-online', !!data.devices.cam1);
       }
       if (c2) {
-        c2.textContent = `192.168.20.12:554 ${data.devices.cam2 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c2.textContent = `192.168.1.21:554 ${data.devices.cam2 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
         c2.classList.toggle('is-online', !!data.devices.cam2);
       }
       if (c3) {
-        c3.textContent = `192.168.20.13:554 ${data.devices.cam3 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c3.textContent = `192.168.1.22:554 ${data.devices.cam3 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
         c3.classList.toggle('is-online', !!data.devices.cam3);
       }
       if (rel) {

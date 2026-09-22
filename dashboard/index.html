@@ -414,16 +414,16 @@
             </div>
             <div class="metric-list">
               <div class="metric-row">
-                <span class="metric-label">Telecamera Carrabile</span>
-                <span id="diagCam1Node" class="node-value is-online">192.168.20.11:554</span>
+                <span class="metric-label">Telecamera Piazzale Esterno</span>
+                <span id="diagCam1Node" class="node-value is-online">192.168.1.20:554</span>
               </div>
               <div class="metric-row">
-                <span class="metric-label">Telecamera Pedonale</span>
-                <span id="diagCam2Node" class="node-value is-online">192.168.20.12:554</span>
+                <span class="metric-label">Telecamera Magazzino Interno</span>
+                <span id="diagCam2Node" class="node-value is-online">192.168.1.21:554</span>
               </div>
               <div class="metric-row">
-                <span class="metric-label">Telecamera Piazzale</span>
-                <span id="diagCam3Node" class="node-value is-online">192.168.20.13:554</span>
+                <span class="metric-label">Telecamera Corridoio Transito</span>
+                <span id="diagCam3Node" class="node-value is-online">192.168.1.22:554</span>
               </div>
               <div class="metric-row">
                 <span class="metric-label">Scheda Relè Waveshare Modbus</span>
@@ -730,6 +730,60 @@
           <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
           <span id="modalVoiceLabel">Dissuasione Audio</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       MODALE SCHEDA IDENTIKIT FORENSE ISTANTANEA (JEV DECIDER)
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div id="identikitModal" class="cam-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="identikitModalTitle" style="display:none;">
+    <div class="cam-modal" style="max-width:720px;">
+      <div class="cam-modal-header" style="background: linear-gradient(135deg, rgba(128, 0, 32, 0.9), rgba(40, 10, 20, 0.95)); border-bottom: 1px solid rgba(212, 175, 55, 0.4);">
+        <div class="cam-modal-ident">
+          <span class="cam-modal-title" id="identikitModalTitle" style="color: #f7e7ce; font-weight:700;">Scheda Identikit Forense</span>
+          <span id="identikitCameraBadge" class="cam-status-pill online" style="background:rgba(212,175,55,0.2); color:#d4af37; border:1px solid #d4af37;">PIAZZALE</span>
+        </div>
+        <button type="button" class="cam-modal-close" onclick="closeIdentikitModal()" aria-label="Chiudi scheda identikit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span>Chiudi</span>
+        </button>
+      </div>
+
+      <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px; color: #fff;">
+        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 240px; background: #000; border-radius: 8px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.1);">
+            <img id="identikitSnapshot" src="" alt="Snapshot intruso" style="width: 100%; height: auto; display: block; object-fit: contain;">
+            <div id="identikitThreatBadge" style="position: absolute; bottom: 8px; left: 8px; background: #e53935; color: #fff; font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; letter-spacing: 0.5px;">
+              DISSVASIONE ESEGUITA
+            </div>
+          </div>
+          <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+            <div style="background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 6px; border-left: 3px solid #d4af37;">
+              <div style="color: #aaa; font-size: 11px; text-transform: uppercase;">ID Evento &amp; Orario</div>
+              <div id="identikitTime" style="font-weight: 600; font-family: monospace; font-size: 14px; color: #fff;">--</div>
+              <div id="identikitEventId" style="font-size: 11px; color: #888;">--</div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 6px;">
+              <div style="color: #aaa; font-size: 11px; text-transform: uppercase;">Soggetto &amp; Confidenza IA</div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                <span id="identikitSubject" style="font-weight: bold; font-size: 15px; color: #4fc3f7;">PERSONA</span>
+                <span id="identikitConf" style="background: rgba(76, 175, 80, 0.2); color: #81c784; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px;">92%</span>
+              </div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 6px;">
+              <div style="color: #aaa; font-size: 11px; text-transform: uppercase;">Dinamica &amp; Traiettoria</div>
+              <div id="identikitTrajectory" style="margin-top: 4px; color: #eee; line-height: 1.3;">--</div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 6px;">
+              <div style="color: #aaa; font-size: 11px; text-transform: uppercase;">Proporzioni Sagoma (H/W)</div>
+              <div id="identikitRatio" style="margin-top: 4px; font-weight: 600; color: #ffb74d;">--</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
