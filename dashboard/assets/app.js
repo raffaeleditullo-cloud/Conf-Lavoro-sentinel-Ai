@@ -449,7 +449,7 @@ async function handleSavePlate(e) {
 
 // Intervalli di polling per ogni cam (ID -> intervalId)
 const camPollIntervals = {};
-const CAM_NAMES = { 1: 'varco_carrabile', 2: 'varco_pedonale', 3: 'piazzale' };
+const CAM_NAMES = { 1: 'piazzale', 2: 'magazzino', 3: 'corridoio' };
 const CAM_POLL_MS = 1000; // refresh frame ogni 1 secondo
 
 function startCamPolling(camId) {
@@ -524,7 +524,7 @@ window.handleStreamError = handleStreamError;
 // la griglia sottostante continua a lavorare senza essere toccata, cosi' la
 // logica di startCamPolling/handleStreamLoaded resta quella gia' stabile in campo.
 // ──────────────────────────────────────────────────────────────────────────────
-const CAM_LABELS = { 1: 'Varco Carrabile', 2: 'Varco Pedonale', 3: 'Piazzale' };
+const CAM_LABELS = { 1: 'Piazzale Esterno', 2: 'Magazzino Interno', 3: 'Corridoio Transito' };
 
 let expandedCamId = null;
 let camModalPollInterval = null;
@@ -685,9 +685,11 @@ function setWallFilter(cam) {
 
 function formatCamName(raw) {
   if (!raw) return 'Telecamera';
+  if (raw === 'piazzale') return 'Piazzale Esterno';
+  if (raw === 'magazzino') return 'Magazzino Interno';
+  if (raw === 'corridoio') return 'Corridoio Transito';
   if (raw === 'varco_carrabile') return 'Varco Carrabile';
   if (raw === 'varco_pedonale') return 'Varco Pedonale';
-  if (raw === 'piazzale') return 'Piazzale Centrale';
   return raw.replace(/_/g, ' ').toUpperCase();
 }
 

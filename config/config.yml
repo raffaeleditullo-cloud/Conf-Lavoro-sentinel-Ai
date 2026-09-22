@@ -160,20 +160,20 @@ model:
 # ──────────────────────────────────────────────────────────────────────────────
 go2rtc:
   streams:
-    varco_carrabile_main:
-      - '{FRIGATE_CAM_VARCO_CARRABILE_MAIN_URL}'
-    varco_carrabile_sub:
-      - '{FRIGATE_CAM_VARCO_CARRABILE_SUB_URL}'
-
-    varco_pedonale_main:
-      - '{FRIGATE_CAM_VARCO_PEDONALE_MAIN_URL}'
-    varco_pedonale_sub:
-      - '{FRIGATE_CAM_VARCO_PEDONALE_SUB_URL}'
-
     piazzale_main:
       - '{FRIGATE_CAM_PIAZZALE_MAIN_URL}'
     piazzale_sub:
       - '{FRIGATE_CAM_PIAZZALE_SUB_URL}'
+
+    magazzino_main:
+      - '{FRIGATE_CAM_MAGAZZINO_MAIN_URL}'
+    magazzino_sub:
+      - '{FRIGATE_CAM_MAGAZZINO_SUB_URL}'
+
+    corridoio_main:
+      - '{FRIGATE_CAM_CORRIDOIO_MAIN_URL}'
+    corridoio_sub:
+      - '{FRIGATE_CAM_CORRIDOIO_SUB_URL}'
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. CONFIGURAZIONE GLOBALE OGGETTI E FILTRI
@@ -229,80 +229,7 @@ audio:
 # ──────────────────────────────────────────────────────────────────────────────
 cameras:
 
-  # ─── TELECAMERA 1: VARCO CARRABILE ──────────────────────────────────────────
-  varco_carrabile:
-    ffmpeg:
-      inputs:
-        - path: rtsp://127.0.0.1:8554/varco_carrabile_main
-          input_args: preset-rtsp-restream
-          roles:
-            - record
-        - path: rtsp://127.0.0.1:8554/varco_carrabile_sub
-          input_args: preset-rtsp-restream
-          roles:
-            - detect
-            - audio
-    detect:
-      enabled: true
-      width: 640
-      height: 360
-      fps: 10
-      min_initialized: 2
-
-    # ┌────────────────────────────────────────────────────────────────────────┐
-    # │ NOTA TECNICA SULLA LETTURA TARGHE (QUESTIONE APERTA):                  │
-    # │ Il flusso secondario Reolink è a 640x360. A questa risoluzione la      │
-    # │ targa potrebbe risultare troppo piccola per PaddleOCR.                 │
-    # │ In sede di collaudo con l'ottica zoom 5x, se la lettura fallisce,      │
-    # │ la soluzione consiste nello spostare il ruolo 'detect' sul flusso 4K   │
-    # │ varco_carrabile_main (impostando width: 3840, height: 2160).           │
-    # │ Vedere dettagli e costi di memoria in docs/BUDGET_RISORSE.md.          │
-    # └────────────────────────────────────────────────────────────────────────┘
-    lpr:
-      enabled: true
-
-# ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE VARCO CARRABILE ══════
-    zones:
-      zona_accesso_veicoli:
-        coordinates: 0.15,0.40,0.85,0.40,0.95,0.95,0.05,0.95
-        objects:
-          - car
-          - motorcycle
-          - bus
-          - truck
-# ══════ FINE PARAMETRI SPECIFICI DEL SITO ══════
-
-  # ─── TELECAMERA 2: VARCO PEDONALE ───────────────────────────────────────────
-  varco_pedonale:
-    ffmpeg:
-      inputs:
-        - path: rtsp://127.0.0.1:8554/varco_pedonale_main
-          input_args: preset-rtsp-restream
-          roles:
-            - record
-        - path: rtsp://127.0.0.1:8554/varco_pedonale_sub
-          input_args: preset-rtsp-restream
-          roles:
-            - detect
-            - audio
-    detect:
-      enabled: true
-      width: 640
-      height: 360
-      fps: 10
-      min_initialized: 2
-    face_recognition:
-      enabled: false
-
-# ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE VARCO PEDONALE ══════
-    zones:
-      zona_transito_pedoni:
-        coordinates: 0.20,0.30,0.80,0.30,0.85,0.95,0.15,0.95
-        objects:
-          - person
-# ══════ FINE PARAMETRI SPECIFICI DEL SITO ══════
-
-  # ─── TELECAMERA 3: PIAZZALE ─────────────────────────────────────────────────
+  # ─── TELECAMERA 1: PIAZZALE ESTERNO (Entrata Magazzino, Parcheggio, Auto) ──
   piazzale:
     ffmpeg:
       inputs:
@@ -322,16 +249,78 @@ cameras:
       fps: 10
       min_initialized: 2
 
-# ══════ INIZIO PARAMETRI SPECIFICI DEL SITO — ZONE PIAZZALE ══════
+    # Lettura targhe opzionale per veicoli in transito piazzale
+    lpr:
+      enabled: true
+
+# ══════ ZONE TELECAMERA PIAZZALE ESTERNO ══════
     zones:
-      zona_parcheggio:
-        coordinates: 0.05,0.20,0.60,0.20,0.60,0.80,0.05,0.80
-        objects:
-          - car
-          - truck
-      zona_perimetro:
-        coordinates: 0.02,0.85,0.98,0.85,0.98,0.98,0.02,0.98
+      zona_entrata_magazzino:
+        coordinates: 0.15,0.40,0.85,0.40,0.95,0.95,0.05,0.95
         objects:
           - person
-# ══════ FINE PARAMETRI SPECIFICI DEL SITO ══════
+          - car
+          - truck
+      zona_parcheggio_auto:
+        coordinates: 0.40,0.50,0.98,0.50,0.98,0.98,0.40,0.98
+        objects:
+          - car
+          - motorcycle
+# ══════ FINE ZONE PIAZZALE ══════
+
+  # ─── TELECAMERA 2: MAGAZZINO INTERNO (Capannone, Scaffali, Bancali) ────────
+  magazzino:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/magazzino_main
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/magazzino_sub
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - audio
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 10
+      min_initialized: 2
+
+# ══════ ZONE TELECAMERA MAGAZZINO INTERNO ══════
+    zones:
+      zona_stoccaggio_merci:
+        coordinates: 0.10,0.20,0.90,0.20,0.95,0.95,0.05,0.95
+        objects:
+          - person
+# ══════ FINE ZONE MAGAZZINO ══════
+
+  # ─── TELECAMERA 3: CORRIDOIO D'ACCESSO (Passaggio Magazzino - Azienda) ─────
+  corridoio:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/corridoio_main
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/corridoio_sub
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - audio
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 10
+      min_initialized: 2
+
+# ══════ ZONE TELECAMERA CORRIDOIO ══════
+    zones:
+      zona_transito_corridoio:
+        coordinates: 0.15,0.15,0.85,0.15,0.90,0.95,0.10,0.95
+        objects:
+          - person
+# ══════ FINE ZONE CORRIDOIO ══════
 version: 0.17-0

@@ -36,17 +36,20 @@ import paho.mqtt.client as mqtt
 from relay_controller import WaveshareRelayController
 from speaker_controller import FanvilSpeakerController
 from nas_archiver import UgreenNASArchiver
+from jev_decider import jev_decider
+from identikit_profiler import identikit_profiler
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. PARAMETRI DI RUNTIME
 # ──────────────────────────────────────────────────────────────────────────────
-# Nomi dei servizi come richiesti da .env: validi in rete bridge Docker.
-# Con 'network_mode: host' (necessario per il multicast RTP verso il Fanvil) i nomi
-# dei container NON sono risolvibili: vengono convertiti in 127.0.0.1 dalla funzione
-# resolve_service_host() piu' sotto, che entrambe le porte pubblicano gia' su loopback.
-MQTT_HOST_PREFERRED = os.environ.get("FRIGATE_MQTT_HOST", "mosquitto")
-MQTT_PORT = 1883
-MQTT_USER = os.environ.get("FRIGATE_MQTT_USER", "")
+# Host di default (sul Jetson 'network_mode: host' non risolve i nomi container, usa 127.0.0.1)
+def is_local_runtime() -> bool:
+    return True
+
+DEFAULT_HOST = "127.0.0.1" if is_local_runtime() else "mosquitto"
+MQTT_HOST = os.environ.get("FRIGATE_MQTT_HOST", DEFAULT_HOST)
+MQTT_PORT = int(os.environ.get("FRIGATE_MQTT_PORT", "1883"))
+MQTT_USER = os.environ.get("FRIGATE_MQTT_USER", "sentinel")
 MQTT_PASSWORD = os.environ.get("FRIGATE_MQTT_PASSWORD", "")
 
 LOG_DIR = os.environ.get("LOG_DIR", "/app/logs")
@@ -77,16 +80,20 @@ RELAY_HOST = os.environ.get("RELAY_HOST", "192.168.1.30")
 RELAY_PORT = int(os.environ.get("RELAY_PORT", "4196"))
 
 # Mappatura Canali Relè Waveshare (1-based da .env -> convertiti in 0-based per Modbus)
-# Di default tutti i fari puntano al Canale 1 (faretto del banco di test)
+# Canale 1: Faretto Piazzale/Magazzino, Canale 2: Cancello/Portone
 RELAY_CHANNEL_PIAZZALE = max(0, int(os.environ.get("RELAY_CHANNEL_PIAZZALE", "1")) - 1)
-RELAY_CHANNEL_VARCO_PEDONALE = max(0, int(os.environ.get("RELAY_CHANNEL_VARCO_PEDONALE", "1")) - 1)
-RELAY_CHANNEL_VARCO_CARRABILE = max(0, int(os.environ.get("RELAY_CHANNEL_VARCO_CARRABILE", "1")) - 1)
+RELAY_CHANNEL_MAGAZZINO = max(0, int(os.environ.get("RELAY_CHANNEL_MAGAZZINO", "1")) - 1)
+RELAY_CHANNEL_CORRIDOIO = max(0, int(os.environ.get("RELAY_CHANNEL_CORRIDOIO", "1")) - 1)
 RELAY_CHANNEL_CANCELLO = max(0, int(os.environ.get("RELAY_CHANNEL_CANCELLO", "2")) - 1)
 
 CAMERA_RELAY_MAP = {
+    # Nuovi nomi del magazzino fisico
     "piazzale": RELAY_CHANNEL_PIAZZALE,
-    "varco_pedonale": RELAY_CHANNEL_VARCO_PEDONALE,
-    "varco_carrabile": RELAY_CHANNEL_VARCO_CARRABILE,
+    "magazzino": RELAY_CHANNEL_MAGAZZINO,
+    "corridoio": RELAY_CHANNEL_CORRIDOIO,
+    # Alias storici per retrocompatibilità
+    "varco_pedonale": RELAY_CHANNEL_MAGAZZINO,
+    "varco_carrabile": RELAY_CHANNEL_PIAZZALE,
 }
 
 SPEAKER_HOST = os.environ.get("SPEAKER_HOST", "192.168.1.31")
@@ -447,10 +454,12 @@ def handle_frigate_event(event_data: dict, topic: str):
     if is_false_positive:
         return
 
-    # Scenario A: RILEVAMENTO PERSONA (Varco pedonale, piazzale o carrabile)
+    # Scenario A: RILEVAMENTO PERSONA (Piazzale, Magazzino o Corridoio)
     if label == "person":
         if event_type in ("new", "update"):
             box = after.get("box", [])
+            score = after.get("score", 0.0)
+
             # Pezzettino 1: verifica che la sagoma abbia proporzioni umane (scarta sedie sul tavolo)
             if not is_valid_human_proportions(box):
                 return
@@ -459,9 +468,37 @@ def handle_frigate_event(event_data: dict, topic: str):
             if not is_dynamic_movement(event_id, box, event_type):
                 return
 
+            # Integrazione JEV Decider: valutazione contestuale auto-adattiva per l'ambiente della telecamera
+            is_threat, jev_reason, final_conf = jev_decider.evaluate_threat(
+                camera=camera,
+                label=label,
+                box=box,
+                score=score,
+                displacement=0.03
+            )
+            if not is_threat:
+                return
+
             event_time = after.get("start_time") or after.get("frame_time")
-            # Attivazione deterrenza (faro + voce) con cooldown per zona e cronometro
+            # Attivazione deterrenza immediata (faro + voce Sprint) con cooldown
             trigger_person_deterrence(camera, zone=active_zone, event_timestamp=event_time)
+
+            # Generazione automatica Scheda Identikit Forense
+            try:
+                profile = identikit_profiler.generate_profile(
+                    event_id=event_id,
+                    camera=camera,
+                    label=label,
+                    score=score,
+                    box=box,
+                    snapshot_url=f"/api/events/{event_id}/snapshot.jpg"
+                )
+                # Pubblicazione MQTT topic dedicato per aggiornamento Dashboard
+                global _active_mqtt_client
+                if _active_mqtt_client and _active_mqtt_client.is_connected():
+                    _active_mqtt_client.publish("sentinel/identikit", json.dumps(profile), qos=0)
+            except Exception as e:
+                logger.debug("Avviso pubblicazione identikit: %s", e)
 
             # 3. Archiviazione Snapshot sul NAS (una sola volta per ID evento, istantanea)
             if has_snapshot and mark_snapshot_archived(event_id):
@@ -494,7 +531,7 @@ def handle_lpr_update(lpr_data: dict):
     plate = lpr_data.get("plate")
     name = lpr_data.get("name") # Se presente in known_plates
     score = lpr_data.get("score", 0.0)
-    camera = lpr_data.get("camera", "varco_carrabile")
+    camera = lpr_data.get("camera", "piazzale")
 
     logger.info(">>> LPR: Targa letta '%s' (Nome: %s, Confidenza: %.2f) su %s", plate, name, score, camera)
 
@@ -610,10 +647,22 @@ def handle_frigate_stats(stats: dict):
             })
 
 ZONE_CAMERA_MAP = {
-    "zona_transito_pedoni": "varco_pedonale",
-    "zona_accesso_veicoli": "varco_carrabile",
+    # Nuove zone del magazzino fisico
+    "zona_entrata_magazzino": "piazzale",
+    "zona_parcheggio_auto": "piazzale",
+    "zona_stoccaggio_merci": "magazzino",
+    "zona_transito_corridoio": "corridoio",
+    # Mappatura telecamere dirette
+    "piazzale": "piazzale",
+    "magazzino": "magazzino",
+    "corridoio": "corridoio",
+    # Alias retrocompatibilità
+    "zona_transito_pedoni": "corridoio",
+    "zona_accesso_veicoli": "piazzale",
     "zona_parcheggio": "piazzale",
-    "zona_perimetro": "piazzale"
+    "zona_perimetro": "piazzale",
+    "varco_pedonale": "magazzino",
+    "varco_carrabile": "piazzale",
 }
 
 def handle_rapid_person_topic(topic: str, payload_str: str):
@@ -668,7 +717,11 @@ def handle_frigate_review(review_data: dict):
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. CALLBACK MQTT
 # ──────────────────────────────────────────────────────────────────────────────
+_active_mqtt_client = None
+
 def on_connect(client, userdata, flags, reason_code, properties):
+    global _active_mqtt_client
+    _active_mqtt_client = client
     if not reason_code.is_failure:
         logger.info("Connessione stabilita con successo al broker MQTT (%s:%d)", MQTT_HOST, MQTT_PORT)
         client.subscribe("frigate/#", qos=0)

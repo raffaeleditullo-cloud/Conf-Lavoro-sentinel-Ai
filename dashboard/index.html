@@ -130,7 +130,7 @@
       <div id="view-wall" class="view-panel view-data">
         
         <section class="video-wall-grid">
-          <button type="button" class="cam-card" onclick="openCamModal(1)" aria-label="Ingrandisci Varco Carrabile a schermo intero">
+          <button type="button" class="cam-card" onclick="openCamModal(1)" aria-label="Ingrandisci Piazzale Esterno a schermo intero">
             <div class="cam-card-viewport">
               <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
               <div class="camera-standby-screen" id="standbyCam1">
@@ -138,27 +138,27 @@
                   <div class="standby-radar-dot"></div>
                 </div>
                 <div class="standby-text-block">
-                  <span class="standby-title">Varco Carrabile</span>
+                  <span class="standby-title">Piazzale Esterno</span>
                   <span class="standby-sub">In attesa del segnale</span>
                 </div>
               </div>
 
               <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
-              <img id="streamCam1" class="camera-stream-feed" src="/api/camera/varco_carrabile/latest.jpg" alt="Varco Carrabile in diretta">
+              <img id="streamCam1" class="camera-stream-feed" src="/api/camera/piazzale/latest.jpg" alt="Piazzale Esterno in diretta">
 
               <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
             </div>
 
             <div class="cam-card-footer">
               <div class="cam-card-ident">
-                <span class="cam-card-name">Varco Carrabile</span>
+                <span class="cam-card-name">Piazzale Esterno</span>
                 <span class="cam-card-meta" id="camCardMeta1">In attesa del segnale</span>
               </div>
               <span id="camStatusBadge1" class="cam-status-pill offline">Offline</span>
             </div>
           </button>
 
-          <button type="button" class="cam-card" onclick="openCamModal(2)" aria-label="Ingrandisci Varco Pedonale a schermo intero">
+          <button type="button" class="cam-card" onclick="openCamModal(2)" aria-label="Ingrandisci Magazzino Interno a schermo intero">
             <div class="cam-card-viewport">
               <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
               <div class="camera-standby-screen" id="standbyCam2">
@@ -166,27 +166,27 @@
                   <div class="standby-radar-dot"></div>
                 </div>
                 <div class="standby-text-block">
-                  <span class="standby-title">Varco Pedonale</span>
+                  <span class="standby-title">Magazzino Interno</span>
                   <span class="standby-sub">In attesa del segnale</span>
                 </div>
               </div>
 
               <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
-              <img id="streamCam2" class="camera-stream-feed" src="/api/camera/varco_pedonale/latest.jpg" alt="Varco Pedonale in diretta">
+              <img id="streamCam2" class="camera-stream-feed" src="/api/camera/magazzino/latest.jpg" alt="Magazzino Interno in diretta">
 
               <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
             </div>
 
             <div class="cam-card-footer">
               <div class="cam-card-ident">
-                <span class="cam-card-name">Varco Pedonale</span>
+                <span class="cam-card-name">Magazzino Interno</span>
                 <span class="cam-card-meta" id="camCardMeta2">In attesa del segnale</span>
               </div>
               <span id="camStatusBadge2" class="cam-status-pill offline">Offline</span>
             </div>
           </button>
 
-          <button type="button" class="cam-card" onclick="openCamModal(3)" aria-label="Ingrandisci Piazzale a schermo intero">
+          <button type="button" class="cam-card" onclick="openCamModal(3)" aria-label="Ingrandisci Corridoio Transito a schermo intero">
             <div class="cam-card-viewport">
               <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
               <div class="camera-standby-screen" id="standbyCam3">
@@ -194,20 +194,20 @@
                   <div class="standby-radar-dot"></div>
                 </div>
                 <div class="standby-text-block">
-                  <span class="standby-title">Piazzale</span>
+                  <span class="standby-title">Corridoio Transito</span>
                   <span class="standby-sub">In attesa del segnale</span>
                 </div>
               </div>
 
               <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
-              <img id="streamCam3" class="camera-stream-feed" src="/api/camera/piazzale/latest.jpg" alt="Piazzale in diretta">
+              <img id="streamCam3" class="camera-stream-feed" src="/api/camera/corridoio/latest.jpg" alt="Corridoio Transito in diretta">
 
               <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
             </div>
 
             <div class="cam-card-footer">
               <div class="cam-card-ident">
-                <span class="cam-card-name">Piazzale</span>
+                <span class="cam-card-name">Corridoio Transito</span>
                 <span class="cam-card-meta" id="camCardMeta3">In attesa del segnale</span>
               </div>
               <span id="camStatusBadge3" class="cam-status-pill offline">Offline</span>
@@ -255,9 +255,9 @@
             <label class="ev-filter-label" for="selWallCamera">Telecamera</label>
             <select id="selWallCamera" class="ultra-input ev-filter-select" onchange="setWallFilter(this.value)">
               <option value="all">Tutte le telecamere</option>
-              <option value="varco_carrabile">Varco Carrabile</option>
-              <option value="varco_pedonale">Varco Pedonale</option>
-              <option value="piazzale">Piazzale</option>
+              <option value="piazzale">Piazzale Esterno</option>
+              <option value="magazzino">Magazzino Interno</option>
+              <option value="corridoio">Corridoio Transito</option>
             </select>
           </div>
 
@@ -304,9 +304,9 @@
               <label class="ev-filter-label" for="selEventCamera">Telecamera</label>
               <select id="selEventCamera" class="ultra-input ev-filter-select" onchange="setEventCameraFilter(this.value)">
                 <option value="all">Tutte le telecamere</option>
-                <option value="varco_carrabile">Varco Carrabile</option>
-                <option value="varco_pedonale">Varco Pedonale</option>
-                <option value="piazzale">Piazzale</option>
+                <option value="piazzale">Piazzale Esterno</option>
+                <option value="magazzino">Magazzino Interno</option>
+                <option value="corridoio">Corridoio Transito</option>
               </select>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">

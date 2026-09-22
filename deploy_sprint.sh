@@ -72,7 +72,7 @@ update_or_add() {
     fi
 }
 
-echo "[2/4] Aggiornamento parametri low-latency e Pezzettino 2..."
+echo "[2/4] Aggiornamento parametri low-latency, filtri e JEV Decider..."
 update_or_add "FANVIL_RTP_DELAY_MS" "150"
 update_or_add "SPEAKER_GLOBAL_COOLDOWN_SECONDS" "20"
 update_or_add "HUMAN_RATIO_FILTER_ENABLED" "true"
@@ -80,35 +80,41 @@ update_or_add "MIN_HUMAN_ASPECT_RATIO" "1.2"
 update_or_add "MAX_PERSON_AREA_RATIO" "0.45"
 update_or_add "MOVEMENT_FILTER_ENABLED" "true"
 update_or_add "MIN_MOVEMENT_DISTANCE" "0.025"
+update_or_add "JEV_DECIDER_ENABLED" "true"
 
-echo "[3/4] Configurazione flussi HTTP-FLV zero-latency su tutte e 3 le telecamere..."
-# Telecamera 1: Varco Carrabile (.20)
-update_or_add "FRIGATE_CAM_VARCO_CARRABILE_MAIN_URL" "ffmpeg:http://admin:${CAM_PASSWORD}@192.168.1.20/flv?port=1935\&app=bcs\&stream=channel0_main.bcs#video=copy#audio=copy"
-update_or_add "FRIGATE_CAM_VARCO_CARRABILE_SUB_URL" "ffmpeg:http://admin:${CAM_PASSWORD}@192.168.1.20/flv?port=1935\&app=bcs\&stream=channel0_sub.bcs#video=copy"
+echo "[3/4] Mappatura flussi telecamere ambiente reale..."
+# Telecamera 1: Piazzale Esterno Magazzino (.20)
+update_or_add "FRIGATE_CAM_PIAZZALE_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.20:554/h264Preview_01_main"
+update_or_add "FRIGATE_CAM_PIAZZALE_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.20:554/h264Preview_01_sub"
 
-# Telecamera 2: Varco Pedonale (.21)
-update_or_add "FRIGATE_CAM_VARCO_PEDONALE_MAIN_URL" "ffmpeg:http://admin:${CAM_PASSWORD}@192.168.1.21/flv?port=1935\&app=bcs\&stream=channel0_main.bcs#video=copy#audio=copy"
-update_or_add "FRIGATE_CAM_VARCO_PEDONALE_SUB_URL" "ffmpeg:http://admin:${CAM_PASSWORD}@192.168.1.21/flv?port=1935\&app=bcs\&stream=channel0_sub.bcs#video=copy"
+# Telecamera 2: Magazzino Interno (.21)
+update_or_add "FRIGATE_CAM_MAGAZZINO_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.21:554/h264Preview_01_main"
+update_or_add "FRIGATE_CAM_MAGAZZINO_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.21:554/h264Preview_01_sub"
 
-# Telecamera 3: Piazzale (.22)
-update_or_add "FRIGATE_CAM_PIAZZALE_MAIN_URL" "ffmpeg:http://admin:${CAM_PASSWORD}@192.168.1.22/flv?port=1935\&app=bcs\&stream=channel0_main.bcs#video=copy#audio=copy"
-update_or_add "FRIGATE_CAM_PIAZZALE_SUB_URL" "ffmpeg:http://admin:${CAM_PASSWORD}@192.168.1.22/flv?port=1935\&app=bcs\&stream=channel0_sub.bcs#video=copy"
+# Telecamera 3: Corridoio di Transito (.22)
+update_or_add "FRIGATE_CAM_CORRIDOIO_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.22:554/h264Preview_01_main"
+update_or_add "FRIGATE_CAM_CORRIDOIO_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.22:554/h264Preview_01_sub"
 
-echo "  ✔ Varco Carrabile (192.168.1.20): Main + Sub -> HTTP-FLV"
-echo "  ✔ Varco Pedonale  (192.168.1.21): Main + Sub -> HTTP-FLV"
-echo "  ✔ Piazzale        (192.168.1.22): Main + Sub -> HTTP-FLV"
+# Mappatura relè aggiornata
+update_or_add "RELAY_CHANNEL_PIAZZALE" "1"
+update_or_add "RELAY_CHANNEL_MAGAZZINO" "1"
+update_or_add "RELAY_CHANNEL_CORRIDOIO" "1"
+
+echo "  ✔ Piazzale Esterno   (192.168.1.20): Main + Sub collegate"
+echo "  ✔ Magazzino Interno  (192.168.1.21): Main + Sub collegate"
+echo "  ✔ Corridoio Transito (192.168.1.22): Main + Sub collegate"
 
 echo "[4/4] Riavvio servizi Frigate e Orchestrator..."
 docker compose up -d --force-recreate frigate orchestrator
 
 echo ""
 echo "======================================================================"
-echo "  ✅ SISTEMA ATTIVATO IN MODALITÀ ZERO-LATENCY!"
-echo "  - Tutte e 3 le telecamere collegate in HTTP-FLV (addio buffer RTSP)"
-echo "  - Frigate attivo a 10 FPS"
-echo "  - Audio Sprint 2.0s attivo"
-echo "  - Pre-roll Fanvil a 150ms"
-echo "  - Filtri Sagome & Movimento Dinamico attivi"
+echo "  ✅ SISTEMA AGGIORNATO CON SUCCESSO!"
+echo "  - Telecamere attive: 'piazzale', 'magazzino', 'corridoio'"
+echo "  - JEV Adaptive Decider attivo (Profili dedicati per ambiente)"
+echo "  - Generatore Identikit Forense attivo"
+echo "  - Frigate a 10 FPS | Audio Sprint 2.0s | Pre-roll 150ms"
 echo "======================================================================"
-echo "In caso di necessità per tornare a RTSP: bash deploy_sprint.sh --revert"
+echo "In caso di necessità: bash deploy_sprint.sh --revert"
 echo "Monitoraggio log: docker compose logs -f orchestrator"
+

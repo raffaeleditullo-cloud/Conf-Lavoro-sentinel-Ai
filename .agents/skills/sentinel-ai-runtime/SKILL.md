@@ -55,6 +55,16 @@ Questo documento funge da knowledge-base certificata per l'ambiente di produzion
 - Mantiene in cache la traiettoria euclidea dei centroidi $[cx, cy]$ per ogni `track_id`.
 - Se una sagoma è statica o compie oscillazioni minime ($< 2.5\%$ dello schermo) per $\ge 3$ update, il trigger audio ripetuto viene soppresso.
 
+### JEV Adaptive Decider (`JEV_DECIDER_ENABLED=true`)
+- Decision engine contestuale auto-adattivo basato su profili ambientali certificati:
+  1. `piazzale` (Esterno, pensilina/parcheggio): $H/W \ge 1.10$, soppressione ombre e auto ferme.
+  2. `magazzino` (Interno, vista dall'alto corsie merci): $H/W \ge 1.05$, soppressione bancali, scatoloni e sedie da ufficio.
+  3. `corridoio` (Transito stretto ad altezza occhi): $H/W \ge 1.25$, massima reattività immediata sul varco.
+
+### Generatore Identikit Forense Istantaneo (`orchestrator/identikit_profiler.py`)
+- Ad ogni allarme confermato, estrae una scheda forense con ID evento, timestamp, telecamera, confidenza IA, proporzioni $H/W$, dinamica di transito e link a snapshot/clip.
+- Viene salvata su disco (`identikit_{cam}_{id}.json`) e pubblicata via MQTT su `sentinel/identikit` per la Dashboard Web.
+
 ---
 
 ## 4. Dissuasione Vocale Sprint & Latenze Collaudate
