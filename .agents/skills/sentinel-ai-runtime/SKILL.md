@@ -18,9 +18,9 @@ Questo documento funge da knowledge-base certificata per l'ambiente di produzion
 | Dispositivo | Indirizzo IP / Porta | Protocollo | Ruolo / Note |
 |---|---|---|---|
 | **Jetson Orin Nano** | `192.168.1.10` | SSH / Host network | Nodo di calcolo Edge (Frigate, TensorRT, Orchestrator, Dashboard) |
-| **Cam Varco Carrabile** | `192.168.1.20` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
-| **Cam Varco Pedonale** | `192.168.1.21` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
-| **Cam Piazzale** | `192.168.1.22` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
+| **Cam Piazzale Esterno** | `192.168.1.22` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
+| **Cam Magazzino Interno** | `192.168.1.20` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
+| **Cam Corridoio Transito** | `192.168.1.21` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
 | **Relè Waveshare** | `192.168.1.30:4196` | Modbus TCP (Porta 4196) | Ch 1: Faretto 220V (30s) \| Ch 2: Cancello Carrabile (3s) |
 | **Altoparlante Fanvil A233** | `192.168.1.31` | Multicast RTP `239.255.1.1:5004` | Codec G.711 µ-law mono, pre-roll 150ms |
 | **NAS Ugreen** | `192.168.1.11` | SMB / CIFS (`sentinel-eventi`) | Archiviazione automatica snapshot e clip MP4 |

@@ -1051,15 +1051,15 @@ async function pollJetsonTelemetry() {
       const nas = document.getElementById('diagNasNode');
 
       if (c1) {
-        c1.textContent = `192.168.1.20:554 ${data.devices.cam1 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c1.textContent = `192.168.1.22:554 ${data.devices.cam1 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
         c1.classList.toggle('is-online', !!data.devices.cam1);
       }
       if (c2) {
-        c2.textContent = `192.168.1.21:554 ${data.devices.cam2 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c2.textContent = `192.168.1.20:554 ${data.devices.cam2 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
         c2.classList.toggle('is-online', !!data.devices.cam2);
       }
       if (c3) {
-        c3.textContent = `192.168.1.22:554 ${data.devices.cam3 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
+        c3.textContent = `192.168.1.21:554 ${data.devices.cam3 ? '(LIVE 4K)' : '(ATTESA SEGNALE)'}`;
         c3.classList.toggle('is-online', !!data.devices.cam3);
       }
       if (rel) {

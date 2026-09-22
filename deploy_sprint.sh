@@ -82,27 +82,27 @@ update_or_add "MOVEMENT_FILTER_ENABLED" "true"
 update_or_add "MIN_MOVEMENT_DISTANCE" "0.025"
 update_or_add "JEV_DECIDER_ENABLED" "true"
 
-echo "[3/4] Mappatura flussi telecamere ambiente reale..."
-# Telecamera 1: Piazzale Esterno Magazzino (.20)
-update_or_add "FRIGATE_CAM_PIAZZALE_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.20:554/h264Preview_01_main"
-update_or_add "FRIGATE_CAM_PIAZZALE_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.20:554/h264Preview_01_sub"
+echo "[3/4] Mappatura flussi telecamere ambiente reale (indicazioni Alessio)..."
+# Telecamera 1: Piazzale Esterno (.22)
+update_or_add "FRIGATE_CAM_PIAZZALE_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.22:554/h264Preview_01_main"
+update_or_add "FRIGATE_CAM_PIAZZALE_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.22:554/h264Preview_01_sub"
 
-# Telecamera 2: Magazzino Interno (.21)
-update_or_add "FRIGATE_CAM_MAGAZZINO_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.21:554/h264Preview_01_main"
-update_or_add "FRIGATE_CAM_MAGAZZINO_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.21:554/h264Preview_01_sub"
+# Telecamera 2: Magazzino Interno (.20)
+update_or_add "FRIGATE_CAM_MAGAZZINO_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.20:554/h264Preview_01_main"
+update_or_add "FRIGATE_CAM_MAGAZZINO_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.20:554/h264Preview_01_sub"
 
-# Telecamera 3: Corridoio di Transito (.22)
-update_or_add "FRIGATE_CAM_CORRIDOIO_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.22:554/h264Preview_01_main"
-update_or_add "FRIGATE_CAM_CORRIDOIO_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.22:554/h264Preview_01_sub"
+# Telecamera 3: Corridoio di Transito (.21)
+update_or_add "FRIGATE_CAM_CORRIDOIO_MAIN_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.21:554/h264Preview_01_main"
+update_or_add "FRIGATE_CAM_CORRIDOIO_SUB_URL" "rtsp://admin:${CAM_PASSWORD}@192.168.1.21:554/h264Preview_01_sub"
 
 # Mappatura relè aggiornata
 update_or_add "RELAY_CHANNEL_PIAZZALE" "1"
 update_or_add "RELAY_CHANNEL_MAGAZZINO" "1"
 update_or_add "RELAY_CHANNEL_CORRIDOIO" "1"
 
-echo "  ✔ Piazzale Esterno   (192.168.1.20): Main + Sub collegate"
-echo "  ✔ Magazzino Interno  (192.168.1.21): Main + Sub collegate"
-echo "  ✔ Corridoio Transito (192.168.1.22): Main + Sub collegate"
+echo "  ✔ Piazzale Esterno   (192.168.1.22): Main + Sub collegate"
+echo "  ✔ Magazzino Interno  (192.168.1.20): Main + Sub collegate"
+echo "  ✔ Corridoio Transito (192.168.1.21): Main + Sub collegate"
 
 echo "[4/4] Riavvio servizi Frigate e Orchestrator..."
 docker compose up -d --force-recreate frigate orchestrator

@@ -260,9 +260,9 @@ def get_jetson_metrics():
 
     metrics["devices"]["relay_modbus"] = check_socket(os.environ.get("RELAY_HOST", "192.168.1.30"), int(os.environ.get("RELAY_PORT", "4196")))
     metrics["devices"]["nas_ugreen"] = check_socket(os.environ.get("NAS_IP", "192.168.1.11"), 445)
-    metrics["devices"]["cam1"] = check_socket(os.environ.get("CAM_PIAZZALE_IP", "192.168.1.20"), 554)
-    metrics["devices"]["cam2"] = check_socket(os.environ.get("CAM_MAGAZZINO_IP", "192.168.1.21"), 554)
-    metrics["devices"]["cam3"] = check_socket(os.environ.get("CAM_CORRIDOIO_IP", "192.168.1.22"), 554)
+    metrics["devices"]["cam1"] = check_socket(os.environ.get("CAM_PIAZZALE_IP", "192.168.1.22"), 554)
+    metrics["devices"]["cam2"] = check_socket(os.environ.get("CAM_MAGAZZINO_IP", "192.168.1.20"), 554)
+    metrics["devices"]["cam3"] = check_socket(os.environ.get("CAM_CORRIDOIO_IP", "192.168.1.21"), 554)
 
     return metrics
 
