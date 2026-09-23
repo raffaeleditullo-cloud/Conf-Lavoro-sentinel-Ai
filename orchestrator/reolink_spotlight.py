@@ -64,8 +64,9 @@ class ReolinkSpotlightController:
             ", ".join(f"{k}->{v}" for k, v in self.camera_ips.items())
         )
 
-        # Esegue un probe diagnostico in background all'avvio per convalidare subito gli IP
-        threading.Thread(target=self._probe_all_cameras, name="SpotlightInitialProbe", daemon=True).start()
+        # Sonda iniziale opzionale (attivata solo dall'orchestratore principale)
+        if os.environ.get("ENABLE_SPOTLIGHT_STARTUP_PROBE", "false").lower() in ("true", "1"):
+            threading.Thread(target=self._probe_all_cameras, name="SpotlightInitialProbe", daemon=True).start()
 
     def _discover_credentials(self) -> tuple:
         """Rileva automaticamente utente e password dalle variabili d'ambiente o dal file .env."""
@@ -202,15 +203,18 @@ class ReolinkSpotlightController:
         """
         Invia il comando CGI Reolink SetWhiteLed via HTTP POST.
         state: 1 per accendere, 0 per spegnere.
-        Gestisce automaticamente i formati payload supportati dalle diverse serie firmware Reolink.
+        Include sempre 'mode': 0 (Manual Mode) essenziale nei firmware Reolink per recepire state=1,
+        con fallbacks su mode: 1 e payload minimale.
         """
         url = f"http://{ip}/cgi-bin/api.cgi?cmd=SetWhiteLed&user={self.username}&password={self.password}"
 
-        # Tentativo 1: Standard Reolink API (state + bright)
-        white_led_param = {"channel": 0, "state": state}
-        if state == 1:
-            white_led_param["bright"] = 100
-
+        # Tentativo 1: Standard Reolink API Manual Mode (mode=0, state, bright=100)
+        white_led_param = {
+            "channel": 0,
+            "mode": 0,
+            "state": state,
+            "bright": 100 if state == 1 else 85
+        }
         payload = [{"cmd": "SetWhiteLed", "action": 0, "param": {"WhiteLed": white_led_param}}]
 
         data = json.dumps(payload).encode("utf-8")
@@ -224,27 +228,42 @@ class ReolinkSpotlightController:
                     if isinstance(resp_data, list) and len(resp_data) > 0:
                         code = resp_data[0].get("code", 0)
                         if code == 0:
-                            logger.info(">>> [REOLINK SPOTLIGHT] Telecamera %s: comando state=%d ESEGUITO con successo.", ip, state)
+                            logger.info(">>> [REOLINK SPOTLIGHT] Telecamera %s: comando state=%d (mode=0, bright=%d) ESEGUITO con successo.", ip, state, white_led_param["bright"])
                             return True
-                        
-                        logger.warning(">>> [REOLINK SPOTLIGHT] Rifiutato da %s (code=%s): %s. Provo fallback semplice...", ip, code, resp_data[0].get("error"))
+                        logger.warning(">>> [REOLINK SPOTLIGHT] Tentativo 1 su %s rifiutato (code=%s): %s", ip, code, resp_data[0].get("error"))
                 except Exception:
                     if resp.status == 200:
                         return True
         except Exception as e:
             logger.warning(">>> [REOLINK SPOTLIGHT] Tentativo 1 su %s fallito (%s). Provo fallback...", ip, e)
 
-        # Tentativo 2: Fallback payload minimale (solo channel e state)
-        payload_fallback = [{"cmd": "SetWhiteLed", "action": 0, "param": {"WhiteLed": {"channel": 0, "state": state}}}]
+        # Tentativo 2: Fallback con mode=1 (Smart/Night mode)
+        payload_fb1 = [{
+            "cmd": "SetWhiteLed",
+            "action": 0,
+            "param": {"WhiteLed": {"channel": 0, "mode": 1, "state": state, "bright": 100 if state == 1 else 85}}
+        }]
         try:
-            req_fb = urllib.request.Request(url, data=json.dumps(payload_fallback).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req_fb, timeout=2.5) as resp:
-                body_fb = json.loads(resp.read().decode("utf-8"))
-                if isinstance(body_fb, list) and len(body_fb) > 0 and body_fb[0].get("code", 0) == 0:
-                    logger.info(">>> [REOLINK SPOTLIGHT] Telecamera %s: fallback state=%d RIUSCITO.", ip, state)
+            req_fb1 = urllib.request.Request(url, data=json.dumps(payload_fb1).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req_fb1, timeout=2.5) as resp:
+                body_fb1 = json.loads(resp.read().decode("utf-8"))
+                if isinstance(body_fb1, list) and len(body_fb1) > 0 and body_fb1[0].get("code", 0) == 0:
+                    logger.info(">>> [REOLINK SPOTLIGHT] Telecamera %s: fallback mode=1 state=%d RIUSCITO.", ip, state)
+                    return True
+        except Exception:
+            pass
+
+        # Tentativo 3: Fallback payload minimale (solo channel e state)
+        payload_fb2 = [{"cmd": "SetWhiteLed", "action": 0, "param": {"WhiteLed": {"channel": 0, "state": state}}}]
+        try:
+            req_fb2 = urllib.request.Request(url, data=json.dumps(payload_fb2).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req_fb2, timeout=2.5) as resp:
+                body_fb2 = json.loads(resp.read().decode("utf-8"))
+                if isinstance(body_fb2, list) and len(body_fb2) > 0 and body_fb2[0].get("code", 0) == 0:
+                    logger.info(">>> [REOLINK SPOTLIGHT] Telecamera %s: fallback minimale state=%d RIUSCITO.", ip, state)
                     return True
         except Exception as e:
-            logger.error(">>> [REOLINK SPOTLIGHT] Fallback su %s fallito: %s", ip, e)
+            logger.error(">>> [REOLINK SPOTLIGHT] Tutti i tentativi su %s sono falliti: %s", ip, e)
 
         return False
 

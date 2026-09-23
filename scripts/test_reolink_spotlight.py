@@ -47,19 +47,35 @@ def main():
             print(f"   [ERRORE] {cam.upper():10s} ({ip}): Non risponde o errore ({res.get('error') or res})")
 
     print("\n[FASE 2] Invio comando accensione:")
-    if target in ("all", "tutti", "tutte"):
-        for cam in ("piazzale", "magazzino", "corridoio"):
-            print(f"   -> Accensione faro '{cam}' ({reolink_spotlight.camera_ips.get(cam)}) per {duration}s...")
-            reolink_spotlight.trigger_spotlight(cam, duration_seconds=duration)
-    else:
-        canon = reolink_spotlight.resolve_camera(target)
-        ip = reolink_spotlight.camera_ips.get(canon)
-        print(f"   -> Accensione faro '{canon}' ({ip}) per {duration}s...")
-        reolink_spotlight.trigger_spotlight(canon, duration_seconds=duration)
+    cams_to_test = ["piazzale", "magazzino", "corridoio"] if target in ("all", "tutti", "tutte") else [reolink_spotlight.resolve_camera(target)]
 
-    print(f"\nIn attesa del timer di spegnimento ({duration + 1}s)...")
-    time.sleep(duration + 1.5)
-    print("Ciclo completato con successo.\n")
+    for cam in cams_to_test:
+        ip = reolink_spotlight.camera_ips.get(cam)
+        print(f"   -> Accensione faro '{cam}' ({ip}) per {duration}s...")
+        reolink_spotlight.trigger_spotlight(cam, duration_seconds=duration)
+
+    print("\n[FASE 3] Verifica hardware in tempo reale (durante l'accensione):")
+    time.sleep(1.0)
+    for cam in cams_to_test:
+        ip = reolink_spotlight.camera_ips.get(cam)
+        st = reolink_spotlight.get_white_led_status(ip)
+        val = st.get("status", {})
+        s_val = val.get("state")
+        m_val = val.get("mode")
+        b_val = val.get("bright")
+        print(f"   - {cam.upper():10s} ({ip}) -> Stato letto: state={s_val} | mode={m_val} | bright={b_val}%")
+
+    print(f"\nIn attesa del timer di spegnimento ({duration}s)...")
+    time.sleep(duration + 0.5)
+
+    print("\n[FASE 4] Verifica spegnimento completato:")
+    for cam in cams_to_test:
+        ip = reolink_spotlight.camera_ips.get(cam)
+        st = reolink_spotlight.get_white_led_status(ip)
+        val = st.get("status", {})
+        print(f"   - {cam.upper():10s} ({ip}) -> Stato finale: state={val.get('state')} | mode={val.get('mode')}")
+
+    print("\nCiclo di test completato con successo.\n")
 
 
 if __name__ == "__main__":
