@@ -37,14 +37,14 @@ ENVIRONMENT_PROFILES = {
             "Ombre proiettate dalla pensilina o dal portone",
             "Sagome lontane o parzialmente occultate dal veicolo in primo piano",
         ],
-        "aspect_ratio_min": 1.10,  # Dall'alto la figura umana appare leggermente compressa
-        "speed_threshold": 0.020,
+        "aspect_ratio_min": 0.60,  # Tollerante per transiti a mezzo busto e prospettive ravvicinate
+        "speed_threshold": 0.005,
     },
     "magazzino": {
         "description": "Interno: Capannone di stoccaggio, corsie, bancali e scatoloni",
         "camera_height_m": 3.5,
         "environment_type": "indoor_warehouse",
-        "min_confidence": 0.65,
+        "min_confidence": 0.60,
         "threat_criteria": [
             "Persona che cammina o si aggira all'interno delle corsie o verso l'area merci",
             "Movimento attivo continuo nello spazio libero centrale",
@@ -55,14 +55,14 @@ ENVIRONMENT_PROFILES = {
             "Materiali di imballaggio o teloni riflettenti a terra",
             "Ponteggi o scale metalliche",
         ],
-        "aspect_ratio_min": 1.05,  # Vista grandangolare a volo d'uccello
-        "speed_threshold": 0.015,  # Movimenti più controllati/lenti tra gli scaffali
+        "aspect_ratio_min": 0.60,  # Tollerante per transiti a mezzo busto e prospettive ravvicinate
+        "speed_threshold": 0.005,  # Movimenti più controllati/lenti tra gli scaffali
     },
     "corridoio": {
         "description": "Interno: Corridoio stretto di collegamento tra magazzino e azienda",
         "camera_height_m": 2.3,
         "environment_type": "indoor_chokepoint",
-        "min_confidence": 0.60,
+        "min_confidence": 0.55,
         "threat_criteria": [
             "Qualsiasi persona che entra nel corridoio e cammina verso la porta",
             "Punto di transito obbligato: massima priorità di reazione immediata",
@@ -71,8 +71,8 @@ ENVIRONMENT_PROFILES = {
             "Riflessi di luce artificiale sul pavimento lucido",
             "Porta di fondo che si apre senza sagoma umana completa",
         ],
-        "aspect_ratio_min": 1.25,  # Inquadratura frontale ad altezza occhi: persona slanciata
-        "speed_threshold": 0.030,  # Transito pedonale rapido a passo normale
+        "aspect_ratio_min": 0.60,  # Tollerante per transiti a mezzo busto e prospettive ravvicinate
+        "speed_threshold": 0.005,  # Transito pedonale rapido a passo normale
     },
 }
 

@@ -63,10 +63,10 @@ AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "15.0"))
 SPEAKER_GLOBAL_COOLDOWN = float(os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20.0"))
 
 # Pezzettino 1: Filtro di Buonsenso per le Sagome (stile Jev / Calibrated Decision)
-# Scarta forme quadrate/larghe (es. sedie con giacca, scatoloni) e oggetti a ridosso dell'obiettivo
-HUMAN_RATIO_FILTER_ENABLED = os.environ.get("HUMAN_RATIO_FILTER_ENABLED", "true").lower() in ("true", "1", "yes")
-MIN_HUMAN_ASPECT_RATIO = float(os.environ.get("MIN_HUMAN_ASPECT_RATIO", "1.2"))
-MAX_PERSON_AREA_RATIO = float(os.environ.get("MAX_PERSON_AREA_RATIO", "0.45"))
+# Disabilitato di default (false) per non scartare persone reali a mezzo busto o a distanza ravvicinata nei test
+HUMAN_RATIO_FILTER_ENABLED = os.environ.get("HUMAN_RATIO_FILTER_ENABLED", "false").lower() in ("true", "1", "yes")
+MIN_HUMAN_ASPECT_RATIO = float(os.environ.get("MIN_HUMAN_ASPECT_RATIO", "0.6"))
+MAX_PERSON_AREA_RATIO = float(os.environ.get("MAX_PERSON_AREA_RATIO", "0.95"))
 
 # Pezzettino 2: Filtro di Movimento Dinamico & Traiettoria (Early Threat / Anti-Static)
 # Sopprime gli allarmi se la sagoma rimane ferma o ha oscillazioni minime (< 2.5% schermo)
