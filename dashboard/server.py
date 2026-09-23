@@ -161,6 +161,14 @@ except Exception as _sp_err:
         DRIVERS_DIR, _sp_err
     )
 
+reolink_spotlight = None
+try:
+    from reolink_spotlight import reolink_spotlight as _reolink_spotlight
+    reolink_spotlight = _reolink_spotlight
+    logger.info("[HARDWARE] ReolinkSpotlightController caricato con successo.")
+except Exception as _rl_err:
+    logger.warning("[HARDWARE] ReolinkSpotlightController non caricato da %s: %s", DRIVERS_DIR, _rl_err)
+
 def get_jetson_metrics():
     """Legge la telemetria reale da sysfs, /proc/meminfo e /proc/uptime su Jetson Orin Nano."""
     metrics = {
@@ -503,6 +511,21 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
             self._send_json(get_jetson_metrics())
             return
 
+        # API Diagnostica Fari Reolink Spotlight
+        elif parsed.path == "/api/spotlight/status":
+            if reolink_spotlight is None:
+                self._send_json({"enabled": False, "error": "Driver Reolink Spotlight non caricato"}, status=503)
+                return
+            results = {}
+            for name, ip in reolink_spotlight.camera_ips.items():
+                results[name] = reolink_spotlight.get_white_led_status(ip)
+            self._send_json({
+                "enabled": reolink_spotlight.enabled,
+                "username": reolink_spotlight.username,
+                "cameras": results
+            })
+            return
+
         # API Vitality Heartbeat TensorRT Detector (Watchdog Segnalazione Alessio)
         elif parsed.path == "/api/detector/vitality":
             vitality = {
@@ -757,16 +780,58 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                         duration = float(cfg.get("faro_sec", 30))
                 except Exception:
                     pass
-            logger.info("Comando Relè: accensione Faretto Piazzale per %ss", duration)
-            if relay_controller is None:
-                logger.error("Comando faretto ignorato: driver relè Modbus non caricato.")
+            logger.info("Comando Fari Piazzale: durata %ss", duration)
+
+            spotlight_ok = False
+            if reolink_spotlight is not None:
+                spotlight_ok = reolink_spotlight.trigger_spotlight("piazzale", duration_seconds=duration)
+
+            relay_ok = False
+            if relay_controller is not None:
+                try:
+                    relay_controller.accendi_faretto(channel=0, durata_secondi=duration)
+                    relay_ok = True
+                except Exception as e:
+                    logger.warning("Errore relè faretto Modbus: %s", e)
+
+            if not spotlight_ok and not relay_ok:
+                logger.error("Comando faretto fallito: nessun attuatore disponibile.")
                 self._send_json({
                     "success": False, "action": "faretto", "duration": duration,
-                    "error": "Driver relè Modbus non disponibile sul server"
+                    "error": "Nessun attuatore fari disponibile (Reolink e Relè non raggiungibili)"
                 }, status=503)
                 return
-            relay_controller.accendi_faretto(channel=0, durata_secondi=duration)
-            self._send_json({"success": True, "action": "faretto", "duration": duration, "relay": f"{relay_host}:{relay_port}/CH1"})
+
+            self._send_json({
+                "success": True, "action": "faretto", "duration": duration,
+                "reolink": spotlight_ok,
+                "relay": f"{relay_host}:{relay_port}/CH1" if relay_ok else None
+            })
+            return
+
+        elif parsed.path.startswith("/api/spotlight/"):
+            cam = parsed.path.replace("/api/spotlight/", "").strip().lower()
+            duration = 10.0
+            if os.path.exists(SETTINGS_FILE):
+                try:
+                    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+                        duration = float(cfg.get("faro_sec", 10))
+                except Exception:
+                    pass
+            if reolink_spotlight is None:
+                self._send_json({"success": False, "error": "Driver Reolink Spotlight non disponibile"}, status=503)
+                return
+
+            if cam in ("all", "tutti", "tutte"):
+                for c in ("piazzale", "magazzino", "corridoio"):
+                    reolink_spotlight.trigger_spotlight(c, duration_seconds=duration)
+                logger.info("Comando Fari Reolink: accensione su TUTTE le telecamere per %ss", duration)
+                self._send_json({"success": True, "cameras": ["piazzale", "magazzino", "corridoio"], "duration": duration})
+            else:
+                ok = reolink_spotlight.trigger_spotlight(cam, duration_seconds=duration)
+                logger.info("Comando Faro Reolink '%s': durata %ss (success: %s)", cam, duration, ok)
+                self._send_json({"success": ok, "camera": cam, "duration": duration})
             return
 
         elif parsed.path == "/api/relay/cancello":
