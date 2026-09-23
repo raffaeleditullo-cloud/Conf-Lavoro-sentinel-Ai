@@ -755,20 +755,26 @@ def handle_rapid_person_topic(topic: str, payload_str: str):
             logger.debug("Notifica rapida '%s' ricevuta: convalida sagoma delegata a frigate/events", topic)
 
 def handle_frigate_review(review_data: dict):
-    """Gestisce gli eventi review (Frigate 0.14+) per notifica o allerta tempestiva."""
+    """
+    Riceve gli eventi aggregati da 'frigate/reviews' per fini di audit e telemetria.
+    NOTA FONDAMENTALE: La deterrenza fisica (fari LED Reolink e audio Fanvil)
+    è affidata in via ESCLUSIVA a 'handle_frigate_event' (topic 'frigate/events'),
+    che possiede la telecamera esatta, il bounding box, il filtro proporzioni umane
+    e la valutazione contestuale JEV Decider.
+    Rimuovere l'attivazione attuatori da questo callback elimina il bug dell'accensione
+    involontaria dei fari di altre telecamere.
+    """
     if not isinstance(review_data, dict):
         return
     after = review_data.get("after", {})
     if not after:
         return
-    camera = after.get("camera", "piazzale")
+    camera = after.get("camera", "unknown")
     severity = after.get("severity", "")
     data = after.get("data", {})
     objects = data.get("objects", [])
     if "person" in objects or severity == "alert":
-        event_time = after.get("start_time")
-        logger.info(">>> ALLERTA REVIEW FRIGATE: Persona rilevata su '%s' (severity: %s)", camera, severity)
-        trigger_person_deterrence(camera, event_timestamp=event_time)
+        logger.debug("Frigate review aggregato su '%s' (severity: %s, objects: %s)", camera, severity, objects)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. CALLBACK MQTT

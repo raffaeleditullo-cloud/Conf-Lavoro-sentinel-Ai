@@ -713,6 +713,7 @@ async function loadRealEvents() {
     currentEvents = [];
     renderEvents();
   }
+  pollLatestIdentikit();
 }
 
 function renderEvents() {
@@ -760,6 +761,9 @@ function renderEvents() {
             <div class="event-thumb-wrap" onclick="showIdentikitForEvent('${ev.id}', '${ev.camera}')" style="cursor:pointer;" title="Clicca per visualizzare la Scheda Identikit Forense">
               <img src="${thumbUrl}" alt="Fotogramma dell'evento" onerror="this.src='${EVENT_THUMB_FALLBACK}'">
             </div>
+            <button type="button" class="ultra-primary-btn" onclick="showIdentikitForEvent('${ev.id}', '${ev.camera}')" style="font-size:10px; padding:2px 6px; margin-top:4px; background:rgba(212,175,55,0.2); border:1px solid #d4af37; color:#f7e7ce; display:inline-flex; align-items:center; gap:3px; border-radius:3px;">
+              <span>Identikit</span>
+            </button>
           </td>
           <td data-field="video">${videoBtn}</td>
         `;
@@ -826,6 +830,10 @@ function renderEvents() {
             <div class="event-thumb-wrap" onclick="showIdentikitForEvent('${ev.id}', '${ev.camera}')" style="cursor:pointer;" title="Clicca per visualizzare la Scheda Identikit Forense">
               <img src="${thumbUrl}" alt="Fotogramma dell'evento" onerror="this.src='${EVENT_THUMB_FALLBACK}'">
             </div>
+            <button type="button" class="ultra-primary-btn" onclick="showIdentikitForEvent('${ev.id}', '${ev.camera}')" style="font-size:11px; padding:3px 8px; margin-top:6px; background:linear-gradient(135deg, rgba(212,175,55,0.25), rgba(160,120,20,0.3)); border:1px solid #d4af37; color:#f7e7ce; display:inline-flex; align-items:center; gap:5px; border-radius:4px; font-weight:700;">
+              <svg style="width:11px; height:11px; fill:currentColor;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <span>Scheda Identikit</span>
+            </button>
           </td>
           <td data-field="video">${videoBtn}</td>
         `;
@@ -1003,6 +1011,79 @@ function downloadCurrentSnapshot() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+async function openLatestIdentikit() {
+  try {
+    const res = await fetch('/api/identikit');
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list) && list.length > 0) {
+        openIdentikitModal(list[0]);
+        return;
+      }
+    }
+    // Fallback con eventi in memoria
+    if (currentEvents && currentEvents.length > 0) {
+      const p = currentEvents.find(e => (e.label || '').toLowerCase() === 'person') || currentEvents[0];
+      showIdentikitForEvent(p.id, p.camera);
+      return;
+    }
+    alert("Nessun identikit ancora registrato dal sistema.");
+  } catch (err) {
+    console.error("Errore apertura ultimo identikit:", err);
+  }
+}
+
+async function pollLatestIdentikit() {
+  try {
+    const res = await fetch('/api/identikit');
+    if (!res.ok) return;
+    const list = await res.json();
+    if (Array.isArray(list) && list.length > 0) {
+      updateWallIdentikitCard(list[0]);
+    } else if (currentEvents && currentEvents.length > 0) {
+      const p = currentEvents.find(e => (e.label || '').toLowerCase() === 'person');
+      if (p) {
+        updateWallIdentikitCard({
+          event_id: p.id,
+          telecamera: p.camera,
+          soggetto: p.label,
+          confidenza_ia: p.conf ? parseFloat(p.conf) : 90.0,
+          timestamp_human: p.time,
+          evidenze: { snapshot_url: p.thumb }
+        });
+      }
+    }
+  } catch (err) {
+    // ignora in silenzio
+  }
+}
+
+function updateWallIdentikitCard(p) {
+  if (!p) return;
+  const badge = document.getElementById('wallIdentikitCamBadge');
+  const thumb = document.getElementById('wallIdentikitThumb');
+  const subj = document.getElementById('wallIdentikitSubject');
+  const conf = document.getElementById('wallIdentikitConf');
+  const timeEl = document.getElementById('wallIdentikitTime');
+  const traj = document.getElementById('wallIdentikitTraj');
+
+  if (badge) {
+    badge.textContent = (p.telecamera || p.camera || 'CAM').toUpperCase();
+    badge.className = 'cam-status-pill online';
+  }
+  if (subj) subj.textContent = (p.soggetto || p.label || 'Persona').toUpperCase();
+  if (conf) conf.textContent = p.confidenza_ia ? `${p.confidenza_ia}%` : (p.conf ? `${p.conf}` : 'IA 90%');
+  if (timeEl) timeEl.textContent = `${p.timestamp_human || p.time || ''} // ID: ${String(p.event_id || p.id || '').slice(0, 10)}`;
+  if (traj) {
+    const d = p.dinamica ? p.dinamica.traiettoria_stimata : (p.telecamera === 'corridoio' ? 'Transito rapido ad altezza uomo verso uffici' : 'Movimento confermato nel varco');
+    traj.textContent = d;
+  }
+  if (thumb) {
+    const snap = (p.evidenze && p.evidenze.snapshot_url) ? p.evidenze.snapshot_url : (p.thumb || `/api/events/${p.event_id || p.id}/snapshot.jpg`);
+    thumb.src = `${snap}?_t=${Date.now()}`;
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1657,6 +1738,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   pollSecurityState();
   setInterval(pollSecurityState, 6000);
+  pollLatestIdentikit();
+  setInterval(pollLatestIdentikit, 4000);
 
   // Controllo sessione PIN attiva
   const savedRole = sessionStorage.getItem('sentinel_role');
