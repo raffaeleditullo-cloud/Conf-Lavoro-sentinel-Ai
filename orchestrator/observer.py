@@ -261,10 +261,50 @@ def get_voice_volume() -> float:
 def get_audio_path(sound_id: str) -> str:
     """Restituisce il percorso assoluto del file audio per il pacchetto vocale attivo."""
     pack = get_voice_pack()
+    cfg = _get_cached_settings()
+    # Se il trigger richiede l'avviso standard, usa la traccia attiva configurata (es. identikit o avviso)
+    track_name = cfg.get("active_track", sound_id) if sound_id == "03_avviso_dissuasione" else sound_id
     pack_folder = os.path.join(AUDIO_BASE_DIR, pack)
     if not os.path.exists(pack_folder):
         pack_folder = os.path.join(AUDIO_BASE_DIR, "carmelo")
-    return os.path.join(pack_folder, f"{sound_id}.mp3")
+    track_path = os.path.join(pack_folder, f"{track_name}.mp3")
+    if not os.path.exists(track_path):
+        track_path = os.path.join(pack_folder, "03_avviso_dissuasione.mp3")
+    return track_path
+
+def is_system_armed() -> tuple:
+    """
+    Verifica se il sistema è in stato ARMATO (fari e voce attivi)
+    oppure in MONITORAGGIO SILENZIOSO (orario di lavoro o disarmo manuale).
+    Ritorna: (is_armed: bool, ragione: str)
+    """
+    cfg = _get_cached_settings()
+    mode = str(cfg.get("security_mode", "auto")).lower()
+
+    if mode == "armed":
+        return True, "Armato 24/7 (Manuale)"
+    if mode == "disarmed":
+        return False, "Disarmato manuale (Monitoraggio silenzioso)"
+
+    # Modalità "auto" (pianificazione oraria)
+    now = datetime.now()
+    weekday = now.isoweekday() # 1=Lunedì, ..., 7=Domenica
+    work_days = cfg.get("work_days", [1, 2, 3, 4, 5])
+
+    if weekday not in work_days:
+        return True, f"Armato automatico (Fine settimana - giorno {weekday})"
+
+    start_str = cfg.get("work_start", "08:00")
+    end_str = cfg.get("work_end", "18:30")
+    cur_time = now.strftime("%H:%M")
+
+    try:
+        if start_str <= cur_time < end_str:
+            return False, f"Pausa Lavoro ({start_str} - {end_str}, ora attuale: {cur_time})"
+        else:
+            return True, f"Armato automatico (Fascia Notturna {end_str} - {start_str}, ora: {cur_time})"
+    except Exception as e:
+        return True, f"Armato fallback ({e})"
 
 def is_valid_human_proportions(box: list) -> bool:
     """
@@ -401,6 +441,15 @@ def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: fl
         except Exception:
             pass
 
+    # 0. Verifica stato di Armamento (Orario di lavoro / Fascia notturna / Disarmo manuale)
+    is_armed, arm_reason = is_system_armed()
+    if not is_armed:
+        logger.info(
+            ">>> [MONITORAGGIO SILENZIOSO] Rilevamento su '%s' [loc: %s] soppresso: %s",
+            camera, loc_key, arm_reason
+        )
+        return False
+
     # 1. Avviso Vocale Fanvil Multicast RTP immediato (prioritario)
     in_global_cd = is_in_cooldown("global_speaker_audio", cooldown_seconds=SPEAKER_GLOBAL_COOLDOWN)
     in_local_cd = is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=AUDIO_COOLDOWN)
@@ -435,6 +484,7 @@ def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: fl
                 name="RelayFarettoTrigger",
                 daemon=True
             ).start()
+    return True
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. LOGICA DI DECISIONE E AZIONE (RULES ENGINE)
@@ -484,18 +534,20 @@ def handle_frigate_event(event_data: dict, topic: str):
                 return
 
             event_time = after.get("start_time") or after.get("frame_time")
-            # Attivazione deterrenza immediata (faro + voce Sprint) con cooldown
-            trigger_person_deterrence(camera, zone=active_zone, event_timestamp=event_time)
+            # Attivazione deterrenza (faro Reolink + voce) in base a orario e stato armato
+            deterrence_fired = trigger_person_deterrence(camera, zone=active_zone, event_timestamp=event_time)
 
             # Generazione automatica Scheda Identikit Forense
             try:
+                status_eval = "MINACCIA CONFERMATA — AZIONE DISSUASIONE ESEGUITA" if deterrence_fired else "TRANSITO IN MONITORAGGIO SILENZIOSO (Pausa Lavoro / Disarmato)"
                 profile = identikit_profiler.generate_profile(
                     event_id=event_id,
                     camera=camera,
                     label=label,
                     score=score,
                     box=box,
-                    snapshot_url=f"/api/events/{event_id}/snapshot.jpg"
+                    snapshot_url=f"/api/events/{event_id}/snapshot.jpg",
+                    status_evaluation=status_eval
                 )
                 # Pubblicazione MQTT topic dedicato per aggiornamento Dashboard
                 global _active_mqtt_client

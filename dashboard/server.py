@@ -14,6 +14,7 @@ import os
 import sys
 import json
 import time
+from datetime import datetime
 import socket
 import logging
 import sqlite3
@@ -90,7 +91,11 @@ DEFAULT_SETTINGS = {
     "client_pin": "1111",
     "admin_pin": "9999",
     "preset": "preset1",
-    "custom_message": "Attenzione: Area sotto videosorveglianza con tracciamento biometrico. Allontanarsi immediatamente."
+    "custom_message": "Attenzione: Area sotto videosorveglianza con tracciamento biometrico. Allontanarsi immediatamente.",
+    "security_mode": "auto",
+    "work_start": "08:00",
+    "work_end": "18:30",
+    "work_days": [1, 2, 3, 4, 5]
 }
 
 # Inizializza file targhe e impostazioni se non presenti
@@ -592,6 +597,93 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
             self._send_json(read_recent_identikits(limit=15))
             return
 
+        # API Download File JSON Scheda Identikit Forense
+        elif parsed.path.startswith("/api/identikit/") and parsed.path.endswith("/download"):
+            parts = parsed.path.strip("/").split("/")
+            event_id = parts[2] if len(parts) >= 3 else ""
+            found_card = None
+            if os.path.isdir(LOGS_DIR):
+                for fname in os.listdir(LOGS_DIR):
+                    if fname.startswith("identikit_") and event_id in fname and fname.endswith(".json"):
+                        fpath = os.path.join(LOGS_DIR, fname)
+                        try:
+                            with open(fpath, "r", encoding="utf-8") as f:
+                                found_card = f.read()
+                                break
+                        except Exception:
+                            pass
+            if not found_card:
+                for card in read_recent_identikits(25):
+                    if card.get("event_id") == event_id or event_id.startswith(str(card.get("event_id", ""))[:8]):
+                        found_card = json.dumps(card, indent=2, ensure_ascii=False)
+                        break
+
+            if found_card:
+                body = found_card.encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Disposition", f'attachment; filename="identikit_{event_id[:12]}.json"')
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            else:
+                self.send_response(404)
+                self.end_headers()
+                return
+
+        # API Stato di Sicurezza & Orari (Armato / Disarmato / Auto)
+        elif parsed.path == "/api/security/state":
+            settings = dict(DEFAULT_SETTINGS)
+            if os.path.exists(SETTINGS_FILE):
+                try:
+                    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                        settings.update(json.load(f))
+                except Exception:
+                    pass
+            mode = settings.get("security_mode", "auto").lower()
+            now = datetime.now()
+            weekday = now.isoweekday()
+            work_days = settings.get("work_days", [1, 2, 3, 4, 5])
+            start_str = settings.get("work_start", "08:00")
+            end_str = settings.get("work_end", "18:30")
+            cur_time = now.strftime("%H:%M")
+
+            if mode == "armed":
+                is_armed = True
+                status_text = "Armato (24/7)"
+                badge = "armed"
+            elif mode == "disarmed":
+                is_armed = False
+                status_text = "Disarmato (Pausa Lavoro)"
+                badge = "disarmed"
+            else:
+                if weekday not in work_days:
+                    is_armed = True
+                    status_text = f"Armato Auto (Fine Settimana)"
+                    badge = "auto_armed"
+                elif start_str <= cur_time < end_str:
+                    is_armed = False
+                    status_text = f"Pausa Lavoro ({start_str} - {end_str})"
+                    badge = "auto_disarmed"
+                else:
+                    is_armed = True
+                    status_text = f"Armato Auto (Fascia Notturna {end_str} - {start_str})"
+                    badge = "auto_armed"
+
+            self._send_json({
+                "mode": mode,
+                "is_armed": is_armed,
+                "status_text": status_text,
+                "badge": badge,
+                "work_start": start_str,
+                "work_end": end_str,
+                "work_days": work_days,
+                "current_time": cur_time
+            })
+            return
+
         # API Proxy Media Eventi (Snapshot e Clip MP4) da Frigate
         elif parsed.path.startswith("/api/events/") and ("/snapshot.jpg" in parsed.path or "/clip.mp4" in parsed.path):
             subpath = parsed.path.replace("/api/events/", "").strip()
@@ -793,6 +885,28 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 with open(PLATES_FILE, "w", encoding="utf-8") as f:
                     json.dump(plates, f, indent=2)
                 self._send_json({"success": True, "plates": plates})
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=400)
+            return
+
+        elif parsed.path == "/api/security/mode":
+            try:
+                data = json.loads(body.decode("utf-8")) if body else {}
+                new_mode = str(data.get("mode", "auto")).lower()
+                if new_mode not in ("auto", "armed", "disarmed"):
+                    new_mode = "auto"
+                current = dict(DEFAULT_SETTINGS)
+                if os.path.exists(SETTINGS_FILE):
+                    try:
+                        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                            current.update(json.load(f))
+                    except Exception:
+                        pass
+                current["security_mode"] = new_mode
+                with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(current, f, indent=2)
+                logger.info("Modalità sicurezza aggiornata a: %s", new_mode)
+                self._send_json({"success": True, "mode": new_mode})
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=400)
             return

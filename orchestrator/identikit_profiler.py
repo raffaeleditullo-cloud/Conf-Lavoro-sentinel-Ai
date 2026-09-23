@@ -34,7 +34,8 @@ class IdentikitProfiler:
         score: float,
         box: list,
         trajectory_vector: tuple = None,
-        snapshot_url: str = None
+        snapshot_url: str = None,
+        status_evaluation: str = None
     ) -> Dict[str, Any]:
         """
         Crea e salva una scheda descrittiva forense dell'evento.
@@ -82,7 +83,7 @@ class IdentikitProfiler:
                 "snapshot_url": snapshot_url or f"/api/events/{event_id}/snapshot.jpg",
                 "clip_url": f"/api/events/{event_id}/clip.mp4",
             },
-            "stato_valutazione": "MINACCIA CONFERMATA — AZIONE DISSVASIONE ESEGUITA"
+            "stato_valutazione": status_evaluation or "MINACCIA CONFERMATA — AZIONE DISSVASIONE ESEGUITA"
         }
 
         # Salvataggio file JSON forense locale

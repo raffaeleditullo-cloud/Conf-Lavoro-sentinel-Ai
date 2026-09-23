@@ -891,9 +891,12 @@ async function showIdentikitForEvent(eventId, camera) {
   }
 }
 
+let currentModalIdentikit = null;
+
 function openIdentikitModal(p) {
   const modal = document.getElementById('identikitModal');
   if (!modal) return;
+  currentModalIdentikit = p;
 
   const camName = formatCamName(p.telecamera || 'piazzale');
   const titleEl = document.getElementById('identikitModalTitle');
@@ -926,6 +929,28 @@ function openIdentikitModal(p) {
     ratioEl.textContent = ar;
   }
 
+  const evalEl = document.getElementById('identikitEvaluation');
+  if (evalEl) {
+    const evalText = p.stato_valutazione || 'DISSVASIONE ESEGUITA';
+    evalEl.textContent = evalText;
+    if (evalText.includes('SILENZIOSO') || evalText.includes('Lavoro')) {
+      evalEl.style.color = '#4fc3f7';
+    } else {
+      evalEl.style.color = '#ef5350';
+    }
+  }
+
+  const threatBadge = document.getElementById('identikitThreatBadge');
+  if (threatBadge) {
+    if (p.stato_valutazione && (p.stato_valutazione.includes('SILENZIOSO') || p.stato_valutazione.includes('Lavoro'))) {
+      threatBadge.textContent = 'MONITORAGGIO SILENZIOSO';
+      threatBadge.style.background = '#0288d1';
+    } else {
+      threatBadge.textContent = 'DISSUASIONE ESEGUITA';
+      threatBadge.style.background = '#e53935';
+    }
+  }
+
   const img = document.getElementById('identikitSnapshot');
   if (img) {
     const snapUrl = (p.evidenze && p.evidenze.snapshot_url) ? p.evidenze.snapshot_url : `/api/events/${p.event_id}/snapshot.jpg`;
@@ -941,6 +966,43 @@ function closeIdentikitModal() {
   if (!modal) return;
   modal.style.display = 'none';
   modal.classList.remove('open');
+}
+
+function downloadCurrentIdentikitJson() {
+  if (!currentModalIdentikit || !currentModalIdentikit.event_id) {
+    alert("Nessuna scheda identikit attiva da scaricare.");
+    return;
+  }
+  const eventId = currentModalIdentikit.event_id;
+  // Trigger direct download using browser Blob for instant client response
+  const jsonStr = JSON.stringify(currentModalIdentikit, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `identikit_${String(eventId).slice(0, 12)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
+
+function downloadCurrentSnapshot() {
+  if (!currentModalIdentikit || !currentModalIdentikit.event_id) {
+    alert("Nessuno snapshot disponibile.");
+    return;
+  }
+  const eventId = currentModalIdentikit.event_id;
+  const snapUrl = (currentModalIdentikit.evidenze && currentModalIdentikit.evidenze.snapshot_url)
+    ? currentModalIdentikit.evidenze.snapshot_url
+    : `/api/events/${eventId}/snapshot.jpg`;
+  const a = document.createElement('a');
+  a.href = snapUrl;
+  a.download = `snapshot_${String(eventId).slice(0, 12)}.jpg`;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1088,7 +1150,11 @@ let currentSettings = {
   voice_volume: 85,
   siren_enabled: true,
   faro_sec: 30,
-  gate_sec: 3
+  gate_sec: 3,
+  security_mode: 'auto',
+  work_start: '08:00',
+  work_end: '18:30',
+  work_days: [1, 2, 3, 4, 5]
 };
 
 function handleVoiceChange(pack) {
@@ -1177,11 +1243,39 @@ function updateVolumeLabel(val) {
   }
 }
 
+async function handleSecurityModeChange(mode) {
+  currentSettings.security_mode = mode;
+  const descEl = document.getElementById('securityModeDesc');
+  if (descEl) {
+    if (mode === 'armed') {
+      descEl.textContent = 'Attivo 24 ore su 24: ogni intrusione attiva immediatamente i fari LED Reolink e la voce Fanvil.';
+    } else if (mode === 'disarmed') {
+      descEl.textContent = 'Monitoraggio silenzioso: le telecamere registrano e analizzano, ma fari e audio sono disattivati.';
+    } else {
+      descEl.textContent = 'Orario di lavoro: sorveglianza silenziosa senza fari/voce. Fuori orario e weekend: deterrenza attiva istantanea.';
+    }
+  }
+
+  try {
+    await fetch('/api/security/mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: mode })
+    });
+    pollSecurityState();
+  } catch (err) {
+    console.warn("Errore aggiornamento rapido modalità sicurezza:", err);
+  }
+}
+
 async function saveSettings() {
   const rngVol = document.getElementById('rngVolume');
   const numFaro = document.getElementById('numFaroSec');
   const numGate = document.getElementById('numGateSec');
   const selTrack = document.getElementById('selAudioTrack');
+  const selSecMode = document.getElementById('selSecurityMode');
+  const inpWorkStart = document.getElementById('inputWorkStart');
+  const inpWorkEnd = document.getElementById('inputWorkEnd');
 
   const payload = {
     voice_pack: currentSettings.voice_pack || 'carmelo',
@@ -1189,10 +1283,15 @@ async function saveSettings() {
     active_track: selTrack ? selTrack.value : (currentSettings.active_track || '03_avviso_dissuasione'),
     voice_volume: rngVol ? parseInt(rngVol.value, 10) : (currentSettings.voice_volume || 70),
     faro_sec: numFaro ? parseInt(numFaro.value, 10) : (currentSettings.faro_sec || 30),
-    gate_sec: numGate ? parseInt(numGate.value, 10) : (currentSettings.gate_sec || 3)
+    gate_sec: numGate ? parseInt(numGate.value, 10) : (currentSettings.gate_sec || 3),
+    security_mode: selSecMode ? selSecMode.value : (currentSettings.security_mode || 'auto'),
+    work_start: inpWorkStart ? inpWorkStart.value : (currentSettings.work_start || '08:00'),
+    work_end: inpWorkEnd ? inpWorkEnd.value : (currentSettings.work_end || '18:30'),
+    work_days: currentSettings.work_days || [1, 2, 3, 4, 5]
   };
 
   const statusLbl = document.getElementById('saveStatus');
+  const schedStatusLbl = document.getElementById('scheduleSaveStatus');
 
   try {
     const res = await fetch('/api/settings', {
@@ -1213,6 +1312,12 @@ async function saveSettings() {
         statusLbl.style.display = 'inline';
         setTimeout(() => { statusLbl.style.display = 'none'; }, 3000);
       }
+      if (schedStatusLbl) {
+        schedStatusLbl.textContent = 'Orari salvati';
+        schedStatusLbl.style.display = 'inline';
+        setTimeout(() => { schedStatusLbl.style.display = 'none'; }, 3000);
+      }
+      pollSecurityState();
     } else {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -1274,7 +1379,68 @@ async function loadSettings() {
   const numGate = document.getElementById('numGateSec');
   if (numGate && currentSettings.gate_sec !== undefined) numGate.value = currentSettings.gate_sec;
 
+  const selSecMode = document.getElementById('selSecurityMode');
+  if (selSecMode && currentSettings.security_mode) selSecMode.value = currentSettings.security_mode;
+
+  const inpWorkStart = document.getElementById('inputWorkStart');
+  if (inpWorkStart && currentSettings.work_start) inpWorkStart.value = currentSettings.work_start;
+
+  const inpWorkEnd = document.getElementById('inputWorkEnd');
+  if (inpWorkEnd && currentSettings.work_end) inpWorkEnd.value = currentSettings.work_end;
+
   updateTrackLabel();
+  pollSecurityState();
+}
+
+async function pollSecurityState() {
+  try {
+    const res = await fetch('/api/security/state');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const liveText = document.getElementById('securityLiveStateText');
+    const liveReason = document.getElementById('securityLiveReasonText');
+    const schedBadge = document.getElementById('securityScheduleBadge');
+    const selSec = document.getElementById('selSecurityMode');
+
+    if (selSec && document.activeElement !== selSec) {
+      selSec.value = data.mode || 'auto';
+    }
+
+    if (liveText) {
+      if (data.is_armed) {
+        liveText.textContent = `ARMATO (${data.badge === 'armed_247' ? '24/7' : 'Fascia Notturna'})`;
+        liveText.style.color = '#81c784';
+      } else {
+        liveText.textContent = data.badge === 'disarmed' ? 'DISARMATO (Silenzioso)' : 'PAUSA LAVORO (Monitoraggio)';
+        liveText.style.color = '#4fc3f7';
+      }
+    }
+
+    if (liveReason) {
+      liveReason.textContent = data.status_text || '';
+    }
+
+    if (schedBadge) {
+      schedBadge.textContent = data.is_armed ? 'Deterrenza Attiva' : 'Monitoraggio Silenzioso';
+      schedBadge.className = data.is_armed ? 'status-beacon is-accent' : 'status-beacon';
+    }
+
+    // Aggiornamento Box Stato di Protezione Top Bar (se il detector non è in freeze)
+    const box = document.getElementById('securityStatus');
+    const label = document.getElementById('securityStatusLabel');
+    if (box && label && !box.classList.contains('is-alert')) {
+      if (data.is_armed) {
+        label.textContent = data.mode === 'armed' ? 'Armato 24/7' : 'Protetto (Notturna)';
+        box.title = `Sistema armato: fari e voce attivi. ${data.status_text}`;
+      } else {
+        label.textContent = data.mode === 'disarmed' ? 'Disarmato' : 'Pausa Lavoro';
+        box.title = `Monitoraggio silenzioso attivo: ${data.status_text}`;
+      }
+    }
+  } catch (e) {
+    // silently ignore
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1489,6 +1655,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(pollJetsonTelemetry, 2500);
 
   loadSettings();
+  pollSecurityState();
+  setInterval(pollSecurityState, 6000);
 
   // Controllo sessione PIN attiva
   const savedRole = sessionStorage.getItem('sentinel_role');

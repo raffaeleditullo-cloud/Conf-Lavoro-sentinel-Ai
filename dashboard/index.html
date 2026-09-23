@@ -504,6 +504,7 @@
                 <option value="03_avviso_dissuasione" selected>03 // Avviso Dissuasione (Presenza nel Piazzale)</option>
                 <option value="04_allarme_intrusione">04 // Allarme Intrusione (Violazione Orario Notturno)</option>
                 <option value="05_targa_non_autorizzata">05 // Targa Non Autorizzata (Accesso Negato)</option>
+                <option value="06_identikit_acquisito">06 // Identikit Biometrico Acquisito (Dissuasione Mirata)</option>
               </select>
 
               <!-- Mini Player Anteprima Audio Reale -->
@@ -588,6 +589,64 @@
               <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:10px 24px; font-size:13px;">Salva Impostazioni</button>
             </div>
 
+          </div>
+
+          <!-- Riquadro 2.5: Pianificazione Oraria & Modalità di Sorveglianza -->
+          <div class="glass-panel" style="grid-column: 1 / -1; margin-top: 18px;">
+            <div class="panel-header-minimal">
+              <div class="ev-head-text">
+                <h3>Pianificazione Oraria &amp; Modalità di Sorveglianza</h3>
+                <p class="ev-head-sub">Regola gli orari di lavoro aziendali e il comportamento di allarmi, fari LED Reolink e diffusore Fanvil</p>
+              </div>
+              <span id="securityScheduleBadge" class="status-beacon is-accent">Modalità Automatica</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+              <!-- Selettore Modalità -->
+              <div class="setting-box">
+                <label class="setting-section-label">MODALITÀ DI SORVEGLIANZA ATTIVA</label>
+                <select id="selSecurityMode" class="ultra-input" style="font-weight:600; margin-bottom:8px;" onchange="handleSecurityModeChange(this.value)">
+                  <option value="auto">Automatica // Orario Lavoro + Fascia Notturna</option>
+                  <option value="armed">Armato 24/7 // Sempre Attivo (Fari LED &amp; Voce)</option>
+                  <option value="disarmed">Disarmato // Monitoraggio Silenzioso</option>
+                </select>
+                <span id="securityModeDesc" class="setting-hint" style="color:#aaa;">Orario di lavoro: sorveglianza silenziosa senza fari/voce. Fuori orario e weekend: deterrenza attiva istantanea.</span>
+              </div>
+
+              <!-- Fascia Oraria Lavorativa -->
+              <div class="setting-box">
+                <label class="setting-section-label">FASCIA ORARIA LAVORATIVA (LUNEDÌ — VENERDÌ)</label>
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="flex:1;">
+                    <span style="font-size:11px; color:#888; text-transform:uppercase;">Inizio Turno</span>
+                    <input type="time" id="inputWorkStart" value="08:00" class="ultra-input" style="font-family:var(--font-mono); font-weight:700; text-align:center;">
+                  </div>
+                  <span style="font-size:18px; color:#666; font-weight:bold; margin-top:14px;">—</span>
+                  <div style="flex:1;">
+                    <span style="font-size:11px; color:#888; text-transform:uppercase;">Fine Turno</span>
+                    <input type="time" id="inputWorkEnd" value="18:30" class="ultra-input" style="font-family:var(--font-mono); font-weight:700; text-align:center;">
+                  </div>
+                </div>
+                <span class="setting-hint">Durante queste ore gli operai e i mezzi transitano senza innescare sirene vocali o fari.</span>
+              </div>
+
+              <!-- Stato Attuale & Telemetria Sorveglianza -->
+              <div class="setting-box" style="display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <label class="setting-section-label">STATO CORRENTE DECIDER</label>
+                  <div id="securityLiveStateText" style="font-weight:700; font-size:14px; color:#4fc3f7; margin-top:4px;">
+                    Calcolo stato in corso...
+                  </div>
+                  <p id="securityLiveReasonText" style="font-size:12px; color:#aaa; margin-top:4px;">
+                    Verifica parametri con il motore JEV Decider
+                  </p>
+                </div>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                  <span id="scheduleSaveStatus" class="save-status" style="display:none;">Orari aggiornati</span>
+                  <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:8px 18px; font-size:12px;">Salva Orari</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Riquadro 3: Gestione Credenziali & Codici PIN (Solo Manutentore) -->
@@ -782,7 +841,24 @@
               <div style="color: #aaa; font-size: 11px; text-transform: uppercase;">Proporzioni Sagoma (H/W)</div>
               <div id="identikitRatio" style="margin-top: 4px; font-weight: 600; color: #ffb74d;">--</div>
             </div>
+
+            <div style="background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 6px;">
+              <div style="color: #aaa; font-size: 11px; text-transform: uppercase;">Stato Valutazione Forense</div>
+              <div id="identikitEvaluation" style="margin-top: 4px; font-weight: 600; font-size: 12px; color: #ef5350;">--</div>
+            </div>
           </div>
+        </div>
+
+        <!-- Download e Azioni Forensi -->
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap;">
+          <button type="button" class="ultra-primary-btn" id="btnDownloadSnapshot" onclick="downloadCurrentSnapshot()" style="padding: 9px 18px; font-size: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); display: inline-flex; align-items: center; gap: 8px;">
+            <svg style="width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Scarica Foto Intruso (.JPG)</span>
+          </button>
+          <button type="button" class="ultra-primary-btn" id="btnDownloadIdentikitJson" onclick="downloadCurrentIdentikitJson()" style="padding: 9px 18px; font-size: 12px; background: linear-gradient(135deg, #d4af37, #9a7610); color: #000; font-weight: 700; border: none; display: inline-flex; align-items: center; gap: 8px;">
+            <svg style="width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Scarica Scheda Forense (.JSON)</span>
+          </button>
         </div>
       </div>
     </div>
