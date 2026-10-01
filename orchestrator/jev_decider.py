@@ -71,7 +71,7 @@ ENVIRONMENT_PROFILES = {
             "Riflessi di luce artificiale sul pavimento lucido",
             "Porta di fondo che si apre senza sagoma umana completa",
         ],
-        "aspect_ratio_min": 0.60,  # Tollerante per transiti a mezzo busto e prospettive ravvicinate
+        "aspect_ratio_min": 0.20,  # Tollerante per inquadrature longitudinali in prospettiva e varchi stretti
         "speed_threshold": 0.005,  # Transito pedonale rapido a passo normale
     },
 }
@@ -125,12 +125,14 @@ class JevAdaptiveDecider:
         else:
             aspect_ratio = 1.5
 
-        # 1. Valutazione Aspect Ratio specifico per il profilo ambientale
-        required_ar = profile["aspect_ratio_min"]
-        if aspect_ratio < required_ar:
-            reason = f"[{camera.upper()}] Sagoma non umana per questo ambiente (H/W={aspect_ratio:.2f} < {required_ar:.2f})"
-            logger.debug("JEV: %s", reason)
-            return False, reason, score
+        # 1. Valutazione Aspect Ratio specifico per il profilo ambientale (se abilitato da .env)
+        human_ratio_enabled = os.environ.get("HUMAN_RATIO_FILTER_ENABLED", "true").lower() in ("true", "1", "yes")
+        if human_ratio_enabled:
+            required_ar = profile["aspect_ratio_min"]
+            if aspect_ratio < required_ar:
+                reason = f"[{camera.upper()}] Sagoma non umana per questo ambiente (H/W={aspect_ratio:.2f} < {required_ar:.2f})"
+                logger.debug("JEV: %s", reason)
+                return False, reason, score
 
         # 2. Valutazione Movimento Dinamico specifico per la camera
         speed_min = profile["speed_threshold"]

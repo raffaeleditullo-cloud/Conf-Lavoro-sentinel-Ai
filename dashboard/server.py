@@ -495,13 +495,16 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=BASE_DIR, **kwargs)
 
     def _send_json(self, data, status=200):
-        body = json.dumps(data).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            body = json.dumps(data).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -726,9 +729,14 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                             break
                         self.wfile.write(chunk)
                 return
+            except (BrokenPipeError, ConnectionResetError):
+                return
             except Exception:
-                self.send_response(404)
-                self.end_headers()
+                try:
+                    self.send_response(404)
+                    self.end_headers()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
                 return
 
         # API Proxy Singolo Frame Telecamere da Frigate (http://<FRIGATE_HOST>:<PORT>/api/<camera>/latest.jpg)
@@ -757,6 +765,8 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                     self.send_header("Access-Control-Allow-Origin", "*")
                     self.end_headers()
                     self.wfile.write(data)
+                return
+            except (BrokenPipeError, ConnectionResetError):
                 return
             except Exception:
                 # Frigate non raggiungibile o telecamera offline: restituisce 503

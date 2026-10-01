@@ -65,7 +65,7 @@ SPEAKER_GLOBAL_COOLDOWN = float(os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS"
 # Pezzettino 1: Filtro di Buonsenso per le Sagome (stile Jev / Calibrated Decision)
 # Disabilitato di default (false) per non scartare persone reali a mezzo busto o a distanza ravvicinata nei test
 HUMAN_RATIO_FILTER_ENABLED = os.environ.get("HUMAN_RATIO_FILTER_ENABLED", "false").lower() in ("true", "1", "yes")
-MIN_HUMAN_ASPECT_RATIO = float(os.environ.get("MIN_HUMAN_ASPECT_RATIO", "0.6"))
+MIN_HUMAN_ASPECT_RATIO = float(os.environ.get("MIN_HUMAN_ASPECT_RATIO", "0.20"))
 MAX_PERSON_AREA_RATIO = float(os.environ.get("MAX_PERSON_AREA_RATIO", "0.95"))
 
 # Pezzettino 2: Filtro di Movimento Dinamico & Traiettoria (Early Threat / Anti-Static)
