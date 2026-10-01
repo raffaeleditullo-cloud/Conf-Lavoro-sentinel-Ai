@@ -18,7 +18,7 @@ from datetime import datetime
 import socket
 import logging
 import sqlite3
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
 
 logging.basicConfig(
@@ -1075,7 +1075,8 @@ def main():
         "OK" if speaker_controller else "NON DISPONIBILE"
     )
     logger.info("================================================================")
-    server = HTTPServer(("0.0.0.0", PORT), SentinelDashboardHandler)
+    server = ThreadingHTTPServer(("0.0.0.0", PORT), SentinelDashboardHandler)
+    server.daemon_threads = True
     try:
         server.serve_forever()
     except KeyboardInterrupt:

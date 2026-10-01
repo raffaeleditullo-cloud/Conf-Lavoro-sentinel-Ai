@@ -278,8 +278,12 @@ def is_system_armed() -> tuple:
     oppure in MONITORAGGIO SILENZIOSO (orario di lavoro o disarmo manuale).
     Ritorna: (is_armed: bool, ragione: str)
     """
+    # Override prioritario per collaudo e test sul campo (evita silenziamenti diurni indesiderati)
+    if os.environ.get("FORCE_ARMED", "false").lower() in ("true", "1", "yes"):
+        return True, "Armato forzato da variabile FORCE_ARMED=true (.env)"
+
     cfg = _get_cached_settings()
-    mode = str(cfg.get("security_mode", "auto")).lower()
+    mode = str(os.environ.get("SENTINEL_SECURITY_MODE") or cfg.get("security_mode", "auto")).lower()
 
     if mode == "armed":
         return True, "Armato 24/7 (Manuale)"
@@ -386,6 +390,8 @@ def is_dynamic_movement(event_id: str, box: list, event_type: str) -> bool:
             now = time.time()
 
             if event_id not in _track_positions or event_type == "new":
+                if len(_track_positions) > 500:
+                    _track_positions.clear()
                 _track_positions[event_id] = {
                     "last_center": (cx, cy),
                     "first_center": (cx, cy),
@@ -826,31 +832,35 @@ def on_message(client, userdata, msg):
             except Exception:
                 parsed_json = None
 
-        if parsed_json is not None:
-            record["type"] = "json"
-            record["payload"] = parsed_json
+        try:
+            if parsed_json is not None:
+                record["type"] = "json"
+                record["payload"] = parsed_json
 
-            # DISPATCHER EVENTI AL DECISION ENGINE
-            if topic == "frigate/events":
-                handle_frigate_event(parsed_json, topic)
-            elif topic == "frigate/reviews":
-                handle_frigate_review(parsed_json)
-            elif topic == "frigate/tracked_object_update":
-                handle_lpr_update(parsed_json)
-            elif topic == "frigate/stats":
-                handle_frigate_stats(parsed_json)
+                # DISPATCHER EVENTI AL DECISION ENGINE
+                if topic == "frigate/events":
+                    handle_frigate_event(parsed_json, topic)
+                elif topic == "frigate/reviews":
+                    handle_frigate_review(parsed_json)
+                elif topic == "frigate/tracked_object_update":
+                    handle_lpr_update(parsed_json)
+                elif topic == "frigate/stats":
+                    handle_frigate_stats(parsed_json)
 
-        else:
-            record["type"] = "text"
-            record["payload"] = text_payload
+            else:
+                record["type"] = "text"
+                record["payload"] = text_payload
 
-            # CONTROLLO TOPIC AUDIO RAPIDI (es. frigate/<cam>/audio/scream ON)
-            if "/audio/" in topic and any(alarm in topic for alarm in ("scream", "yell", "fire_alarm")):
-                handle_audio_alarm(topic, text_payload)
+                # CONTROLLO TOPIC AUDIO RAPIDI (es. frigate/<cam>/audio/scream ON)
+                if "/audio/" in topic and any(alarm in topic for alarm in ("scream", "yell", "fire_alarm")):
+                    handle_audio_alarm(topic, text_payload)
 
-            # TRIGGER ISTANTANEO PERSONA (camera o zona, conteggio numerico o ON/OFF)
-            elif topic.startswith("frigate/") and "/person" in topic:
-                handle_rapid_person_topic(topic, text_payload)
+                # TRIGGER ISTANTANEO PERSONA (camera o zona, conteggio numerico o ON/OFF)
+                elif topic.startswith("frigate/") and "/person" in topic:
+                    handle_rapid_person_topic(topic, text_payload)
+
+        except Exception as err:
+            logger.error("Errore imprevisto elaborazione messaggio MQTT su topic '%s': %s", topic, err, exc_info=True)
 
     # Scrittura su log JSON Lines (audit e replay)
     json_line = json.dumps(record, ensure_ascii=False, separators=(',', ':'))

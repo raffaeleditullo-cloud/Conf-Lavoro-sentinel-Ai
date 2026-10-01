@@ -55,7 +55,7 @@ ENVIRONMENT_PROFILES = {
             "Materiali di imballaggio o teloni riflettenti a terra",
             "Ponteggi o scale metalliche",
         ],
-        "aspect_ratio_min": 0.60,  # Tollerante per transiti a mezzo busto e prospettive ravvicinate
+        "aspect_ratio_min": 0.25,  # Tollerante per operatori chini, movimentazione merci e prospettive dall'alto
         "speed_threshold": 0.005,  # Movimenti più controllati/lenti tra gli scaffali
     },
     "corridoio": {
