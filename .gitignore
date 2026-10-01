@@ -1,5 +1,7 @@
-# File di ambiente con credenziali reali
+# File di ambiente con credenziali reali e backup
 .env
+.env.*
+*.bak
 
 # Dati persistenti di registrazione e database
 storage/recordings/
