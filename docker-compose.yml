@@ -22,6 +22,8 @@ services:
       - ${STORAGE_RECORDINGS_PATH:-./storage/recordings}:/media/frigate/recordings
       # Database SQLite (su Jetson punta all'SSD NVMe tramite STORAGE_DB_PATH)
       - ${STORAGE_DB_PATH:-./storage/db}:/media/frigate/db
+      # Snapshot e clip temporanee di evento (persistenza per identikit e rassegna)
+      - ${STORAGE_CLIPS_PATH:-./storage/clips}:/media/frigate/clips
       # Opzionale: decommentare su PC Linux con GPU Intel integrata per VAAPI
       # - /dev/dri:/dev/dri
     ports:

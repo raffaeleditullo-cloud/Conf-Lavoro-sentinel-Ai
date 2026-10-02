@@ -12,11 +12,10 @@
 # ══════════════════════════════════════════════════════════════════════════════
 
 # A) PIATTAFORMA HARDWARE (ACCELERAZIONE VIDEO DECODIFICA FFMPEG)
-# - Su Jetson Orin Nano: la decodifica dei substream 640x360 a 10-15 fps e' affidata alla CPU ARM
+# - Su Jetson Orin Nano: la decodifica dei substream 640x360 a 10 fps e' affidata alla CPU ARM
 #   (impatto < 3%), eliminando i crash del decoder hardware NVIDIA NvMMLite (Block 261)
 #   sui profili H.264 High 5.1 dei flussi Reolink. Il recording 4K non usa decodifica (-c copy).
-ffmpeg:
-  # hwaccel_args: preset-jetson-h264  # Disattivato per stabilita' assoluta su flussi Reolink FLV/RTSP
+ffmpeg: {}
 
 
 # B) CLASSIFICAZIONE EVENTI PER L'ORCHESTRATORE (REVIEW: ALERTS vs DETECTIONS)
@@ -248,7 +247,7 @@ cameras:
       enabled: true
       width: 640
       height: 360
-      fps: 15
+      fps: 10
       min_initialized: 2
 
     # Lettura targhe opzionale per veicoli in transito piazzale
@@ -287,7 +286,7 @@ cameras:
       enabled: true
       width: 640
       height: 360
-      fps: 15
+      fps: 10
       min_initialized: 2
     objects:
       track:
@@ -318,7 +317,7 @@ cameras:
       enabled: true
       width: 640
       height: 360
-      fps: 15
+      fps: 10
       min_initialized: 2
     objects:
       track:
