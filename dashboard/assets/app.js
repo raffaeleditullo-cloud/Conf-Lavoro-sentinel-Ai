@@ -954,9 +954,9 @@ function openIdentikitModal(p) {
       threatBadge.textContent = 'MONITORAGGIO SILENZIOSO';
       threatBadge.style.background = '#0288d1';
     } else if (p.orin_intelligence && p.orin_intelligence.is_president) {
-      threatBadge.textContent = 'ACCOGLIENZA VIP ATTIVA';
-      threatBadge.style.background = '#d4af37';
-      threatBadge.style.color = '#000';
+      threatBadge.textContent = 'ACCESSO AUTORIZZATO // PRESIDENZA';
+      threatBadge.style.background = 'var(--brand)';
+      threatBadge.style.color = '#fff';
     } else {
       threatBadge.textContent = 'DISSUASIONE ESEGUITA';
       threatBadge.style.background = '#e53935';
@@ -977,7 +977,7 @@ function openIdentikitModal(p) {
       if (orinData.is_president) {
         if (orinVipBadge) {
           orinVipBadge.style.display = 'inline-flex';
-          orinVipBadge.textContent = '⭐ DOTT. ROBERTO CAPOBIANCO (PRESIDENTE)';
+          orinVipBadge.textContent = 'PRESIDENZA // ACCESSO AUTORIZZATO';
         }
       } else {
         if (orinVipBadge) orinVipBadge.style.display = 'none';
@@ -1122,10 +1122,10 @@ function updateWallIdentikitCard(p) {
   if (orinBadge) {
     if (p.orin_intelligence) {
       if (p.orin_intelligence.is_president) {
-        orinBadge.innerHTML = '<span style="background:linear-gradient(135deg, #d4af37, #9a7610); color:#000; font-weight:800; font-size:11px; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">⭐ VIP PRESIDENTE</span>';
+        orinBadge.innerHTML = '<span class="orin-vip-tag">Presidenza // Autorizzato</span>';
         orinBadge.style.display = 'block';
       } else if (p.orin_intelligence.spoken_message) {
-        orinBadge.innerHTML = `<span style="color:#e8c15a; font-size:11.5px; font-style:italic;">🎙️ "${p.orin_intelligence.spoken_message.slice(0, 50)}..."</span>`;
+        orinBadge.innerHTML = `<span style="color:var(--brand); font-size:11.5px; font-weight:600; font-style:italic;">"${p.orin_intelligence.spoken_message.slice(0, 50)}..."</span>`;
         orinBadge.style.display = 'block';
       } else {
         orinBadge.style.display = 'none';

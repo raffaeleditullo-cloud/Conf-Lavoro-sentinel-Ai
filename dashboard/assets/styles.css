@@ -2953,58 +2953,63 @@ select.ultra-input {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
- * ORIN CYBERNETIC BRAIN // MULTIMODAL AI & DYNAMIC SPEECH EXTENSIONS
+ * ORIN ASSISTENTE VOCALE & RICONOSCIMENTO VIP // TEMA UFFICIALE BIANCO & ROSSO
  * ══════════════════════════════════════════════════════════════════════════════ */
-.orin-hero-card {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.05), rgba(142, 31, 47, 0.04));
-  border: 1px solid rgba(142, 31, 47, 0.18);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  position: relative;
-  overflow: hidden;
-}
-
 .orin-vip-banner {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(160, 120, 20, 0.08));
-  border: 1px solid rgba(212, 175, 55, 0.4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
+  padding: 14px 16px;
   margin-top: 14px;
+  box-shadow: var(--shadow-xs);
 }
 
 .orin-vip-avatar {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  border: 2px solid #d4af37;
+  border: 2px solid var(--border-strong);
   object-fit: cover;
   flex-shrink: 0;
-  box-shadow: 0 0 10px rgba(212, 175, 55, 0.35);
+}
+
+.orin-vip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  border: 1px solid var(--brand-line);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
 }
 
 .orin-vip-title {
+  font-size: 13.5px;
   font-weight: 700;
-  color: #926b00;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  color: var(--text-title);
+  margin-top: 3px;
 }
 
 .orin-vip-desc {
   font-size: 12px;
-  color: var(--text-body);
+  color: var(--text-muted);
   margin-top: 2px;
+  line-height: 1.45;
 }
 
 .orin-live-input-wrap {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .orin-quick-tags {
@@ -3015,17 +3020,14 @@ select.ultra-input {
 
 .orin-quick-btn {
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xs);
   padding: 5px 12px;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-body);
   cursor: pointer;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
 .orin-quick-btn:hover {
@@ -3035,30 +3037,15 @@ select.ultra-input {
 }
 
 .orin-speech-bubble {
-  background: rgba(142, 31, 47, 0.05);
+  background: var(--brand-soft);
   border-left: 3px solid var(--brand);
   border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
-  padding: 10px 14px;
+  padding: 9px 13px;
   font-style: italic;
   color: var(--brand);
   font-weight: 500;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
-.orin-beacon-pulse {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 8px #22c55e;
-  animation: orin-pulse 1.8s infinite;
-}
-
-@keyframes orin-pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-}
 
