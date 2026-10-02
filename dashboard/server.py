@@ -773,6 +773,45 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 self._send_json({"connected": False, "status": "offline", "camera": cam_name}, status=503)
                 return
 
+        # API Stato ORIN Cybernetic Brain
+        elif parsed.path == "/api/orin/status":
+            try:
+                sys.path.insert(0, DRIVERS_DIR)
+                from orin_brain import orin_brain, PRESIDENT_REF_PATH
+                has_key = bool(orin_brain.api_key or os.environ.get("OPENROUTER_API_KEY"))
+                eleven_active = bool(os.environ.get("ELEVENLABS_API_KEY") or os.path.exists(os.path.expanduser("~/.secrets/ElevenLabs Api.txt")))
+                self._send_json({
+                    "name": "ORIN",
+                    "status": "online" if has_key else "standby",
+                    "model": orin_brain.model,
+                    "president_cached": bool(orin_brain._president_ref_b64 or os.path.exists(PRESIDENT_REF_PATH)),
+                    "elevenlabs_active": eleven_active
+                })
+            except Exception as e:
+                self._send_json({"name": "ORIN", "status": "standby", "error": str(e)})
+            return
+
+        # API Immagine Biometrica di Riferimento Presidente Roberto Capobianco
+        elif parsed.path in ("/api/orin/president_photo.jpg", "/config/reference_faces/roberto_capobianco.jpg"):
+            target_path = os.path.join(CONFIG_DIR, "reference_faces", "roberto_capobianco.jpg")
+            if not os.path.exists(target_path):
+                target_path = os.path.abspath(os.path.join(BASE_DIR, "..", "config", "reference_faces", "roberto_capobianco.jpg"))
+            if os.path.exists(target_path):
+                try:
+                    with open(target_path, "rb") as f:
+                        data = f.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/jpeg")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Cache-Control", "public, max-age=86400")
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+                except Exception:
+                    pass
+            self.send_error(404, "Foto presidente non trovata")
+            return
+
         # Serve i file statici normalmente
         return super().do_GET()
 
@@ -1052,6 +1091,19 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
                     json.dump(settings, f, indent=2)
                 self._send_json({"success": True, "message": "PIN aggiornati con successo"})
+                return
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=400)
+        elif parsed.path == "/api/orin/speak":
+            try:
+                data = json.loads(body.decode("utf-8")) if body else {}
+                text = str(data.get("text", "")).strip()
+                voice = str(data.get("voice", "carmelo")).lower()
+                volume = float(data.get("volume", 70))
+                sys.path.insert(0, DRIVERS_DIR)
+                from orin_brain import orin_brain
+                ok = orin_brain.speak(text=text, voice_pack=voice, volume_percent=volume)
+                self._send_json({"success": ok, "spoken_text": text, "voice": voice})
                 return
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=400)

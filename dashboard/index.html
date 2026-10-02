@@ -273,6 +273,7 @@
               </div>
               <div id="wallIdentikitTime" style="font-family:var(--font-mono); font-size:12px; color:#aaa;">I passaggi nel raggio delle telecamere appariranno qui</div>
               <div id="wallIdentikitTraj" style="font-size:12px; color:#ddd; font-style:italic;">Dossier completo scaricabile in formato forense .JSON e .JPG</div>
+              <div id="wallIdentikitOrinBadge" style="display:none; margin-top:2px;"></div>
             </div>
           </div>
         </div>
@@ -485,19 +486,34 @@
       <div id="view-settings" class="view-panel view-data" style="display:none;">
         <div class="data-split-zone">
 
-          <!-- Colonna 1: Pacchetti Vocali Ufficiali Sentinel AI -->
+          <!-- Colonna 1: ORIN Cybernetic Brain // Live Multimodal AI & Diffusione Vocale -->
           <div class="glass-panel">
             <div class="panel-header-minimal">
               <div class="ev-head-text">
-                <h3>Pacchetti Vocali Ufficiali Sentinel AI</h3>
-                <p class="ev-head-sub">Seleziona e ascolta i pacchetti audio registrati a bordo del sistema</p>
+                <h3>ORIN Cybernetic Brain // Assistente Multimodale</h3>
+                <p class="ev-head-sub">Motore Visione Multimodale (Gemini 2.5 Flash) &amp; Sintesi Streaming ElevenLabs Turbo</p>
               </div>
-              <span class="status-beacon">Audio pronto</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="orin-beacon-pulse"></span>
+                <span id="orinStatusBeacon" class="status-beacon is-accent">ORIN ATTIVO</span>
+              </div>
+            </div>
+
+            <!-- Banner Memoria Biometrica VIP Presidente Roberto Capobianco -->
+            <div class="orin-vip-banner">
+              <img src="/api/orin/president_photo.jpg" class="orin-vip-avatar" alt="Dott. Roberto Capobianco" onerror="this.src='assets/img/conflavoro-ai-icon-oro.svg'">
+              <div style="flex:1;">
+                <div class="orin-vip-title">
+                  <svg style="width:15px; height:15px; fill:#d4af37;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span>VIP MEMORY // DOTT. ROBERTO CAPOBIANCO</span>
+                </div>
+                <p class="orin-vip-desc">Presidente Conflavoro PMI in memoria visiva permanente. Riconoscimento istantaneo a distanza, accoglienza amichevole e consenso apertura varco carraio automatico (Relè 2).</p>
+              </div>
             </div>
 
             <!-- Selezione Voce Carmelo / Sami -->
-            <div style="margin-top:18px;">
-              <label class="setting-section-label">PACCHETTO VOCALE ATTIVO</label>
+            <div style="margin-top:16px;">
+              <label class="setting-section-label">VOCE DI SINTESI STREAMING (ELEVENLABS TURBO / EDGE)</label>
               <div class="voice-selector-grid">
                 
                 <label class="voice-card-option active" id="cardVoiceCarmelo">
@@ -509,10 +525,10 @@
                       </div>
                       <div>
                         <strong class="voice-title">CARMELO</strong>
-                        <span class="voice-sub">Voce Maschile Ufficiale</span>
+                        <span class="voice-sub">Voce Maschile</span>
                       </div>
                     </div>
-                    <p class="voice-desc">Pacchetto audio maschile: timbro perentorio, fermo e autorevole per dissuasione ad alto impatto.</p>
+                    <p class="voice-desc">Timbro profondo e cordiale: caloroso con il personale autorizzato, perentorio verso intrusioni non autorizzate.</p>
                   </div>
                 </label>
 
@@ -525,47 +541,74 @@
                       </div>
                       <div>
                         <strong class="voice-title">SAMI</strong>
-                        <span class="voice-sub">Voce Femminile Ufficiale</span>
+                        <span class="voice-sub">Voce Femminile</span>
                       </div>
                     </div>
-                    <p class="voice-desc">Pacchetto audio femminile: dizione cristallina, chiara e metallica in stile centrale operativa di difesa.</p>
+                    <p class="voice-desc">Dizione cristallina, squillante ed empatica: perfetta per ambienti aziendali, uffici di presidenza e soccorso.</p>
                   </div>
                 </label>
 
               </div>
             </div>
 
-            <!-- Selezione Traccia Audio da Ascoltare / Provare -->
-            <div style="margin-top:22px;">
-              <label class="setting-section-label">TRACCE AUDIO REGISTRATE SUL SISTEMA</label>
-              <select id="selAudioTrack" class="ultra-input" style="margin-bottom:14px; font-weight:600;" onchange="handleTrackChange()">
-                <option value="01_accesso_consentito">01 // Accesso Consentito (Apertura Varco)</option>
-                <option value="02_targa_autorizzata">02 // Targa Autorizzata (Apertura Cancello)</option>
-                <option value="03_avviso_dissuasione" selected>03 // Avviso Dissuasione (Presenza nel Piazzale)</option>
-                <option value="04_allarme_intrusione">04 // Allarme Intrusione (Violazione Orario Notturno)</option>
-                <option value="05_targa_non_autorizzata">05 // Targa Non Autorizzata (Accesso Negato)</option>
-                <option value="06_identikit_acquisito">06 // Identikit Biometrico Acquisito (Dissuasione Mirata)</option>
-              </select>
-
-              <!-- Mini Player Anteprima Audio Reale -->
-              <div class="audio-player-box setting-box">
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <button type="button" id="btnPlayTrack" class="ultra-primary-btn" onclick="playRealAudioTrack()" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px;">
-                    <svg id="playIconSvg" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    <span id="playBtnText">Ascolta Traccia Reale</span>
-                  </button>
-                  <span id="playingTrackLabel" class="track-path">audio/carmelo/03_avviso_dissuasione.mp3</span>
-                </div>
-                <span id="audioPlayingIndicator" class="status-beacon is-accent" style="display:none;">In riproduzione</span>
+            <!-- Trasmissione Vocale Live Dinamica su Diffusore Fanvil -->
+            <div class="orin-live-input-wrap">
+              <label class="setting-section-label">TRASMETTI MESSAGGIO LIVE TRAMITE ORIN (FANVIL A233 .31)</label>
+              <div class="orin-quick-tags">
+                <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura.')">
+                  <span>👋 Saluto Presidente</span>
+                </button>
+                <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Attenzione, area privata Conflavoro PMI sorvegliata da Sentinel AI. Siete pregati di allontanarvi.')">
+                  <span>⚠️ Avviso Dissuasione</span>
+                </button>
+                <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Benvenuto in Conflavoro PMI, accesso autorizzato.')">
+                  <span>✅ Benvenuto Ospite</span>
+                </button>
               </div>
+
+              <div style="display:flex; gap:10px; margin-top:6px;">
+                <input type="text" id="orinLiveInput" class="ultra-input" placeholder="Scrivi il messaggio che ORIN deve pronunciare sull'altoparlante..." value="Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura." style="flex:1; font-weight:500;">
+                <button type="button" id="btnOrinSpeak" class="ultra-primary-btn" onclick="triggerOrinSpeak()" style="padding:8px 18px; display:inline-flex; align-items:center; gap:8px; font-weight:700; white-space:nowrap;">
+                  <svg style="width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2;" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                  <span id="orinSpeakBtnText">Parla Live</span>
+                </button>
+              </div>
+              <span id="orinSpeakStatus" style="font-size:12px; color:#22c55e; display:none; margin-top:2px;"></span>
             </div>
 
-            <!-- Pulsante invio al Fanvil -->
-            <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
-              <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:12px; padding:9px 18px;">
-                <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
-                <span>Trasmetti Traccia su Diffusore Fanvil (.31)</span>
-              </button>
+            <!-- Sezione Fallback Locale Offline MP3 -->
+            <div style="margin-top:20px; border-top:1px dashed var(--border); padding-top:16px;">
+              <details style="cursor:pointer;">
+                <summary style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; outline:none;">
+                  ▶ Fallback Locale Offline (Tracce Audio Pre-registrate MP3)
+                </summary>
+                <div style="margin-top:12px;">
+                  <select id="selAudioTrack" class="ultra-input" style="margin-bottom:12px; font-weight:600;" onchange="handleTrackChange()">
+                    <option value="01_accesso_consentito">01 // Accesso Consentito (Apertura Varco)</option>
+                    <option value="02_targa_autorizzata">02 // Targa Autorizzata (Apertura Cancello)</option>
+                    <option value="03_avviso_dissuasione" selected>03 // Avviso Dissuasione (Presenza nel Piazzale)</option>
+                    <option value="04_allarme_intrusione">04 // Allarme Intrusione (Violazione Orario Notturno)</option>
+                    <option value="05_targa_non_autorizzata">05 // Targa Non Autorizzata (Accesso Negato)</option>
+                    <option value="06_identikit_acquisito">06 // Identikit Biometrico Acquisito (Dissuasione Mirata)</option>
+                  </select>
+
+                  <div class="audio-player-box setting-box" style="margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                      <button type="button" id="btnPlayTrack" class="ultra-primary-btn" onclick="playRealAudioTrack()" style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; font-size:12px;">
+                        <svg id="playIconSvg" style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <span id="playBtnText">Ascolta nel Browser</span>
+                      </button>
+                      <span id="playingTrackLabel" class="track-path" style="font-size:11px;">audio/carmelo/03_avviso_dissuasione.mp3</span>
+                    </div>
+                    <span id="audioPlayingIndicator" class="status-beacon is-accent" style="display:none;">In riproduzione</span>
+                  </div>
+
+                  <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:11.5px; padding:7px 14px; width:100%;">
+                    <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
+                    <span>Trasmetti Traccia MP3 Offline su Fanvil (.31)</span>
+                  </button>
+                </div>
+              </details>
             </div>
 
           </div>
@@ -870,6 +913,19 @@
                 <span id="identikitSubject" style="font-weight: bold; font-size: 15px; color: #4fc3f7;">PERSONA</span>
                 <span id="identikitConf" style="background: rgba(76, 175, 80, 0.2); color: #81c784; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px;">92%</span>
               </div>
+            </div>
+
+            <!-- ORIN CYBERNETIC INTELLIGENCE (VLM) -->
+            <div id="identikitOrinBlock" style="background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(142,31,47,0.12)); padding: 12px 14px; border-radius: 6px; border: 1px solid rgba(212,175,55,0.4); display: none;">
+              <div style="color: #e8c15a; font-size: 11px; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
+                <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>ORIN CYBERNETIC INTELLIGENCE (VLM)</span>
+              </div>
+              <div id="identikitOrinVipBadge" style="margin-top:6px; display:none; align-items:center; gap:6px; background:#d4af37; color:#000; font-weight:800; font-size:12px; padding:3px 8px; border-radius:4px;">
+                ⭐ DOTT. ROBERTO CAPOBIANCO (PRESIDENTE)
+              </div>
+              <div id="identikitOrinAction" style="margin-top:6px; font-size:12px; color:#f0fdf4;"></div>
+              <div id="identikitOrinSpeech" style="margin-top:6px; font-style:italic; font-size:12px; color:#f7e7ce; background:rgba(0,0,0,0.3); padding:6px 10px; border-radius:4px; border-left:3px solid #d4af37;"></div>
             </div>
 
             <div style="background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 6px;">

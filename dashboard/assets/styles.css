@@ -2951,3 +2951,114 @@ select.ultra-input {
     transform: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+ * ORIN CYBERNETIC BRAIN // MULTIMODAL AI & DYNAMIC SPEECH EXTENSIONS
+ * ══════════════════════════════════════════════════════════════════════════════ */
+.orin-hero-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.05), rgba(142, 31, 47, 0.04));
+  border: 1px solid rgba(142, 31, 47, 0.18);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.orin-vip-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(160, 120, 20, 0.08));
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 14px;
+}
+
+.orin-vip-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #d4af37;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.35);
+}
+
+.orin-vip-title {
+  font-weight: 700;
+  color: #926b00;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.orin-vip-desc {
+  font-size: 12px;
+  color: var(--text-body);
+  margin-top: 2px;
+}
+
+.orin-live-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.orin-quick-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.orin-quick-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-body);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.orin-quick-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.orin-speech-bubble {
+  background: rgba(142, 31, 47, 0.05);
+  border-left: 3px solid var(--brand);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  padding: 10px 14px;
+  font-style: italic;
+  color: var(--brand);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.orin-beacon-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: orin-pulse 1.8s infinite;
+}
+
+@keyframes orin-pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+

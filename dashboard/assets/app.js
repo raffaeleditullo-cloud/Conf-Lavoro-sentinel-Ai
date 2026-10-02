@@ -953,9 +953,43 @@ function openIdentikitModal(p) {
     if (p.stato_valutazione && (p.stato_valutazione.includes('SILENZIOSO') || p.stato_valutazione.includes('Lavoro'))) {
       threatBadge.textContent = 'MONITORAGGIO SILENZIOSO';
       threatBadge.style.background = '#0288d1';
+    } else if (p.orin_intelligence && p.orin_intelligence.is_president) {
+      threatBadge.textContent = 'ACCOGLIENZA VIP ATTIVA';
+      threatBadge.style.background = '#d4af37';
+      threatBadge.style.color = '#000';
     } else {
       threatBadge.textContent = 'DISSUASIONE ESEGUITA';
       threatBadge.style.background = '#e53935';
+      threatBadge.style.color = '#fff';
+    }
+  }
+
+  // ORIN MULTIMODAL INTELLIGENCE RENDERING
+  const orinBlock = document.getElementById('identikitOrinBlock');
+  const orinVipBadge = document.getElementById('identikitOrinVipBadge');
+  const orinAction = document.getElementById('identikitOrinAction');
+  const orinSpeech = document.getElementById('identikitOrinSpeech');
+
+  const orinData = p.orin_intelligence;
+  if (orinBlock) {
+    if (orinData) {
+      orinBlock.style.display = 'block';
+      if (orinData.is_president) {
+        if (orinVipBadge) {
+          orinVipBadge.style.display = 'inline-flex';
+          orinVipBadge.textContent = '⭐ DOTT. ROBERTO CAPOBIANCO (PRESIDENTE)';
+        }
+      } else {
+        if (orinVipBadge) orinVipBadge.style.display = 'none';
+      }
+      if (orinAction) {
+        orinAction.textContent = orinData.action_detected ? `Azione Rilevata: ${orinData.action_detected}` : '';
+      }
+      if (orinSpeech) {
+        orinSpeech.textContent = orinData.spoken_message ? `Messaggio ORIN: "${orinData.spoken_message}"` : '';
+      }
+    } else {
+      orinBlock.style.display = 'none';
     }
   }
 
@@ -1083,6 +1117,22 @@ function updateWallIdentikitCard(p) {
   if (thumb) {
     const snap = (p.evidenze && p.evidenze.snapshot_url) ? p.evidenze.snapshot_url : (p.thumb || `/api/events/${p.event_id || p.id}/snapshot.jpg`);
     thumb.src = `${snap}?_t=${Date.now()}`;
+  }
+  const orinBadge = document.getElementById('wallIdentikitOrinBadge');
+  if (orinBadge) {
+    if (p.orin_intelligence) {
+      if (p.orin_intelligence.is_president) {
+        orinBadge.innerHTML = '<span style="background:linear-gradient(135deg, #d4af37, #9a7610); color:#000; font-weight:800; font-size:11px; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;">⭐ VIP PRESIDENTE</span>';
+        orinBadge.style.display = 'block';
+      } else if (p.orin_intelligence.spoken_message) {
+        orinBadge.innerHTML = `<span style="color:#e8c15a; font-size:11.5px; font-style:italic;">🎙️ "${p.orin_intelligence.spoken_message.slice(0, 50)}..."</span>`;
+        orinBadge.style.display = 'block';
+      } else {
+        orinBadge.style.display = 'none';
+      }
+    } else {
+      orinBadge.style.display = 'none';
+    }
   }
 }
 
@@ -1322,6 +1372,88 @@ function updateVolumeLabel(val) {
   if (currentAudioPlayer) {
     currentAudioPlayer.volume = currentSettings.voice_volume / 100;
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 6B. ORIN CYBERNETIC BRAIN // LIVE DYNAMIC SPEECH STREAMING (ELEVENLABS TURBO)
+// ──────────────────────────────────────────────────────────────────────────────
+function setOrinSpeechText(text) {
+  const inp = document.getElementById('orinLiveInput');
+  if (inp) {
+    inp.value = text;
+    inp.focus();
+  }
+}
+
+async function triggerOrinSpeak() {
+  const inp = document.getElementById('orinLiveInput');
+  const btn = document.getElementById('btnOrinSpeak');
+  const btnText = document.getElementById('orinSpeakBtnText');
+  const statusEl = document.getElementById('orinSpeakStatus');
+  const text = inp ? inp.value.trim() : '';
+  if (!text) return;
+
+  const originalText = btnText ? btnText.textContent : 'Parla Live';
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.textContent = 'Trasmissione...';
+  if (statusEl) {
+    statusEl.style.display = 'inline';
+    statusEl.style.color = '#e8c15a';
+    statusEl.textContent = 'Sintesi audio & streaming RTP in corso...';
+  }
+
+  try {
+    const res = await fetch('/api/orin/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        voice: currentSettings.voice_pack || 'carmelo',
+        volume: currentSettings.voice_volume || 70
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      if (statusEl) {
+        statusEl.style.color = '#22c55e';
+        statusEl.textContent = 'Trasmesso con successo su Diffusore Fanvil (.31)';
+      }
+    } else {
+      if (statusEl) {
+        statusEl.style.color = '#ef4444';
+        statusEl.textContent = 'Errore trasmissione: ' + (data.error || 'Server non raggiungibile');
+      }
+    }
+  } catch (err) {
+    if (statusEl) {
+      statusEl.style.color = '#ef4444';
+      statusEl.textContent = 'Errore connessione: ' + err.message;
+    }
+  } finally {
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = originalText;
+    setTimeout(() => {
+      if (statusEl) statusEl.style.display = 'none';
+    }, 4000);
+  }
+}
+
+async function pollOrinStatus() {
+  try {
+    const res = await fetch('/api/orin/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    const beacon = document.getElementById('orinStatusBeacon');
+    if (beacon) {
+      if (data.status === 'online') {
+        beacon.textContent = data.elevenlabs_active ? 'ORIN ONLINE // ELEVENLABS' : 'ORIN ONLINE // GEMINI 2.5';
+        beacon.className = 'status-beacon is-accent';
+      } else {
+        beacon.textContent = 'ORIN STANDBY';
+        beacon.className = 'status-beacon';
+      }
+    }
+  } catch (_) {}
 }
 
 async function handleSecurityModeChange(mode) {
@@ -1740,6 +1872,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(pollSecurityState, 6000);
   pollLatestIdentikit();
   setInterval(pollLatestIdentikit, 4000);
+  pollOrinStatus();
+  setInterval(pollOrinStatus, 10000);
 
   // Controllo sessione PIN attiva
   const savedRole = sessionStorage.getItem('sentinel_role');

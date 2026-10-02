@@ -35,7 +35,8 @@ class IdentikitProfiler:
         box: list,
         trajectory_vector: tuple = None,
         snapshot_url: str = None,
-        status_evaluation: str = None
+        status_evaluation: str = None,
+        snapshot_bytes: bytes = None
     ) -> Dict[str, Any]:
         """
         Crea e salva una scheda descrittiva forense dell'evento.
@@ -86,17 +87,124 @@ class IdentikitProfiler:
             "stato_valutazione": status_evaluation or "MINACCIA CONFERMATA — AZIONE DISSVASIONE ESEGUITA"
         }
 
-        # Salvataggio file JSON forense locale
-        safe_filename = f"identikit_{camera}_{event_id[:12]}.json"
-        local_path = os.path.join(self.log_dir, safe_filename)
-        try:
-            with open(local_path, "w", encoding="utf-8") as f:
-                json.dump(profile, f, indent=2, ensure_ascii=False)
-            logger.info(">>> SCHEDA IDENTIKIT GENERATA: %s (salvata in %s)", safe_filename, local_path)
-        except Exception as e:
-            logger.warning("Impossibile salvare file identikit: %s", e)
+        # Arricchimento intelligente con ORIN BRAIN (Asincrono in background)
+        self._trigger_orin_enrichment_async(
+            profile=profile,
+            event_id=event_id,
+            camera=camera,
+            local_json_path=local_path,
+            snapshot_bytes=snapshot_bytes
+        )
 
         return profile
 
+    def _trigger_orin_enrichment_async(
+        self,
+        profile: dict,
+        event_id: str,
+        camera: str,
+        local_json_path: str,
+        snapshot_bytes: bytes = None
+    ):
+        """Avvia l'analisi visiva avanzata di ORIN in un thread separato senza bloccare il flusso principale."""
+        import threading
+        t = threading.Thread(
+            target=self._run_orin_enrichment,
+            args=(profile, event_id, camera, local_json_path, snapshot_bytes),
+            name=f"OrinEnrichment-{event_id[:8]}",
+            daemon=True
+        )
+        t.start()
+
+    def _run_orin_enrichment(
+        self,
+        profile: dict,
+        event_id: str,
+        camera: str,
+        local_json_path: str,
+        snapshot_bytes: bytes = None
+    ):
+        """Esegue l'analisi con Gemini 2.5 Flash, gestisce l'accoglienza del Presidente e la voce dinamica."""
+        try:
+            from orin_brain import orin_brain
+        except ImportError:
+            return
+
+        # Recupera i byte dello snapshot se non forniti direttamente
+        img_data = snapshot_bytes
+        if not img_data:
+            # 1. Prova a leggere da /media/frigate/clips/
+            clips_dir = os.environ.get("CLIPS_DIR", "/media/frigate/clips")
+            local_clip_img = os.path.join(clips_dir, f"{camera}-{event_id}.jpg")
+            if os.path.exists(local_clip_img):
+                try:
+                    with open(local_clip_img, "rb") as f:
+                        img_data = f.read()
+                except Exception:
+                    pass
+
+        # 2. Prova a scaricare dall'API locale di Frigate
+        if not img_data:
+            frigate_host = os.environ.get("FRIGATE_HOST", "127.0.0.1")
+            frigate_port = int(os.environ.get("FRIGATE_PORT", "5000"))
+            snap_url = f"http://{frigate_host}:{frigate_port}/api/events/{event_id}/snapshot.jpg"
+            import urllib.request
+            try:
+                with urllib.request.urlopen(snap_url, timeout=2.0) as resp:
+                    img_data = resp.read()
+            except Exception:
+                pass
+
+        if not img_data:
+            logger.debug("ORIN: Nessun fotogramma disponibile per l'evento %s", event_id)
+            return
+
+        # Analisi Visiva ORIN
+        orin_res = orin_brain.analyze_frame(img_data, camera=camera, is_armed=True)
+        if not orin_res or orin_res.get("fallback"):
+            return
+
+        # Aggiornamento scheda profilo
+        profile["orin_intelligence"] = orin_res
+        if orin_res.get("is_president"):
+            profile["stato_valutazione"] = "PRESIDENTE RICONOSCIUTO: ROBERTO CAPOBIANCO — ACCOGLIENZA ATTIVA"
+
+        # Riscrive il file JSON arricchito
+        try:
+            with open(local_json_path, "w", encoding="utf-8") as f:
+                json.dump(profile, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+        # Pubblica aggiornamento via MQTT per la Dashboard
+        try:
+            import observer
+            if observer._active_mqtt_client and observer._active_mqtt_client.is_connected():
+                observer._active_mqtt_client.publish("sentinel/identikit", json.dumps(profile), qos=0)
+        except Exception:
+            pass
+
+        # Azione A: Se è il Presidente Roberto, apri il cancello carraio automaticamente!
+        if orin_res.get("open_gate") or orin_res.get("is_president"):
+            logger.info(">>> [ORIN ACTION] Presidente Roberto riconosciuto al varco '%s': apertura cancello!", camera)
+            try:
+                import observer
+                observer.relay.apri_cancello(channel=observer.RELAY_CHANNEL_CANCELLO, impulso_secondi=3.0)
+            except Exception as e:
+                logger.warning("Impossibile azionare relè cancello per il Presidente: %s", e)
+
+        # Azione B: Sintesi vocale dinamica con ElevenLabs (Voce Carmelo)
+        spoken_msg = orin_res.get("spoken_message")
+        if spoken_msg:
+            try:
+                import observer
+                vol = observer.get_voice_volume()
+                v_pack = "carmelo"
+                orin_brain.speak(spoken_msg, voice_pack=v_pack, volume_percent=vol)
+            except Exception as e:
+                logger.warning("Impossibile diffondere voce ORIN: %s", e)
+
+
 # Istanza pronta all'uso
 identikit_profiler = IdentikitProfiler()
+
