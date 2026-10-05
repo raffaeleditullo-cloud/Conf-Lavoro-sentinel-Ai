@@ -16,6 +16,13 @@ from typing import Tuple, Dict, Any
 
 logger = logging.getLogger("SentinelDemonGate")
 
+# Tracce che non devono mai arrivare all'altoparlante: istruzioni di sistema,
+# nomi di modelli e servizi, JSON trapelato dalla risposta del modello.
+FORBIDDEN_SPEECH_MARKERS = (
+    "prompt", "istruzioni di sistema", "openrouter", "gemini", "chatgpt", "openai",
+    "elevenlabs", "json", "spoken_message", "threat_level", "{", "}",
+)
+
 class DemonActionGate:
     """Gate deterministico per attuatori fisici e conformità dell'output."""
 
@@ -68,32 +75,38 @@ class DemonActionGate:
     def verify_spoken_thought(text: str, max_words: int = 25) -> Tuple[bool, str]:
         """
         Verifica di conformità PEIRA sull'output vocale prima della sintesi.
-        1. Lunghezza entro max_words (evita monologhi o allucinazioni infinite).
-        2. Rimozione di prompt injection o istruzioni di sistema sfuggite.
+
+        Regole (fail-closed: in caso di dubbio la frase NON va all'altoparlante,
+        e il chiamante usa l'avviso registrato):
+        1. Frase scartata PER INTERO se contiene tracce di prompt, nomi di modelli/servizi
+           o JSON trapelato: togliere singole parole lascerebbe comunque una frase sbagliata.
+        2. Oltre max_words si tiene solo fino all'ultima frase completa (. ! ?) entro il
+           limite; se non ce n'e' una, la frase e' scartata per non troncarla a meta'.
+
+        Restituisce (valida, testo_da_pronunciare).
         """
         if not text or not text.strip():
             return False, ""
 
-        clean = text.strip()
-        words = clean.split()
-
-        # Controllo lunghezza massima
-        if len(words) > max_words:
-            # Tronca chirurgicamente alla fine dell'ultima frase sensata entro max_words
-            truncated = " ".join(words[:max_words])
-            if "." in truncated:
-                truncated = truncated.rsplit(".", 1)[0] + "."
-            clean = truncated
-
-        # Filtro parole di fuga o pattern anomali di injection
-        forbidden_substrings = ["system prompt", "openrouter", "gemini", "chatgpt", "json:", "spoken_message"]
+        clean = " ".join(text.split())
         lower = clean.lower()
-        for f in forbidden_substrings:
-            if f in lower:
-                clean = clean.replace(f, "")
 
-        clean = clean.strip()
-        return bool(clean), clean
+        for marker in FORBIDDEN_SPEECH_MARKERS:
+            if marker in lower:
+                logger.warning("PEIRA BLOCK: frase di ORIN scartata (contiene '%s'): %r", marker, clean[:120])
+                return False, ""
+
+        words = clean.split()
+        if len(words) > max_words:
+            head = " ".join(words[:max_words])
+            cut = max(head.rfind(p) for p in ".!?")
+            if cut <= 0:
+                logger.warning("PEIRA BLOCK: frase di ORIN oltre %d parole senza fine frase: scartata.", max_words)
+                return False, ""
+            clean = head[:cut + 1]
+            logger.info("PEIRA: frase di ORIN ridotta a %d parole (ultima frase completa).", len(clean.split()))
+
+        return True, clean
 
 
 # Istanza singleton pronta all'uso

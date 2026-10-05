@@ -279,15 +279,14 @@ class IdentikitProfiler:
         # Azione B: Sintesi vocale dinamica con ElevenLabs (Voce Carmelo)
         spoken_msg = orin_res.get("spoken_message")
         if spoken_msg:
-            # Verifica deterministica PEIRA sulla sicurezza e brevità del testo
+            # Verifica deterministica PEIRA sulla sicurezza e brevità del testo.
+            # Fail-closed: una frase non verificata non va mai all'altoparlante.
             try:
                 from demon_gate import demon_gate
                 is_valid, sanitized_msg = demon_gate.verify_spoken_thought(spoken_msg, max_words=22)
-            except Exception:
-                is_valid, sanitized_msg = True, spoken_msg
-
-            if not is_valid or not sanitized_msg:
-                sanitized_msg = spoken_msg
+            except Exception as e:
+                logger.warning("PEIRA non disponibile (%s): frase di ORIN non pronunciata.", e)
+                is_valid, sanitized_msg = False, ""
 
             # Se è il Presidente Roberto parla SEMPRE (accoglienza). Altrimenti, parla solo se il sistema è armato.
             should_speak = orin_res.get("is_president") or is_armed
@@ -297,9 +296,10 @@ class IdentikitProfiler:
                     if grant:
                         vol = self.get_volume() if self.get_volume else 100.0
                         v_pack = "carmelo"
-                        ok = orin_brain.speak(sanitized_msg, voice_pack=v_pack, volume_percent=vol)
+                        ok = is_valid and orin_brain.speak(sanitized_msg, voice_pack=v_pack, volume_percent=vol)
                         if not ok and is_armed and not grant.reflex_voiced:
-                            # Sintesi fallita e nessun riflesso pronunciato: avviso registrato
+                            # Frase scartata da PEIRA o sintesi fallita, e nessun riflesso pronunciato:
+                            # avviso registrato
                             self._play_recorded_warning(camera)
                     else:
                         logger.info(">>> [ORIN VOICE] Annuncio vocale per '%s' soppresso: turno vocale gia' concesso.", camera)

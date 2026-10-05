@@ -168,11 +168,24 @@ try:
 except Exception:
     pass
 
+def _resolve_mqtt_host() -> str:
+    """
+    Host del broker MQTT. Con 'network_mode: host' il nome del container ('mosquitto')
+    non e' risolvibile: si ripiega su 127.0.0.1, dove la porta 1883 e' gia' pubblicata
+    (stesso criterio di resolve_service_host() nell'orchestratore).
+    """
+    preferred = os.environ.get("FRIGATE_MQTT_HOST", os.environ.get("MQTT_HOST", "127.0.0.1"))
+    try:
+        socket.getaddrinfo(preferred, None)
+        return preferred
+    except socket.gaierror:
+        return "127.0.0.1"
+
 def send_orchestrator_cmd(topic: str, payload: dict) -> bool:
     """Invia comandi vocali all'Orchestratore via MQTT per usare l'AudioBus centralizzato."""
     try:
         import paho.mqtt.publish as publish
-        mqtt_host = os.environ.get("FRIGATE_MQTT_HOST", os.environ.get("MQTT_HOST", "127.0.0.1"))
+        mqtt_host = _resolve_mqtt_host()
         mqtt_port = int(os.environ.get("FRIGATE_MQTT_PORT", os.environ.get("MQTT_PORT", "1883")))
         mqtt_user = os.environ.get("FRIGATE_MQTT_USER", "sentinel")
         mqtt_pass = os.environ.get("FRIGATE_MQTT_PASSWORD", "")
@@ -181,7 +194,9 @@ def send_orchestrator_cmd(topic: str, payload: dict) -> bool:
         logger.info("[MQTT CMD] Inoltrato comando autenticato a orchestrator su '%s'", topic)
         return True
     except Exception as e:
-        logger.debug("[MQTT CMD] Impossibile inviare comando MQTT (%s): fallback su driver locale", e)
+        # WARNING e non debug: con il ripiego la dashboard suona in proprio e puo'
+        # sovrapporsi ai riflessi dell'orchestratore, quindi deve essere visibile nei log.
+        logger.warning("[MQTT CMD] Comando non inoltrato all'orchestratore (%s): uso il driver locale", e)
         return False
 
 def get_jetson_metrics():
