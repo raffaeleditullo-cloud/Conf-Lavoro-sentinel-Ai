@@ -60,6 +60,12 @@ class OrinBrain:
         self._president_ref_b64 = None
         self._load_president_reference()
 
+    def is_active(self) -> bool:
+        """Verifica se sia OpenRouter (VLM) che ElevenLabs (TTS) sono configurati e pronti."""
+        has_vlm = bool(self.api_key or os.environ.get("OPENROUTER_API_KEY"))
+        has_tts = bool(os.environ.get("ELEVENLABS_API_KEY") or os.path.exists(os.path.expanduser("~/.secrets/ElevenLabs Api.txt")))
+        return has_vlm and has_tts
+
     def _load_president_reference(self):
         """Carica in cache l'immagine di riferimento del Presidente Roberto Capobianco se disponibile."""
         if os.path.exists(PRESIDENT_REF_PATH):
@@ -260,11 +266,16 @@ class OrinBrain:
         import shutil
         ffmpeg_bin = shutil.which("ffmpeg") or "ffmpeg"
 
+        # adelay: 250ms per consentire l'apertura fisica del relè/amplificatore del Fanvil A233
+        # -re: pacing nativo in tempo reale (evita il buffer overflow UDP sul Fanvil)
+        # -f mp3: specifica esplicita del formato in ingresso sullo stdin
         cmd = [
             ffmpeg_bin,
             "-hide_banner", "-loglevel", "warning", "-nostdin",
+            "-re",
+            "-f", "mp3",
             "-i", "pipe:0",
-            "-af", f"volume={vol_float:.2f}",
+            "-af", f"adelay=250|250,volume={vol_float:.2f}",
             "-ac", "1",
             "-ar", "8000",
             "-acodec", "pcm_mulaw",
@@ -294,20 +305,18 @@ class OrinBrain:
                 }
             )
 
-            # Apertura FFmpeg pipe
+            # Scarica l'audio completo da ElevenLabs in RAM (~300-500ms)
+            with urllib.request.urlopen(req, timeout=8.0) as resp:
+                audio_bytes = resp.read()
+
+            if not audio_bytes:
+                logger.warning(">>> [ORIN VOICE] Nessun dato audio ricevuto da ElevenLabs.")
+                return False
+
+            # Invia l'audio a FFmpeg con pacing a velocità reale (-re)
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc.communicate(input=audio_bytes, timeout=45.0)
 
-            with urllib.request.urlopen(req, timeout=5.0) as resp:
-                while True:
-                    chunk = resp.read(4096)
-                    if not chunk:
-                        break
-                    if proc.stdin:
-                        proc.stdin.write(chunk)
-
-            if proc.stdin:
-                proc.stdin.close()
-            proc.wait(timeout=10.0)
             logger.info(">>> [ORIN VOICE] Trasmessa con successo su Fanvil RTP %s:%d", multicast_ip, multicast_port)
             return True
 

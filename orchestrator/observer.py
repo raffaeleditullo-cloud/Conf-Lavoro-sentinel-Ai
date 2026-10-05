@@ -460,19 +460,31 @@ def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: fl
     in_global_cd = is_in_cooldown("global_speaker_audio", cooldown_seconds=SPEAKER_GLOBAL_COOLDOWN)
     in_local_cd = is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=AUDIO_COOLDOWN)
 
-    if not in_global_cd and not in_local_cd:
-        audio_file = get_audio_path("03_avviso_dissuasione")
-        volume = get_voice_volume()
+    try:
+        from orin_brain import orin_brain
+        orin_active = orin_brain.is_active()
+    except Exception:
+        orin_active = False
+
+    if orin_active:
         logger.info(
-            ">>> AZIONE IMMEDIATA AUDIO: Riproduzione avviso vocale '%s' per '%s' [loc: %s]%s (multicast RTP %s:%d, volume %.0f%%)",
-            os.path.basename(audio_file), camera, loc_key, latency_str, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
+            ">>> [ORIN ACTIVE] Rilevamento su '%s' [loc: %s]%s: delega sintesi vocale contestuale ad assistente multimodale (ElevenLabs/Gemini)",
+            camera, loc_key, latency_str
         )
-        speaker.play_audio_file(audio_file, volume_percent=volume)
     else:
-        if in_global_cd:
-            logger.info(">>> Audio dissuasione per '%s' soppresso da Cooldown Globale Speaker (%ds)", camera, int(SPEAKER_GLOBAL_COOLDOWN))
-        elif in_local_cd:
-            logger.info(">>> Audio dissuasione per '%s' [loc: %s] soppresso da Cooldown Locale (%ds)", camera, loc_key, int(AUDIO_COOLDOWN))
+        if not in_global_cd and not in_local_cd:
+            audio_file = get_audio_path("03_avviso_dissuasione")
+            volume = get_voice_volume()
+            logger.info(
+                ">>> AZIONE IMMEDIATA AUDIO (FALLBACK LOCALE): Riproduzione avviso vocale '%s' per '%s' [loc: %s]%s (multicast RTP %s:%d, volume %.0f%%)",
+                os.path.basename(audio_file), camera, loc_key, latency_str, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
+            )
+            speaker.play_audio_file(audio_file, volume_percent=volume)
+        else:
+            if in_global_cd:
+                logger.info(">>> Audio dissuasione per '%s' soppresso da Cooldown Globale Speaker (%ds)", camera, int(SPEAKER_GLOBAL_COOLDOWN))
+            elif in_local_cd:
+                logger.info(">>> Audio dissuasione per '%s' [loc: %s] soppresso da Cooldown Locale (%ds)", camera, loc_key, int(AUDIO_COOLDOWN))
 
     # 2. Accensione Fari LED integrati Reolink (Spotlight) + opzionale Relè
     if not is_in_cooldown(f"{loc_key}_faro", cooldown_seconds=5.0):

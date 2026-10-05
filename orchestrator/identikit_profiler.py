@@ -162,6 +162,19 @@ class IdentikitProfiler:
         # Analisi Visiva ORIN
         orin_res = orin_brain.analyze_frame(img_data, camera=camera, is_armed=True)
         if not orin_res or orin_res.get("fallback"):
+            # Fallback di sicurezza: se l'analisi cloud fallisce, riproduci l'avviso locale
+            try:
+                import observer
+                loc_key = observer.CAMERA_LOCATION_MAP.get(camera, camera)
+                in_global_cd = observer.is_in_cooldown("global_speaker_audio", cooldown_seconds=observer.SPEAKER_GLOBAL_COOLDOWN)
+                in_local_cd = observer.is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=observer.AUDIO_COOLDOWN)
+                if not in_global_cd and not in_local_cd:
+                    audio_file = observer.get_audio_path("03_avviso_dissuasione")
+                    vol = observer.get_voice_volume()
+                    logger.info(">>> [ORIN FALLBACK] Analisi non disponibile: avvio avviso vocale locale '%s'", os.path.basename(audio_file))
+                    observer.speaker.play_audio_file(audio_file, volume_percent=vol)
+            except Exception as e:
+                logger.warning("Errore fallback audio: %s", e)
             return
 
         # Aggiornamento scheda profilo
@@ -198,9 +211,19 @@ class IdentikitProfiler:
         if spoken_msg:
             try:
                 import observer
-                vol = observer.get_voice_volume()
-                v_pack = "carmelo"
-                orin_brain.speak(spoken_msg, voice_pack=v_pack, volume_percent=vol)
+                loc_key = observer.CAMERA_LOCATION_MAP.get(camera, camera)
+                in_global_cd = observer.is_in_cooldown("global_speaker_audio", cooldown_seconds=observer.SPEAKER_GLOBAL_COOLDOWN)
+                in_local_cd = observer.is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=observer.AUDIO_COOLDOWN)
+                if not in_global_cd and not in_local_cd:
+                    vol = observer.get_voice_volume()
+                    v_pack = "carmelo"
+                    ok = orin_brain.speak(spoken_msg, voice_pack=v_pack, volume_percent=vol)
+                    if not ok:
+                        # Fallback su file locale
+                        audio_file = observer.get_audio_path("03_avviso_dissuasione")
+                        observer.speaker.play_audio_file(audio_file, volume_percent=vol)
+                else:
+                    logger.info(">>> [ORIN VOICE] Annuncio vocale per '%s' soppresso da cooldown attivo.", camera)
             except Exception as e:
                 logger.warning("Impossibile diffondere voce ORIN: %s", e)
 
