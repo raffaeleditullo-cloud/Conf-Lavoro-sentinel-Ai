@@ -19,8 +19,18 @@ import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Tuple
+import hashlib
 
 logger = logging.getLogger("SentinelOrin")
+
+# Integrazione Motore di Prosodia e Fonetica KERYX
+try:
+    from keryx_verbalizer import verbalize_for_speech
+except ImportError:
+    try:
+        from orchestrator.keryx_verbalizer import verbalize_for_speech
+    except ImportError:
+        def verbalize_for_speech(t, max_chars=3500): return t
 
 # Configurazione API OpenRouter
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -31,6 +41,8 @@ TIMEOUT_SECONDS = float(os.environ.get("ORIN_TIMEOUT_SECONDS", "3.5"))
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 FACES_DIR = os.path.join(BASE_DIR, "config", "reference_faces")
 PRESIDENT_REF_PATH = os.path.join(FACES_DIR, "roberto_capobianco.jpg")
+AUDIO_CACHE_DIR = os.path.join(os.path.dirname(__file__), "audio_cache")
+os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
 
 
 def optimize_image_for_vlm(image_bytes: bytes, max_dim: int = 512, quality: int = 75) -> str:
@@ -236,28 +248,23 @@ class OrinBrain:
         if not text or not text.strip():
             return False
 
-        eleven_key = os.environ.get("ELEVENLABS_API_KEY")
-        if not eleven_key:
-            secret_path = os.path.expanduser("~/.secrets/ElevenLabs Api.txt")
-            if os.path.exists(secret_path):
-                try:
-                    with open(secret_path, "r", encoding="utf-8") as sf:
-                        eleven_key = sf.read().strip()
-                except Exception:
-                    pass
+        # 1. Normalizzazione fonetica, accenti e prosodia KERYX
+        spoken_text = verbalize_for_speech(text)
+        if not spoken_text or not spoken_text.strip():
+            spoken_text = text
 
-        # Se non c'è la chiave ElevenLabs, usiamo il fallback offline
-        if not eleven_key:
-            logger.info(">>> [ORIN VOICE] ELEVENLABS_API_KEY non trovata: riproduzione traccia offline di fallback.")
-            return False
+        # 2. Controllo Cache Locale Permanente SHA256 (0ms latenza, 0 costi ElevenLabs)
+        cache_key = hashlib.sha256(f"{voice_pack}::{spoken_text}".encode("utf-8")).hexdigest()[:20]
+        cache_file = os.path.join(AUDIO_CACHE_DIR, f"{cache_key}.mp3")
 
-        # Mappatura voci ufficiali Conflavoro
-        voices = {
-            "carmelo": "HuK8QKF35exsCh2e7fLT",  # Carmelo La Rosa (Autorevole, calda)
-            "sami": "Ap2b3ZnSIW7h0QbBbxCq"       # Alessandra (Elegante, perentoria)
-        }
-        voice_id = voices.get(voice_pack.lower(), voices["carmelo"])
-        tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
+        audio_bytes = None
+        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 100:
+            try:
+                with open(cache_file, "rb") as cf:
+                    audio_bytes = cf.read()
+                logger.info(">>> [ORIN VOICE CACHE] Riproduzione istantanea da cache locale (0ms, 0 crediti): '%s'", cache_key)
+            except Exception as e:
+                logger.debug("Impossibile leggere file di cache: %s", e)
 
         vol_float = max(0.1, min(1.0, float(volume_percent) / 100.0))
 
@@ -284,44 +291,80 @@ class OrinBrain:
             f"rtp://{multicast_ip}:{multicast_port}"
         ]
 
-        try:
-            logger.info(">>> [ORIN VOICE] Avvio sintesi ElevenLabs (%s) -> '%s' (vol: %.0f%%)", voice_pack, text, volume_percent)
-            payload = {
-                "text": text,
-                "model_id": "eleven_turbo_v2_5",
-                "voice_settings": {
-                    "stability": 0.70,
-                    "similarity_boost": 0.85
-                }
-            }
+        # Se non è presente in cache, effettua la sintesi con ElevenLabs
+        if not audio_bytes:
+            eleven_key = os.environ.get("ELEVENLABS_API_KEY")
+            if not eleven_key:
+                secret_path = os.path.expanduser("~/.secrets/ElevenLabs Api.txt")
+                if os.path.exists(secret_path):
+                    try:
+                        with open(secret_path, "r", encoding="utf-8") as sf:
+                            eleven_key = sf.read().strip()
+                    except Exception:
+                        pass
 
-            req = urllib.request.Request(
-                tts_url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={
-                    "xi-api-key": eleven_key,
-                    "Content-Type": "application/json",
-                    "Accept": "audio/mpeg"
-                }
-            )
-
-            # Scarica l'audio completo da ElevenLabs in RAM (~300-500ms)
-            with urllib.request.urlopen(req, timeout=8.0) as resp:
-                audio_bytes = resp.read()
-
-            if not audio_bytes:
-                logger.warning(">>> [ORIN VOICE] Nessun dato audio ricevuto da ElevenLabs.")
+            # Se non c'è la chiave ElevenLabs e non è in cache, fallback offline
+            if not eleven_key:
+                logger.info(">>> [ORIN VOICE] ELEVENLABS_API_KEY non trovata: riproduzione traccia offline di fallback.")
                 return False
 
-            # Invia l'audio a FFmpeg con pacing a velocità reale (-re)
+            # Mappatura voci ufficiali Conflavoro
+            voices = {
+                "carmelo": "HuK8QKF35exsCh2e7fLT",  # Carmelo La Rosa (Autorevole, calda)
+                "sami": "Ap2b3ZnSIW7h0QbBbxCq"       # Alessandra (Elegante, perentoria)
+            }
+            voice_id = voices.get(voice_pack.lower(), voices["carmelo"])
+            tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
+
+            try:
+                logger.info(">>> [ORIN VOICE] Avvio sintesi ElevenLabs (%s) -> '%s' (vol: %.0f%%)", voice_pack, spoken_text, volume_percent)
+                payload = {
+                    "text": spoken_text,
+                    "model_id": "eleven_turbo_v2_5",
+                    "voice_settings": {
+                        "stability": 0.70,
+                        "similarity_boost": 0.85
+                    }
+                }
+
+                req = urllib.request.Request(
+                    tts_url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={
+                        "xi-api-key": eleven_key,
+                        "Content-Type": "application/json",
+                        "Accept": "audio/mpeg"
+                    }
+                )
+
+                # Scarica l'audio completo da ElevenLabs in RAM (~300-500ms)
+                with urllib.request.urlopen(req, timeout=8.0) as resp:
+                    audio_bytes = resp.read()
+
+                if not audio_bytes:
+                    logger.warning(">>> [ORIN VOICE] Nessun dato audio ricevuto da ElevenLabs.")
+                    return False
+
+                # Salva in cache permanente per le prossime volte (0 costi futuri)
+                try:
+                    with open(cache_file, "wb") as cf:
+                        cf.write(audio_bytes)
+                    logger.info(">>> [ORIN VOICE CACHE] Salvato nuovo audio in cache locale: '%s'", cache_key)
+                except Exception as ce:
+                    logger.debug("Impossibile salvare cache audio: %s", ce)
+
+            except Exception as e:
+                logger.warning(">>> [ORIN VOICE] Errore streaming ElevenLabs: %s (uso fallback locale)", e)
+                return False
+
+        # Trasmissione FFmpeg a velocità naturale verso Fanvil RTP
+        try:
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
             proc.communicate(input=audio_bytes, timeout=45.0)
-
             logger.info(">>> [ORIN VOICE] Trasmessa con successo su Fanvil RTP %s:%d", multicast_ip, multicast_port)
             return True
-
         except Exception as e:
-            logger.warning(">>> [ORIN VOICE] Errore streaming ElevenLabs: %s (uso fallback locale)", e)
+            logger.warning(">>> [ORIN VOICE] Errore streaming FFmpeg verso Fanvil: %s", e)
             return False
 
 
