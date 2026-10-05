@@ -1,0 +1,623 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+ * ORIN — Interfaccia a comandi scritti (tema famiglie)
+ *
+ * Si carica DOPO styles.css e non lo modifica. Il foglio originale e' gia' chiaro:
+ * qui si portano le azioni sul blu, si sceglie la tipografia e si disegna la
+ * "stanza": cielo blu, occhio cartoon, finestre bianche in stile Google.
+ *
+ * Principi:
+ *   - L'occhio e' il protagonista: grande, simpatico, vivo. Il resto e' pulito.
+ *   - Due voci tipografiche: Nunito arrotondato per ORIN (nome, risposte, barra),
+ *     Roboto per i contenuti delle finestre.
+ *   - Blu per le azioni, corallo solo per gli allarmi.
+ * ══════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Palette ORIN ──────────────────────────────────────────────────────── */
+  --orin-cielo-alto: #2a74da;
+  --orin-cielo-basso: #1554c0;
+  --orin-blu: #1a73e8;          /* accento: pulsanti, focus, selezioni */
+  --orin-blu-scuro: #174ea6;
+  --orin-blu-tenue: #e8f0fe;
+  --orin-bianco: #ffffff;
+  --orin-testo: #202124;
+  --orin-testo-2: #5f6368;
+  --orin-linea: #dadce0;
+  --orin-corallo: #d93025;      /* solo allarmi */
+
+  /* ── Token originali: azioni sul blu, testi grigio Google ───────────────── */
+  --brand: var(--orin-blu);
+  --brand-hover: var(--orin-blu-scuro);
+  --brand-soft: var(--orin-blu-tenue);
+  --brand-line: #c6dafc;
+
+  --text-title: var(--orin-testo);
+  --text-body: #3c4043;
+  --text-muted: var(--orin-testo-2);
+  --border: var(--orin-linea);
+
+  --tone-brand-bg: var(--orin-blu-tenue);
+  --tone-brand-border: #c6dafc;
+  --tone-brand-fg: var(--orin-blu-scuro);
+  --tone-brand-dot: var(--orin-blu);
+
+  --font-brand: 'Nunito', system-ui, sans-serif;
+  --font-display: 'Roboto', system-ui, sans-serif;
+  --font-sans: 'Roboto', system-ui, sans-serif;
+  --font-tech: 'Roboto', system-ui, sans-serif;
+  --font-orin: 'Nunito', system-ui, sans-serif;
+
+  /* Elevazioni in stile Google */
+  --orin-elev-1: 0 1px 2px rgba(60, 64, 67, 0.30), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --orin-elev-3: 0 4px 8px 3px rgba(60, 64, 67, 0.15), 0 1px 3px rgba(60, 64, 67, 0.30);
+  --orin-elev-5: 0 8px 12px 6px rgba(8, 30, 80, 0.22), 0 4px 4px rgba(8, 30, 80, 0.28);
+
+  /* ── Misure della stanza ───────────────────────────────────────────────── */
+  --orin-topbar-h: 64px;
+  --orin-command-h: 132px;
+  --orin-eye: clamp(200px, 42vh, 400px);
+  --orin-gutter: 24px;
+  --orin-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   STANZA
+   ────────────────────────────────────────────────────────────────────────── */
+body.orin {
+  display: block;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--orin-cielo-basso);
+  color: var(--text-body);
+  font-size: 15px;
+}
+
+.orin-sky {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.orin-sky-alert {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+body.orin.is-alert .orin-sky-alert {
+  opacity: 1;
+}
+
+.orin-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+body.orin :focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.orin-window :focus-visible,
+.cam-modal :focus-visible,
+.ultra-modal-card :focus-visible,
+.auth-card :focus-visible {
+  outline-color: var(--orin-blu);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   BARRA IN ALTO
+   ────────────────────────────────────────────────────────────────────────── */
+.orin-topbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--orin-topbar-h);
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 0 var(--orin-gutter);
+}
+
+.orin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Il nome e' arrotondato e pieno, come un personaggio */
+.orin-wordmark {
+  font-family: var(--font-orin);
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.orin-brand-mark {
+  display: none;   /* il marchio oro Conflavoro non si legge sul blu */
+}
+
+.orin-topbar .hud-security-zone {
+  justify-self: center;
+}
+
+.orin-topbar .hud-right-zone {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+}
+
+/* Pastiglie della barra: bianche sul cielo */
+body.orin .orin-topbar .security-status,
+body.orin .orin-topbar .vitality-badge,
+body.orin .orin-topbar .role-pill,
+body.orin .orin-topbar .role-lock-btn,
+body.orin .orin-topbar .hud-menu-btn {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: transparent;
+  box-shadow: var(--orin-elev-1);
+}
+
+body.orin .orin-topbar .ultra-primary-btn {
+  background: #ffffff;
+  color: var(--orin-blu-scuro);
+  border-color: transparent;
+  box-shadow: var(--orin-elev-1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   OCCHIO E RISPOSTA
+   ────────────────────────────────────────────────────────────────────────── */
+.orin-room {
+  position: fixed;
+  inset: var(--orin-topbar-h) 0 var(--orin-command-h) 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  pointer-events: none;
+}
+
+.orin-eye-stage {
+  width: var(--orin-eye);
+  height: calc(var(--orin-eye) * 1.045);
+  transition: opacity 0.45s var(--orin-ease), transform 0.45s var(--orin-ease);
+}
+
+.orin-eye-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Con finestre aperte l'occhio arretra e resta a guardare */
+body.orin.has-windows .orin-eye-stage {
+  opacity: 0.28;
+  transform: scale(0.84);
+}
+
+.orin-reply {
+  min-height: 3.6em;
+  max-width: min(60ch, calc(100vw - 2 * var(--orin-gutter)));
+  text-align: center;
+  pointer-events: auto;
+}
+
+.orin-reply-text {
+  font-family: var(--font-orin);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #ffffff;
+}
+
+.orin-reply-text.is-alert {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--orin-corallo);
+}
+
+.orin-reply-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.orin-reply-actions:empty {
+  display: none;
+}
+
+/* Con finestre aperte la risposta scende in una riga sopra la barra comandi */
+body.orin.has-windows .orin-reply {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--orin-command-h) + 2px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 0;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--orin-gutter));
+}
+
+body.orin.has-windows .orin-reply-text {
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.orin.has-windows .orin-reply-actions {
+  margin-top: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   FINESTRE BIANCHE
+   ────────────────────────────────────────────────────────────────────────── */
+.orin-windows {
+  position: fixed;
+  inset: calc(var(--orin-topbar-h) + 4px) var(--orin-gutter) var(--orin-command-h) var(--orin-gutter);
+  z-index: 20;
+  pointer-events: none;
+}
+
+body.orin.has-windows .orin-windows {
+  bottom: calc(var(--orin-command-h) + 48px);
+}
+
+.orin-window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: 100%;
+  background: var(--orin-bianco);
+  border-radius: 16px;
+  box-shadow: var(--orin-elev-3);
+  pointer-events: auto;
+  overflow: hidden;
+  transform-origin: var(--orin-origin, 50% 50%);
+  transition: transform 0.3s var(--orin-ease), opacity 0.22s ease, box-shadow 0.2s ease;
+}
+
+.orin-window[hidden] {
+  display: none;
+}
+
+.orin-window.is-opening {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+.orin-window.is-focused {
+  box-shadow: var(--orin-elev-5);
+}
+
+/* Misure di partenza: parete video e impostazioni occupano lo spazio,
+   le altre crescono con il contenuto fino al limite della stanza */
+#win-wall { width: 1180px; height: 820px; }
+#win-settings { width: 1100px; height: 820px; }
+#win-events { width: 1000px; }
+#win-plates { width: 860px; }
+#win-diagnostics { width: 940px; }
+
+.orin-window.is-max {
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.orin-window-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  flex-shrink: 0;
+  padding: 0 8px 0 24px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.orin-window-bar:active {
+  cursor: grabbing;
+}
+
+.orin-window.is-max .orin-window-bar {
+  cursor: default;
+}
+
+.orin-window-title {
+  font-family: var(--font-orin);
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--orin-testo);
+}
+
+.orin-window-tools {
+  display: flex;
+  gap: 4px;
+}
+
+.orin-window-btn {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--orin-testo-2);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.orin-window-btn:hover {
+  background: #f1f3f4;
+  color: var(--orin-testo);
+}
+
+.orin-window-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.orin-window-body {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 24px 24px;
+  overscroll-behavior: contain;
+}
+
+/* Le pagine originali avevano margini pensati per la pagina intera */
+.orin-window-body > .view-panel {
+  display: block;
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+
+/* Schede interne: contorno sottile, niente ombra (la finestra ha gia' la sua) */
+.orin-window-body .glass-panel {
+  background: var(--orin-bianco);
+  border: 1px solid var(--orin-linea);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.orin-window-body .glass-panel:first-child {
+  margin-top: 0;
+}
+
+/* La griglia originale si basava sulla larghezza dello schermo: dentro una
+   finestra produceva colonne strette e un vuoto a destra */
+.orin-window-body .data-split-zone {
+  grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   BARRA DEI COMANDI (come una barra di ricerca)
+   ────────────────────────────────────────────────────────────────────────── */
+.orin-command {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 30;
+  width: min(720px, calc(100vw - 2 * var(--orin-gutter)));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orin-command-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 24px;
+  background: var(--orin-bianco);
+  border-radius: 999px;
+  box-shadow: var(--orin-elev-3);
+  transition: box-shadow 0.2s ease;
+}
+
+.orin-command-field:focus-within {
+  box-shadow: var(--orin-elev-5), 0 0 0 4px rgba(255, 255, 255, 0.45);
+}
+
+.orin-command-input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--orin-testo);
+  font-family: var(--font-orin);
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.orin-command-input::placeholder {
+  color: var(--orin-testo-2);
+  font-weight: 600;
+}
+
+/* Il focus e' gia' mostrato dall'alone bianco del campo */
+body.orin .orin-command-input:focus-visible {
+  outline: none;
+}
+
+.orin-command-send {
+  height: 48px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--orin-blu);
+  color: #ffffff;
+  font-family: var(--font-orin);
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.orin-command-send:hover {
+  background: var(--orin-blu-scuro);
+}
+
+.orin-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.orin-chip {
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-family: var(--font-orin);
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.orin-chip:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   COMPONENTI ORIGINALI
+   ────────────────────────────────────────────────────────────────────────── */
+/* Modali di sistema (telecamera, identikit, video, targa): sopra le finestre */
+body.orin .cam-modal-backdrop,
+body.orin .ultra-modal-backdrop {
+  z-index: 60;
+}
+
+body.orin .auth-modal-backdrop {
+  z-index: 80;
+  background: rgba(10, 40, 100, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+/* Testata del tastierino PIN: dal granata al blu ORIN */
+body.orin .auth-header {
+  background: linear-gradient(180deg, var(--orin-cielo-alto), var(--orin-cielo-basso));
+}
+
+/* Fondi dei video: grafite neutra al posto del blu notte dell'originale */
+body.orin .cam-card-viewport,
+body.orin .cam-modal-stage {
+  background: #202124;
+}
+
+body.orin .camera-standby-screen,
+body.orin .cam-modal-standby {
+  background: #2d2e31;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   SCHERMI STRETTI: le finestre occupano tutto lo spazio e non si trascinano
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  :root {
+    --orin-gutter: 12px;
+    --orin-command-h: 128px;
+    --orin-eye: clamp(170px, 36vh, 280px);
+  }
+
+  .orin-topbar {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .orin-wordmark {
+    font-size: 24px;
+  }
+
+  .orin-window {
+    inset: 0 !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .orin-window-bar {
+    cursor: default;
+    padding-left: 18px;
+  }
+
+  .orin-window-body {
+    padding: 4px 14px 16px;
+  }
+
+  .orin-window-tools [data-window-action="maximize"] {
+    display: none;
+  }
+
+  .orin-window-body .data-split-zone {
+    grid-template-columns: 1fr;
+  }
+
+  .orin-suggestions {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .orin-chip {
+    flex-shrink: 0;
+  }
+
+  .orin-reply-text {
+    font-size: 18px;
+  }
+}
+
+/* Su telefono il foglio originale colora barra e pastiglie con i token della
+   vecchia barra granata (testo bianco, icone oro): sulle pastiglie bianche di
+   ORIN sparirebbero. Qui diventano testo scuro e icone blu. */
+@media (max-width: 767.98px) {
+  body.orin {
+    --nav-fg: var(--orin-testo);
+    --nav-fg-muted: #3c4043;
+    --nav-gold: var(--orin-blu);
+    --nav-hover: #ffffff;
+    --nav-active: var(--orin-blu-tenue);
+    --nav-border: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orin-eye-stage,
+  .orin-window,
+  .orin-sky-alert {
+    transition: none;
+  }
+}

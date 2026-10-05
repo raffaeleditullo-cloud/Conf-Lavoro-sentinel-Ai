@@ -106,6 +106,23 @@ seguita senza pause dalla frase contestuale di ORIN.
 
 ---
 
+## Dashboard ORIN (porta 8080)
+
+La dashboard ha un nuovo aspetto: al centro l'occhio di ORIN, in basso una barra in cui si
+scrive cosa si vuole vedere, e le pagine di sempre (telecamere, eventi, targhe, stato della
+Jetson, impostazioni) che si aprono come finestre. Il funzionamento sotto è lo stesso di prima.
+
+| Cosa | Come |
+|------|------|
+| Aggiornare | `git pull`, poi `docker compose restart dashboard` e nel browser **Ctrl+F5** |
+| Comandi di esempio | `piazzale`, `telecamera 2`, `tutte le telecamere`, `eventi`, `targhe`, `impostazioni`, `stato jetson`, `accendi i fari`, `chiudi tutto`, `aiuto` |
+| Finestre | si trascinano dalla barra del titolo, doppio clic per ingrandire, **Esc** chiude |
+| Scorciatoia | il tasto **/** porta alla barra dei comandi |
+| Aggiungere un sinonimo | blocco `VOCABOLARIO` in `dashboard/assets/orin-commands.js`, poi `node dashboard/test/orin-commands.test.js` |
+| Tornare all'aspetto precedente | `git revert` del commit ORIN: il resto del sistema non cambia |
+
+---
+
 ## Struttura della cartella
 
 ```

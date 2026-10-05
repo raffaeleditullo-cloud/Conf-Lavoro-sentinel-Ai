@@ -3,81 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SENTINEL AI // Mission Control</title>
+  <title>ORIN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Roboto:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/styles.css?v=9.9">
+  <link rel="stylesheet" href="assets/orin.css?v=2">
 </head>
-<body>
+<body class="orin">
+
+  <!-- Sfondo: cielo blu con forme morbide. Lo strato caldo si accende solo durante un allarme -->
+  <svg class="orin-sky" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="skyFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#2a74da"/>
+        <stop offset="1" stop-color="#1554c0"/>
+      </linearGradient>
+      <radialGradient id="skyGlow" cx="50%" cy="42%" r="38%">
+        <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="skyAlert" cx="50%" cy="40%" r="24%">
+        <stop offset="0" stop-color="#ff7a6b" stop-opacity="0.85"/>
+        <stop offset="0.55" stop-color="#ff6a5c" stop-opacity="0.35"/>
+        <stop offset="1" stop-color="#ff6a5c" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1440" height="900" fill="url(#skyFill)"/>
+    <circle cx="120" cy="140" r="210" fill="#ffffff" opacity="0.06"/>
+    <circle cx="1340" cy="210" r="260" fill="#ffffff" opacity="0.05"/>
+    <circle cx="1220" cy="80" r="70" fill="#ffffff" opacity="0.07"/>
+    <circle cx="260" cy="420" r="46" fill="#ffffff" opacity="0.06"/>
+    <rect width="1440" height="900" fill="url(#skyGlow)"/>
+    <path d="M0 760 C 240 700 420 820 720 770 S 1200 700 1440 750 L 1440 900 L 0 900 Z" fill="#0f47ad" opacity="0.55"/>
+    <path d="M0 820 C 300 780 520 870 820 830 S 1260 790 1440 830 L 1440 900 L 0 900 Z" fill="#0b3c99" opacity="0.6"/>
+    <rect class="orin-sky-alert" width="1440" height="900" fill="url(#skyAlert)"/>
+  </svg>
 
   <!-- ──────────────────────────────────────────────────────────────────────────
-       SLIM NAV (VERKADA / LINEAR STYLE)
+       ORIN — interfaccia a comandi scritti della dashboard Sentinel.
+       Le 5 pagine della dashboard sono intatte (stessi ID usati da app.js) e
+       vivono dentro finestre che si aprono su comando. Aspetto: assets/orin.css;
+       finestre e occhio: orin-shell.js, orin-eye.js; comandi: orin-commands.js.
        ────────────────────────────────────────────────────────────────────────── -->
-  <aside class="soc-nav">
-    <div class="nav-brand">
-      <div class="nav-brand-clean-wrap">
-        <img id="brandLogo" class="conflavoro-official-logo" src="assets/img/conflavoro-ai-oro.svg" alt="Conflavoro AI">
-        <span class="nav-brand-sub">SENTINEL PERIMETER // V2.4</span>
-      </div>
+  <header class="orin-topbar">
+    <div class="orin-brand">
+      <span class="orin-wordmark">ORIN</span>
+      <img class="orin-brand-mark" src="assets/img/conflavoro-ai-icon-oro.svg" alt="Conflavoro AI">
     </div>
 
-    <!-- Gruppo Viste Operative -->
-    <nav class="nav-items-group">
-      <button class="nav-btn active" data-view="wall" title="Live Video Wall">
-        <svg class="nav-btn-icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-        <span class="nav-btn-label">Video Wall</span>
-      </button>
-
-      <button class="nav-btn" data-view="events" title="Registro Evidenze & Allarmi">
-        <svg class="nav-btn-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        <span class="nav-btn-label">Archivio Evidenze</span>
-      </button>
-
-      <button class="nav-btn" data-view="plates" title="Whitelist Targhe & Varchi">
-        <svg class="nav-btn-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span class="nav-btn-label">Whitelist Targhe</span>
-      </button>
-
-      <!-- SEZIONE ESCLUSIVA MANUTENTORE (PIN 9999) -->
-      <button class="nav-btn maintainer-only-nav" data-view="diagnostics" title="Diagnostica Edge Jetson Orin Nano">
-        <svg class="nav-btn-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        <span class="nav-btn-label">Telemetria Edge</span>
-      </button>
-
-      <button class="nav-btn" data-view="settings" title="Audio Deterrenza & Impostazioni">
-        <svg class="nav-btn-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span class="nav-btn-label">Audio & Sintesi</span>
-      </button>
-    </nav>
-
-    <!-- Comprimi / espandi la barra laterale -->
-    <div class="nav-bottom-actions">
-      <button id="sidebarCollapseBtn" class="collapse-icon-btn" title="Comprimi Barra Laterale">
-        <svg id="collapseSvg" class="collapse-toggle-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><path d="m14 9-3 3 3 3"/></svg>
-      </button>
-    </div>
-  </aside>
-
-  <!-- ──────────────────────────────────────────────────────────────────────────
-       MAIN STAGE
-       ────────────────────────────────────────────────────────────────────────── -->
-  <main class="main-stage">
-    
-    <!-- Top HUD Bar (3-Zone Tactical SOC Header) -->
-    <header class="top-hud">
-      <!-- Zona Sinistra: Titolo Vista & Badge Canali -->
-      <div class="hud-left-zone">
-        <div class="mobile-hud-brand">
-          <img id="mobileBrandLogo" class="mobile-brand-icon" src="assets/img/conflavoro-ai-icon-oro.svg" alt="Conflavoro AI">
-        </div>
-        <div class="hud-title-wrap">
-          <span id="hudTitleText" class="hud-main-title">LIVE VIDEO WALL</span>
-        </div>
-      </div>
-
-      <!-- Zona Centrale: stato di protezione.
-           E' il messaggio principale per il cliente. La telemetria hardware
-           (RAM, swap, temperatura, potenza) vive ora esclusivamente nella vista
-           "Telemetria Edge", riservata al manutentore. -->
-      <div class="hud-security-zone">
+    <!-- Stato di protezione: aggiornato da app.js (pollSecurityState) -->
+    <div class="hud-security-zone">
         <div id="securityStatus" class="security-status" title="Stato di protezione del sistema">
           <svg class="security-status-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
           <span class="security-status-text">
@@ -85,12 +61,10 @@
             <span class="security-status-dot"></span>
           </span>
         </div>
-      </div>
+    </div>
 
-      <!-- Zona Destra: Vitality Watchdog IA + Ruolo & Blocco PIN -->
-      <div class="hud-right-zone">
-        <!-- Su telefono questo pulsante apre il pannello sottostante;
-             su schermo largo e' nascosto e il pannello resta in linea. -->
+    <!-- Rilevatore, scheda identikit, ruolo e blocco: aggiornati da app.js -->
+    <div class="hud-right-zone">
         <button id="hudMenuBtn" class="hud-menu-btn" type="button"
                 aria-label="Apri il menu" aria-expanded="false" aria-controls="hudMenu"
                 onclick="toggleHudMenu()">
@@ -123,648 +97,710 @@
             </button>
           </div>
         </div>
+    </div>
+  </header>
 
-      </div>
-    </header>
-
-    <!-- Scrollable Workspace -->
-    <div class="stage-content-scroll">
-
-      <!-- ════════════════════════════════════════════════════════════════════════
-           VISTA 1: LIVE VIDEO WALL
-           ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-wall" class="view-panel view-data">
-        
-        <section class="video-wall-grid">
-          <button type="button" class="cam-card" onclick="openCamModal(1)" aria-label="Ingrandisci Piazzale Esterno a schermo intero">
-            <div class="cam-card-viewport">
-              <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
-              <div class="camera-standby-screen" id="standbyCam1">
-                <div class="standby-radar-ring">
-                  <div class="standby-radar-dot"></div>
-                </div>
-                <div class="standby-text-block">
-                  <span class="standby-title">Piazzale Esterno</span>
-                  <span class="standby-sub">In attesa del segnale</span>
-                </div>
-              </div>
-
-              <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
-              <img id="streamCam1" class="camera-stream-feed" src="/api/camera/piazzale/latest.jpg" alt="Piazzale Esterno in diretta">
-
-              <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
-            </div>
-
-            <div class="cam-card-footer">
-              <div class="cam-card-ident">
-                <span class="cam-card-name">Piazzale Esterno</span>
-                <span class="cam-card-meta" id="camCardMeta1">In attesa del segnale</span>
-              </div>
-              <span id="camStatusBadge1" class="cam-status-pill offline">Offline</span>
-            </div>
-          </button>
-
-          <button type="button" class="cam-card" onclick="openCamModal(2)" aria-label="Ingrandisci Magazzino Interno a schermo intero">
-            <div class="cam-card-viewport">
-              <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
-              <div class="camera-standby-screen" id="standbyCam2">
-                <div class="standby-radar-ring">
-                  <div class="standby-radar-dot"></div>
-                </div>
-                <div class="standby-text-block">
-                  <span class="standby-title">Magazzino Interno</span>
-                  <span class="standby-sub">In attesa del segnale</span>
-                </div>
-              </div>
-
-              <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
-              <img id="streamCam2" class="camera-stream-feed" src="/api/camera/magazzino/latest.jpg" alt="Magazzino Interno in diretta">
-
-              <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
-            </div>
-
-            <div class="cam-card-footer">
-              <div class="cam-card-ident">
-                <span class="cam-card-name">Magazzino Interno</span>
-                <span class="cam-card-meta" id="camCardMeta2">In attesa del segnale</span>
-              </div>
-              <span id="camStatusBadge2" class="cam-status-pill offline">Offline</span>
-            </div>
-          </button>
-
-          <button type="button" class="cam-card" onclick="openCamModal(3)" aria-label="Ingrandisci Corridoio Transito a schermo intero">
-            <div class="cam-card-viewport">
-              <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
-              <div class="camera-standby-screen" id="standbyCam3">
-                <div class="standby-radar-ring">
-                  <div class="standby-radar-dot"></div>
-                </div>
-                <div class="standby-text-block">
-                  <span class="standby-title">Corridoio Transito</span>
-                  <span class="standby-sub">In attesa del segnale</span>
-                </div>
-              </div>
-
-              <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
-              <img id="streamCam3" class="camera-stream-feed" src="/api/camera/corridoio/latest.jpg" alt="Corridoio Transito in diretta">
-
-              <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
-            </div>
-
-            <div class="cam-card-footer">
-              <div class="cam-card-ident">
-                <span class="cam-card-name">Corridoio Transito</span>
-                <span class="cam-card-meta" id="camCardMeta3">In attesa del segnale</span>
-              </div>
-              <span id="camStatusBadge3" class="cam-status-pill offline">Offline</span>
-            </div>
-          </button>
-        </section>
-
-        <!-- FLOATING COMMAND DOCK -->
-        <div class="floating-dock-wrap" style="margin-top:20px; margin-bottom:24px;">
-          <div class="floating-dock">
-            <button id="dockFaroBtn" class="dock-action-btn btn-faro" onclick="triggerFaro()">
-              <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="11" height="8" rx="1.5"/><path d="M13.5 8.2 20 5.5v8l-6.5-2.7"/><path d="M8 13.5v3.5"/><path d="M4.5 20.5 8 17l3.5 3.5"/></svg>
-              <span id="dockFaroLabel">Fari Piazzale // 30s</span>
-              <div id="dockFaroProgress" class="dock-progress-line"></div>
-            </button>
-
-            <button id="dockGateBtn" class="dock-action-btn btn-gate" onclick="triggerGate()">
-              <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 7.5h11v12h-11z"/><path d="M6.2 7.5v12M9.8 7.5v12"/><path d="M2.5 13.5h11"/><path d="M16.5 13.5H21"/><path d="m18.8 11.2 2.3 2.3-2.3 2.3"/></svg>
-              <span id="dockGateLabel">Apri Cancello // 3s</span>
-              <div id="dockGateProgress" class="dock-progress-line"></div>
-            </button>
-
-            <button id="dockSirenBtn" class="dock-action-btn btn-siren" onclick="triggerVoice()">
-              <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
-              <span id="dockSirenLabel">Dissuasione Audio IP</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Riquadro Ultimo Identikit Forense Acquisito -->
-        <div id="wallLatestIdentikitCard" class="glass-panel" style="margin-top:20px;">
-          <div class="panel-header-minimal">
-            <div class="ev-head-text">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <svg style="width:18px; height:18px; fill:var(--brand);" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                <h3 style="margin:0;">Ultimo Identikit Acquisito</h3>
-              </div>
-              <p class="ev-head-sub">Dossier biometrico e dinamica dei varchi generati dal motore di analisi</p>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <span id="wallIdentikitCamBadge" class="status-beacon">In attesa</span>
-              <button type="button" class="ultra-primary-btn" onclick="openLatestIdentikit()">
-                <svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Visualizza Scheda</span>
-              </button>
-            </div>
-          </div>
-
-          <div id="wallIdentikitContent" style="display:flex; gap:16px; margin-top:16px; align-items:center; flex-wrap:wrap;">
-            <div style="width:84px; height:84px; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-sunken); border:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="openLatestIdentikit()" title="Clicca per aprire la Scheda Identikit Forense">
-              <img id="wallIdentikitThumb" src="assets/img/conflavoro-ai-icon-oro.svg" alt="Identikit thumbnail" style="width:100%; height:100%; object-fit:cover;">
-            </div>
-            <div style="flex:1; min-width:220px; font-size:13px; display:flex; flex-direction:column; gap:4px;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <strong id="wallIdentikitSubject" style="font-size:14px; color:var(--text-title); font-weight:700;">In attesa di transito</strong>
-                <span id="wallIdentikitConf" style="font-size:11px; background:var(--bg-sunken); border:1px solid var(--border); color:var(--text-muted); padding:1px 6px; border-radius:var(--radius-xs); font-family:var(--font-mono);">--</span>
-              </div>
-              <div id="wallIdentikitTime" style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">I passaggi nel raggio delle telecamere appariranno qui</div>
-              <div id="wallIdentikitTraj" style="font-size:12px; color:var(--text-body);">Dossier completo scaricabile in formato forense .JSON e .JPG</div>
-              <div id="wallIdentikitOrinBadge" style="display:none; margin-top:4px;"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Live Ticker Preview -->
-        <div class="glass-panel">
-          <div class="panel-header-minimal">
-            <div class="ev-head-text">
-              <h3>Attività Recente</h3>
-              <p class="ev-head-sub">Ultimi passaggi rilevati dalle telecamere</p>
-            </div>
-            <button class="ultra-primary-btn panel-action-btn" onclick="switchView('events')">
-              <span>Visualizza tutto</span>
-            </button>
-          </div>
-
-          <!-- Filtro indipendente da quello dell'Archivio: qui si guarda cosa
-               sta succedendo adesso, la' si cerca un evento passato. -->
-          <div class="ev-filter-bar">
-            <label class="ev-filter-label" for="selWallCamera">Telecamera</label>
-            <select id="selWallCamera" class="ultra-input ev-filter-select" onchange="setWallFilter(this.value)">
-              <option value="all">Tutte le telecamere</option>
-              <option value="piazzale">Piazzale Esterno</option>
-              <option value="magazzino">Magazzino Interno</option>
-              <option value="corridoio">Corridoio Transito</option>
-            </select>
-          </div>
-
-          <div class="table-scroll-wrap">
-            <table class="data-table-ultra">
-              <thead>
-                <tr>
-                  <th>Orario</th>
-                  <th>Varco</th>
-                  <th>Soggetto</th>
-                  <th>Snapshot</th>
-                  <th>Clip MP4</th>
-                </tr>
-              </thead>
-              <tbody id="eventsWallTbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ════════════════════════════════════════════════════════════════════════
-           VISTA 2: REGISTRO EVENTI COMPLETO (NAS)
-           ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-events" class="view-panel view-data" style="display:none;">
-        <div class="glass-panel">
-          <div class="panel-header-minimal">
-            <div class="ev-head-text">
-              <h3>Registro Eventi &amp; Registrazioni</h3>
-              <p class="ev-head-sub">NAS Ugreen // sentinel-eventi</p>
-            </div>
-            <button class="ultra-primary-btn panel-action-btn ev-refresh-btn" onclick="renderEvents()">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-              <span>Aggiorna</span>
-            </button>
-          </div>
-          
-          <!-- Filtro per telecamera. E' un select nativo di proposito: sul
-               telefono apre il selettore di sistema, gia' comodo e accessibile.
-               I valori corrispondono al campo 'camera' degli eventi di Frigate. -->
-          <!-- Barra Filtri per Telecamera e Tipo Oggetto (Persone / Veicoli) -->
-          <div class="ev-filter-bar" style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <label class="ev-filter-label" for="selEventCamera">Telecamera</label>
-              <select id="selEventCamera" class="ultra-input ev-filter-select" onchange="setEventCameraFilter(this.value)">
-                <option value="all">Tutte le telecamere</option>
-                <option value="piazzale">Piazzale Esterno</option>
-                <option value="magazzino">Magazzino Interno</option>
-                <option value="corridoio">Corridoio Transito</option>
-              </select>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <label class="ev-filter-label" for="selEventLabel">Tipo Oggetto</label>
-              <select id="selEventLabel" class="ultra-input ev-filter-select" onchange="setEventLabelFilter(this.value)">
-                <option value="all">Tutti i tipi</option>
-                <option value="person">Solo Persone</option>
-                <option value="vehicle">Solo Veicoli (Auto/Moto)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="table-scroll-wrap">
-            <table class="data-table-ultra" style="margin-top:12px;">
-              <thead>
-                <tr>
-                  <th>Orario</th>
-                  <th>Telecamera</th>
-                  <th>Tipo Evento</th>
-                  <th>Confidenza</th>
-                  <th>Snapshot Evidenza</th>
-                  <th>Registrazione Video</th>
-                </tr>
-              </thead>
-              <tbody id="eventsFullTbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ════════════════════════════════════════════════════════════════════════
-           VISTA 3: WHITELIST TARGHE LPR
-           ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-plates" class="view-panel view-data" style="display:none;">
-        <div class="glass-panel">
-          <div class="panel-header-minimal">
-            <div class="ev-head-text">
-              <h3>Whitelist Targhe Autorizzate</h3>
-              <p class="ev-head-sub">I veicoli registrati aprono automaticamente il cancello carrabile tramite IA (Modbus Relè 2)</p>
-            </div>
-            <button class="ultra-primary-btn panel-action-btn is-add" onclick="openAddPlateModal()">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-              <span>Aggiungi Nuova Targa</span>
-            </button>
-          </div>
-
-          <div class="table-scroll-wrap">
-            <table class="data-table-ultra" style="margin-top:16px;">
-              <thead>
-                <tr>
-                  <th>Targa</th>
-                  <th>Intestatario</th>
-                  <th>Ruolo</th>
-                  <th>Stato</th>
-                  <th style="text-align:right;">Elimina</th>
-                </tr>
-              </thead>
-              <tbody id="platesFullTbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ════════════════════════════════════════════════════════════════════════
-           VISTA 4: TELEMETRIA EDGE JETSON
-           ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-diagnostics" class="view-panel view-data" style="display:none;">
-        <div class="data-split-zone">
-          
-          <!-- Metriche HW -->
-          <div class="glass-panel">
-            <div class="panel-header-minimal">
-              <h3>Hardware Jetson Orin Nano</h3>
-              <span class="status-beacon">Operativo</span>
-            </div>
-            <div class="metric-list">
-              <div class="metric-row">
-                <span class="metric-label">Temperatura SoC (GPU/CPU)</span>
-                <strong id="diagTemp" class="metric-value is-accent">61.0 °C (Ottimale)</strong>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">Memoria Swap NVMe</span>
-                <strong id="diagSwap" class="metric-value is-ok">4 MB / 3.8 GB (swappiness=10)</strong>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">RAM Fisica in Uso</span>
-                <strong id="diagRam" class="metric-value">4.56 GB / 7.6 GB</strong>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">Potenza Assorbita (INA3221)</span>
-                <strong id="diagPower" class="metric-value is-ok">16.0 W (Profilo 25W)</strong>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">Uptime Sistema Jetson</span>
-                <strong id="diagUptime" class="metric-value">--</strong>
-              </div>
-            </div>
-          </div>
-
-          <!-- Nodi di Rete -->
-          <div class="glass-panel">
-            <div class="panel-header-minimal">
-              <h3>Nodi e Periferiche di Campo</h3>
-              <span id="diagNetworkStatus" class="status-beacon">ALL LINKED</span>
-            </div>
-            <div class="metric-list">
-              <div class="metric-row">
-                <span class="metric-label">Telecamera Piazzale Esterno</span>
-                <span id="diagCam1Node" class="node-value is-online">192.168.1.22:554</span>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">Telecamera Magazzino Interno</span>
-                <span id="diagCam2Node" class="node-value is-online">192.168.1.20:554</span>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">Telecamera Corridoio Transito</span>
-                <span id="diagCam3Node" class="node-value is-online">192.168.1.21:554</span>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">Scheda Relè Waveshare Modbus</span>
-                <span id="diagRelayNode" class="node-value is-accent is-online">192.168.1.30:4196</span>
-              </div>
-              <div class="metric-row">
-                <span class="metric-label">NAS Ugreen Storage (SMB)</span>
-                <span id="diagNasNode" class="node-value is-online">192.168.1.11 (sentinel-eventi)</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ════════════════════════════════════════════════════════════════════════
-           VISTA 5: CONFIGURAZIONE & SINTESI VOCALE AI
-           ════════════════════════════════════════════════════════════════════════ -->
-      <div id="view-settings" class="view-panel view-data" style="display:none;">
-        <div class="data-split-zone">
-
-          <!-- Colonna 1: ORIN Assistente Vocale & Sintesi Streaming -->
-          <div class="glass-panel">
-            <div class="panel-header-minimal">
-              <div class="ev-head-text">
-                <h3>ORIN // Assistente Vocale &amp; Riconoscimento Varchi</h3>
-                <p class="ev-head-sub">Sintesi vocale dinamica e identificazione presenze ai varchi (Gemini 2.5 Flash)</p>
-              </div>
-              <span id="orinStatusBeacon" class="status-beacon is-accent">ORIN Attivo</span>
-            </div>
-
-            <!-- Scheda Memoria Biometrica Presidente Roberto Capobianco -->
-            <div class="orin-vip-banner">
-              <img src="/api/orin/president_photo.jpg" class="orin-vip-avatar" alt="Dott. Roberto Capobianco" onerror="this.src='assets/img/conflavoro-ai-icon-oro.svg'">
-              <div style="flex:1;">
-                <span class="orin-vip-tag">Presidenza // Accesso Autorizzato</span>
-                <div class="orin-vip-title">Dott. Roberto Capobianco</div>
-                <p class="orin-vip-desc">Presidente Conflavoro PMI in memoria visiva permanente. Riconoscimento a distanza con accoglienza cordiale e apertura automatica cancello carraio (Relè 2).</p>
-              </div>
-            </div>
-
-            <!-- Selezione Voce Carmelo / Sami -->
-            <div style="margin-top:18px;">
-              <label class="setting-section-label">PACCHETTO VOCALE DI DIFFUSIONE</label>
-              <div class="voice-selector-grid">
-                
-                <label class="voice-card-option active" id="cardVoiceCarmelo">
-                  <input type="radio" name="voicePack" value="carmelo" checked onchange="handleVoiceChange('carmelo')">
-                  <div class="voice-card-body">
-                    <div class="voice-card-header">
-                      <div class="voice-icon-badge">
-                        <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v5a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                      </div>
-                      <div>
-                        <strong class="voice-title">CARMELO</strong>
-                        <span class="voice-sub">Voce Maschile</span>
-                      </div>
-                    </div>
-                    <p class="voice-desc">Timbro profondo e cordiale: caloroso con il personale autorizzato, perentorio verso intrusioni non autorizzate.</p>
-                  </div>
-                </label>
-
-                <label class="voice-card-option" id="cardVoiceSami">
-                  <input type="radio" name="voicePack" value="sami" onchange="handleVoiceChange('sami')">
-                  <div class="voice-card-body">
-                    <div class="voice-card-header">
-                      <div class="voice-icon-badge">
-                        <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v5a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                      </div>
-                      <div>
-                        <strong class="voice-title">SAMI</strong>
-                        <span class="voice-sub">Voce Femminile</span>
-                      </div>
-                    </div>
-                    <p class="voice-desc">Dizione cristallina, squillante ed empatica: ideale per ambienti aziendali, presidenza e accoglienza.</p>
-                  </div>
-                </label>
-
-              </div>
-            </div>
-
-            <!-- Trasmissione Vocale Live su Diffusore Fanvil -->
-            <div class="setting-box" style="margin-top:18px;">
-              <label class="setting-section-label" style="margin-bottom:8px;">TRASMETTI MESSAGGIO LIVE SU DIFFUSORE FANVIL (.31)</label>
-              <div class="orin-quick-tags" style="margin-bottom:10px;">
-                <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura.')">
-                  <span>Saluto Presidente</span>
-                </button>
-                <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Attenzione, area privata Conflavoro PMI sorvegliata da Sentinel AI. Siete pregati di allontanarvi.')">
-                  <span>Avviso Dissuasione</span>
-                </button>
-                <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Benvenuto in Conflavoro PMI, accesso autorizzato.')">
-                  <span>Benvenuto Ospite</span>
-                </button>
-              </div>
-
-              <div style="display:flex; gap:10px;">
-                <input type="text" id="orinLiveInput" class="ultra-input" placeholder="Digita il messaggio da trasmettere sull'altoparlante..." value="Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura.">
-                <button type="button" id="btnOrinSpeak" class="ultra-primary-btn" onclick="triggerOrinSpeak()" style="padding:9px 18px; white-space:nowrap;">
-                  <span id="orinSpeakBtnText">Parla Live</span>
-                </button>
-              </div>
-              <span id="orinSpeakStatus" style="font-size:12px; color:var(--brand); display:none; margin-top:6px; font-weight:600;"></span>
-            </div>
-
-            <!-- Sezione Fallback Locale Offline MP3 -->
-            <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
-              <details style="cursor:pointer;">
-                <summary style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; outline:none;">
-                  ▶ Fallback Locale Offline (Tracce Audio Pre-registrate MP3)
-                </summary>
-                <div style="margin-top:12px;">
-                  <select id="selAudioTrack" class="ultra-input" style="margin-bottom:12px; font-weight:600;" onchange="handleTrackChange()">
-                    <option value="01_accesso_consentito">01 // Accesso Consentito (Apertura Varco)</option>
-                    <option value="02_targa_autorizzata">02 // Targa Autorizzata (Apertura Cancello)</option>
-                    <option value="03_avviso_dissuasione" selected>03 // Avviso Dissuasione (Presenza nel Piazzale)</option>
-                    <option value="04_allarme_intrusione">04 // Allarme Intrusione (Violazione Orario Notturno)</option>
-                    <option value="05_targa_non_autorizzata">05 // Targa Non Autorizzata (Accesso Negato)</option>
-                    <option value="06_identikit_acquisito">06 // Identikit Biometrico Acquisito (Dissuasione Mirata)</option>
-                  </select>
-
-                  <div class="audio-player-box setting-box" style="margin-bottom:12px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                      <button type="button" id="btnPlayTrack" class="ultra-primary-btn" onclick="playRealAudioTrack()" style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; font-size:12px;">
-                        <svg id="playIconSvg" style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        <span id="playBtnText">Ascolta nel Browser</span>
-                      </button>
-                      <span id="playingTrackLabel" class="track-path" style="font-size:11px;">audio/carmelo/03_avviso_dissuasione.mp3</span>
-                    </div>
-                    <span id="audioPlayingIndicator" class="status-beacon is-accent" style="display:none;">In riproduzione</span>
-                  </div>
-
-                  <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:11.5px; padding:7px 14px; width:100%;">
-                    <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
-                    <span>Trasmetti Traccia MP3 Offline su Fanvil (.31)</span>
-                  </button>
-                </div>
-              </details>
-            </div>
-
-          </div>
-
-          <!-- Colonna 2: Parametri Audio Altoparlante & Temporizzazioni -->
-          <div class="glass-panel">
-            <div class="panel-header-minimal">
-              <div class="ev-head-text">
-                <h3>Parametri Audio & Attuatori</h3>
-                <p class="ev-head-sub">Regolazione hardware Fanvil (.31) e Modbus Relè (.30)</p>
-              </div>
-              <span class="status-beacon">Hardware collegato</span>
-            </div>
-
-            <!-- Volume Altoparlante -->
-            <div style="margin-top:18px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <label class="setting-section-label" style="margin-bottom:0;">VOLUME DIFFUSIONE FANVIL (MULTICAST RTP)</label>
-                <strong id="valVolume" class="setting-value is-accent">70%</strong>
-              </div>
-              <input type="range" id="rngVolume" min="10" max="100" value="70" class="tactical-slider" oninput="updateVolumeLabel(this.value)">
-              <div class="slider-legend">
-                <span>10% (Minimo)</span>
-                <span>50% (Medio)</span>
-                <span>100% (Massima Potenza)</span>
-              </div>
-            </div>
-
-            <!-- Temporizzazione Relè (Solo Manutentore) -->
-            <div class="maintainer-only-block" style="margin-top:22px;">
-              <label class="setting-section-label">TEMPORIZZAZIONE ATTUATORI HARDWARE</label>
-              
-              <div class="metric-list">
-                <div class="metric-row">
-                  <div>
-                    <span class="metric-label is-strong">Accensione Fari Piazzale</span>
-                    <p class="metric-sub">Relè 1 Modbus TCP // 192.168.1.30:4196</p>
-                  </div>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="number" id="numFaroSec" value="30" min="5" max="300" class="ultra-input" style="width:64px; text-align:center; font-family:var(--font-mono); font-weight:700;">
-                    <span class="unit-label">sec</span>
-                  </div>
-                </div>
-
-                <div class="metric-row">
-                  <div>
-                    <span class="metric-label is-strong">Impulso Cancello Carraio</span>
-                    <p class="metric-sub">Relè 2 Modbus TCP (Apertura Automatica LPR)</p>
-                  </div>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="number" id="numGateSec" value="3" min="1" max="15" class="ultra-input" style="width:64px; text-align:center; font-family:var(--font-mono); font-weight:700;">
-                    <span class="unit-label">sec</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Salva Configurazione -->
-            <div style="margin-top:26px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
-              <span id="saveStatus" class="save-status" style="display:none;">Configurazione salvata</span>
-              <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:10px 24px; font-size:13px;">Salva Impostazioni</button>
-            </div>
-
-          </div>
-
-          <!-- Riquadro 2.5: Pianificazione Oraria & Modalità di Sorveglianza -->
-          <div class="glass-panel" style="grid-column: 1 / -1; margin-top: 18px;">
-            <div class="panel-header-minimal">
-              <div class="ev-head-text">
-                <h3>Pianificazione Oraria &amp; Modalità di Sorveglianza</h3>
-                <p class="ev-head-sub">Regola gli orari di lavoro aziendali e il comportamento di allarmi, fari LED Reolink e diffusore Fanvil</p>
-              </div>
-              <span id="securityScheduleBadge" class="status-beacon is-accent">Modalità Automatica</span>
-            </div>
-
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
-              <!-- Selettore Modalità -->
-              <div class="setting-box">
-                <label class="setting-section-label">MODALITÀ DI SORVEGLIANZA ATTIVA</label>
-                <select id="selSecurityMode" class="ultra-input" style="font-weight:600; margin-bottom:8px;" onchange="handleSecurityModeChange(this.value)">
-                  <option value="auto">Automatica // Orario Lavoro + Fascia Notturna</option>
-                  <option value="armed">Armato 24/7 // Sempre Attivo (Fari LED &amp; Voce)</option>
-                  <option value="disarmed">Disarmato // Monitoraggio Silenzioso</option>
-                </select>
-                <span id="securityModeDesc" class="setting-hint" style="color:#aaa;">Orario di lavoro: sorveglianza silenziosa senza fari/voce. Fuori orario e weekend: deterrenza attiva istantanea.</span>
-              </div>
-
-              <!-- Fascia Oraria Lavorativa -->
-              <div class="setting-box">
-                <label class="setting-section-label">FASCIA ORARIA LAVORATIVA (LUNEDÌ — VENERDÌ)</label>
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <div style="flex:1;">
-                    <span style="font-size:11px; color:#888; text-transform:uppercase;">Inizio Turno</span>
-                    <input type="time" id="inputWorkStart" value="08:00" class="ultra-input" style="font-family:var(--font-mono); font-weight:700; text-align:center;">
-                  </div>
-                  <span style="font-size:18px; color:#666; font-weight:bold; margin-top:14px;">—</span>
-                  <div style="flex:1;">
-                    <span style="font-size:11px; color:#888; text-transform:uppercase;">Fine Turno</span>
-                    <input type="time" id="inputWorkEnd" value="18:30" class="ultra-input" style="font-family:var(--font-mono); font-weight:700; text-align:center;">
-                  </div>
-                </div>
-                <span class="setting-hint">Durante queste ore gli operai e i mezzi transitano senza innescare sirene vocali o fari.</span>
-              </div>
-
-              <!-- Stato Attuale & Telemetria Sorveglianza -->
-              <div class="setting-box" style="display:flex; flex-direction:column; justify-content:space-between;">
-                <div>
-                  <label class="setting-section-label">STATO CORRENTE DECIDER</label>
-                  <div id="securityLiveStateText" style="font-weight:700; font-size:14px; color:#4fc3f7; margin-top:4px;">
-                    Calcolo stato in corso...
-                  </div>
-                  <p id="securityLiveReasonText" style="font-size:12px; color:#aaa; margin-top:4px;">
-                    Verifica parametri con il motore JEV Decider
-                  </p>
-                </div>
-                <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-                  <span id="scheduleSaveStatus" class="save-status" style="display:none;">Orari aggiornati</span>
-                  <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:8px 18px; font-size:12px;">Salva Orari</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Riquadro 3: Gestione Credenziali & Codici PIN (Solo Manutentore) -->
-          <div class="glass-panel maintainer-only-block" style="grid-column: 1 / -1; margin-top: 18px;">
-            <div class="panel-header-minimal">
-              <div class="ev-head-text">
-                <h3>Gestione Credenziali & Codici di Accesso</h3>
-                <p class="ev-head-sub">Configurazione del doppio PIN per accesso Cliente e Manutentore (salvataggio locale Jetson)</p>
-              </div>
-              <span class="status-beacon is-accent">Area riservata</span>
-            </div>
-
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
-              <div class="setting-box">
-                <label class="setting-section-label">PIN CLIENTE (USO ORDINARIO)</label>
-                <div style="display:flex; gap:10px;">
-                  <input type="password" id="inputClientPin" class="ultra-input" maxlength="6" value="1111" style="font-family:var(--font-mono); letter-spacing:0.2em; font-weight:700;">
-                  <button type="button" class="pin-eye-btn" onclick="togglePinVisibility('inputClientPin', this)" title="Mostra il codice" aria-label="Mostra o nascondi il codice" aria-pressed="false"><svg class="pin-eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="eye-open" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle class="eye-open" cx="12" cy="12" r="3"/><path class="eye-off" d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.1M6.5 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path class="eye-off" d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><line class="eye-off" x1="3" y1="3" x2="21" y2="21"/></svg></button>
-                </div>
-                <span class="setting-hint">Accesso a telecamere, allarmi, targhe e voce/volume</span>
-              </div>
-
-              <div class="setting-box">
-                <label class="setting-section-label">PIN MANUTENTORE (ACCESSO TOTALE)</label>
-                <div style="display:flex; gap:10px;">
-                  <input type="password" id="inputAdminPin" class="ultra-input" maxlength="6" value="9999" style="font-family:var(--font-mono); letter-spacing:0.2em; font-weight:700;">
-                  <button type="button" class="pin-eye-btn" onclick="togglePinVisibility('inputAdminPin', this)" title="Mostra il codice" aria-label="Mostra o nascondi il codice" aria-pressed="false"><svg class="pin-eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="eye-open" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle class="eye-open" cx="12" cy="12" r="3"/><path class="eye-off" d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.1M6.5 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path class="eye-off" d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><line class="eye-off" x1="3" y1="3" x2="21" y2="21"/></svg></button>
-                </div>
-                <span class="setting-hint">Accesso a telemetria, relè, rete e gestione codici</span>
-              </div>
-            </div>
-
-            <div style="margin-top:18px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
-              <span id="pinSaveStatus" class="save-status" style="display:none;">PIN aggiornati</span>
-              <button type="button" class="ultra-primary-btn" onclick="saveNewPins()" style="padding:8px 20px; font-size:12px;">Aggiorna Codici PIN</button>
-            </div>
-          </div>
-
-        </div>
-      </div>
+  <!-- La stanza dell'occhio -->
+  <main class="orin-room">
+    <!-- L'occhio di ORIN: disegnato in SVG da orin-eye.js -->
+    <div class="orin-eye-stage" id="orinEyeStage"></div>
+    <div class="orin-reply" id="orinReply" aria-live="polite">
+      <p class="orin-reply-text" id="orinReplyText"></p>
+      <div class="orin-reply-actions" id="orinReplyActions"></div>
+    </div>
   </main>
+
+  <!-- Finestre: si aprono su comando, si trascinano dalla barra del titolo -->
+  <div class="orin-windows" id="orinWindows">
+    <section class="orin-window" id="win-wall" data-window="wall" role="dialog" aria-labelledby="win-wall-title" hidden>
+      <header class="orin-window-bar">
+        <h2 class="orin-window-title" id="win-wall-title">Telecamere</h2>
+        <div class="orin-window-tools">
+          <button type="button" class="orin-window-btn" data-window-action="maximize" aria-pressed="false" aria-label="Ingrandisci Telecamere" title="Ingrandisci"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button type="button" class="orin-window-btn" data-window-action="close" aria-label="Chiudi Telecamere" title="Chiudi"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </header>
+      <div class="orin-window-body">
+              <div id="view-wall" class="view-panel view-data">
+        
+                <section class="video-wall-grid">
+                  <button type="button" class="cam-card" onclick="openCamModal(1)" aria-label="Ingrandisci Piazzale Esterno a schermo intero">
+                    <div class="cam-card-viewport">
+                      <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
+                      <div class="camera-standby-screen" id="standbyCam1">
+                        <div class="standby-radar-ring">
+                          <div class="standby-radar-dot"></div>
+                        </div>
+                        <div class="standby-text-block">
+                          <span class="standby-title">Piazzale Esterno</span>
+                          <span class="standby-sub">In attesa del segnale</span>
+                        </div>
+                      </div>
+
+                      <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
+                      <img id="streamCam1" class="camera-stream-feed" src="/api/camera/piazzale/latest.jpg" alt="Piazzale Esterno in diretta">
+
+                      <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
+                    </div>
+
+                    <div class="cam-card-footer">
+                      <div class="cam-card-ident">
+                        <span class="cam-card-name">Piazzale Esterno</span>
+                        <span class="cam-card-meta" id="camCardMeta1">In attesa del segnale</span>
+                      </div>
+                      <span id="camStatusBadge1" class="cam-status-pill offline">Offline</span>
+                    </div>
+                  </button>
+
+                  <button type="button" class="cam-card" onclick="openCamModal(2)" aria-label="Ingrandisci Magazzino Interno a schermo intero">
+                    <div class="cam-card-viewport">
+                      <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
+                      <div class="camera-standby-screen" id="standbyCam2">
+                        <div class="standby-radar-ring">
+                          <div class="standby-radar-dot"></div>
+                        </div>
+                        <div class="standby-text-block">
+                          <span class="standby-title">Magazzino Interno</span>
+                          <span class="standby-sub">In attesa del segnale</span>
+                        </div>
+                      </div>
+
+                      <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
+                      <img id="streamCam2" class="camera-stream-feed" src="/api/camera/magazzino/latest.jpg" alt="Magazzino Interno in diretta">
+
+                      <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
+                    </div>
+
+                    <div class="cam-card-footer">
+                      <div class="cam-card-ident">
+                        <span class="cam-card-name">Magazzino Interno</span>
+                        <span class="cam-card-meta" id="camCardMeta2">In attesa del segnale</span>
+                      </div>
+                      <span id="camStatusBadge2" class="cam-status-pill offline">Offline</span>
+                    </div>
+                  </button>
+
+                  <button type="button" class="cam-card" onclick="openCamModal(3)" aria-label="Ingrandisci Corridoio Transito a schermo intero">
+                    <div class="cam-card-viewport">
+                      <!-- Schermata di attesa: app.js le aggiunge .feed-connected quando arriva il primo fotogramma -->
+                      <div class="camera-standby-screen" id="standbyCam3">
+                        <div class="standby-radar-ring">
+                          <div class="standby-radar-dot"></div>
+                        </div>
+                        <div class="standby-text-block">
+                          <span class="standby-title">Corridoio Transito</span>
+                          <span class="standby-sub">In attesa del segnale</span>
+                        </div>
+                      </div>
+
+                      <!-- Fotogramma da Frigate: sorgente aggiornata ogni secondo da startCamPolling() -->
+                      <img id="streamCam3" class="camera-stream-feed" src="/api/camera/corridoio/latest.jpg" alt="Corridoio Transito in diretta">
+
+                      <span class="cam-expand-hint" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></span>
+                    </div>
+
+                    <div class="cam-card-footer">
+                      <div class="cam-card-ident">
+                        <span class="cam-card-name">Corridoio Transito</span>
+                        <span class="cam-card-meta" id="camCardMeta3">In attesa del segnale</span>
+                      </div>
+                      <span id="camStatusBadge3" class="cam-status-pill offline">Offline</span>
+                    </div>
+                  </button>
+                </section>
+
+                <!-- FLOATING COMMAND DOCK -->
+                <div class="floating-dock-wrap" style="margin-top:20px; margin-bottom:24px;">
+                  <div class="floating-dock">
+                    <button id="dockFaroBtn" class="dock-action-btn btn-faro" onclick="triggerFaro()">
+                      <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="11" height="8" rx="1.5"/><path d="M13.5 8.2 20 5.5v8l-6.5-2.7"/><path d="M8 13.5v3.5"/><path d="M4.5 20.5 8 17l3.5 3.5"/></svg>
+                      <span id="dockFaroLabel">Fari Piazzale // 30s</span>
+                      <div id="dockFaroProgress" class="dock-progress-line"></div>
+                    </button>
+
+                    <button id="dockGateBtn" class="dock-action-btn btn-gate" onclick="triggerGate()">
+                      <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 7.5h11v12h-11z"/><path d="M6.2 7.5v12M9.8 7.5v12"/><path d="M2.5 13.5h11"/><path d="M16.5 13.5H21"/><path d="m18.8 11.2 2.3 2.3-2.3 2.3"/></svg>
+                      <span id="dockGateLabel">Apri Cancello // 3s</span>
+                      <div id="dockGateProgress" class="dock-progress-line"></div>
+                    </button>
+
+                    <button id="dockSirenBtn" class="dock-action-btn btn-siren" onclick="triggerVoice()">
+                      <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
+                      <span id="dockSirenLabel">Dissuasione Audio IP</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Riquadro Ultimo Identikit Forense Acquisito -->
+                <div id="wallLatestIdentikitCard" class="glass-panel" style="margin-top:20px;">
+                  <div class="panel-header-minimal">
+                    <div class="ev-head-text">
+                      <div style="display:flex; align-items:center; gap:8px;">
+                        <svg style="width:18px; height:18px; fill:var(--brand);" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        <h3 style="margin:0;">Ultimo Identikit Acquisito</h3>
+                      </div>
+                      <p class="ev-head-sub">Dossier biometrico e dinamica dei varchi generati dal motore di analisi</p>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <span id="wallIdentikitCamBadge" class="status-beacon">In attesa</span>
+                      <button type="button" class="ultra-primary-btn" onclick="openLatestIdentikit()">
+                        <svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Visualizza Scheda</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div id="wallIdentikitContent" style="display:flex; gap:16px; margin-top:16px; align-items:center; flex-wrap:wrap;">
+                    <div style="width:84px; height:84px; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-sunken); border:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="openLatestIdentikit()" title="Clicca per aprire la Scheda Identikit Forense">
+                      <img id="wallIdentikitThumb" src="assets/img/conflavoro-ai-icon-oro.svg" alt="Identikit thumbnail" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div style="flex:1; min-width:220px; font-size:13px; display:flex; flex-direction:column; gap:4px;">
+                      <div style="display:flex; align-items:center; gap:8px;">
+                        <strong id="wallIdentikitSubject" style="font-size:14px; color:var(--text-title); font-weight:700;">In attesa di transito</strong>
+                        <span id="wallIdentikitConf" style="font-size:11px; background:var(--bg-sunken); border:1px solid var(--border); color:var(--text-muted); padding:1px 6px; border-radius:var(--radius-xs); font-family:var(--font-mono);">--</span>
+                      </div>
+                      <div id="wallIdentikitTime" style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">I passaggi nel raggio delle telecamere appariranno qui</div>
+                      <div id="wallIdentikitTraj" style="font-size:12px; color:var(--text-body);">Dossier completo scaricabile in formato forense .JSON e .JPG</div>
+                      <div id="wallIdentikitOrinBadge" style="display:none; margin-top:4px;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Live Ticker Preview -->
+                <div class="glass-panel">
+                  <div class="panel-header-minimal">
+                    <div class="ev-head-text">
+                      <h3>Attività Recente</h3>
+                      <p class="ev-head-sub">Ultimi passaggi rilevati dalle telecamere</p>
+                    </div>
+                    <button class="ultra-primary-btn panel-action-btn" onclick="switchView('events')">
+                      <span>Visualizza tutto</span>
+                    </button>
+                  </div>
+
+                  <!-- Filtro indipendente da quello dell'Archivio: qui si guarda cosa
+                       sta succedendo adesso, la' si cerca un evento passato. -->
+                  <div class="ev-filter-bar">
+                    <label class="ev-filter-label" for="selWallCamera">Telecamera</label>
+                    <select id="selWallCamera" class="ultra-input ev-filter-select" onchange="setWallFilter(this.value)">
+                      <option value="all">Tutte le telecamere</option>
+                      <option value="piazzale">Piazzale Esterno</option>
+                      <option value="magazzino">Magazzino Interno</option>
+                      <option value="corridoio">Corridoio Transito</option>
+                    </select>
+                  </div>
+
+                  <div class="table-scroll-wrap">
+                    <table class="data-table-ultra">
+                      <thead>
+                        <tr>
+                          <th>Orario</th>
+                          <th>Varco</th>
+                          <th>Soggetto</th>
+                          <th>Snapshot</th>
+                          <th>Clip MP4</th>
+                        </tr>
+                      </thead>
+                      <tbody id="eventsWallTbody"></tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+      </div>
+    </section>
+    <section class="orin-window" id="win-events" data-window="events" role="dialog" aria-labelledby="win-events-title" hidden>
+      <header class="orin-window-bar">
+        <h2 class="orin-window-title" id="win-events-title">Eventi</h2>
+        <div class="orin-window-tools">
+          <button type="button" class="orin-window-btn" data-window-action="maximize" aria-pressed="false" aria-label="Ingrandisci Eventi" title="Ingrandisci"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button type="button" class="orin-window-btn" data-window-action="close" aria-label="Chiudi Eventi" title="Chiudi"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </header>
+      <div class="orin-window-body">
+              <div id="view-events" class="view-panel view-data">
+                <div class="glass-panel">
+                  <div class="panel-header-minimal">
+                    <div class="ev-head-text">
+                      <h3>Registro Eventi &amp; Registrazioni</h3>
+                      <p class="ev-head-sub">NAS Ugreen // sentinel-eventi</p>
+                    </div>
+                    <button class="ultra-primary-btn panel-action-btn ev-refresh-btn" onclick="renderEvents()">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                      <span>Aggiorna</span>
+                    </button>
+                  </div>
+          
+                  <!-- Filtro per telecamera. E' un select nativo di proposito: sul
+                       telefono apre il selettore di sistema, gia' comodo e accessibile.
+                       I valori corrispondono al campo 'camera' degli eventi di Frigate. -->
+                  <!-- Barra Filtri per Telecamera e Tipo Oggetto (Persone / Veicoli) -->
+                  <div class="ev-filter-bar" style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <label class="ev-filter-label" for="selEventCamera">Telecamera</label>
+                      <select id="selEventCamera" class="ultra-input ev-filter-select" onchange="setEventCameraFilter(this.value)">
+                        <option value="all">Tutte le telecamere</option>
+                        <option value="piazzale">Piazzale Esterno</option>
+                        <option value="magazzino">Magazzino Interno</option>
+                        <option value="corridoio">Corridoio Transito</option>
+                      </select>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <label class="ev-filter-label" for="selEventLabel">Tipo Oggetto</label>
+                      <select id="selEventLabel" class="ultra-input ev-filter-select" onchange="setEventLabelFilter(this.value)">
+                        <option value="all">Tutti i tipi</option>
+                        <option value="person">Solo Persone</option>
+                        <option value="vehicle">Solo Veicoli (Auto/Moto)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="table-scroll-wrap">
+                    <table class="data-table-ultra" style="margin-top:12px;">
+                      <thead>
+                        <tr>
+                          <th>Orario</th>
+                          <th>Telecamera</th>
+                          <th>Tipo Evento</th>
+                          <th>Confidenza</th>
+                          <th>Snapshot Evidenza</th>
+                          <th>Registrazione Video</th>
+                        </tr>
+                      </thead>
+                      <tbody id="eventsFullTbody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+      </div>
+    </section>
+    <section class="orin-window" id="win-plates" data-window="plates" role="dialog" aria-labelledby="win-plates-title" hidden>
+      <header class="orin-window-bar">
+        <h2 class="orin-window-title" id="win-plates-title">Targhe</h2>
+        <div class="orin-window-tools">
+          <button type="button" class="orin-window-btn" data-window-action="maximize" aria-pressed="false" aria-label="Ingrandisci Targhe" title="Ingrandisci"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button type="button" class="orin-window-btn" data-window-action="close" aria-label="Chiudi Targhe" title="Chiudi"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </header>
+      <div class="orin-window-body">
+              <div id="view-plates" class="view-panel view-data">
+                <div class="glass-panel">
+                  <div class="panel-header-minimal">
+                    <div class="ev-head-text">
+                      <h3>Whitelist Targhe Autorizzate</h3>
+                      <p class="ev-head-sub">I veicoli registrati aprono automaticamente il cancello carrabile tramite IA (Modbus Relè 2)</p>
+                    </div>
+                    <button class="ultra-primary-btn panel-action-btn is-add" onclick="openAddPlateModal()">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                      <span>Aggiungi Nuova Targa</span>
+                    </button>
+                  </div>
+
+                  <div class="table-scroll-wrap">
+                    <table class="data-table-ultra" style="margin-top:16px;">
+                      <thead>
+                        <tr>
+                          <th>Targa</th>
+                          <th>Intestatario</th>
+                          <th>Ruolo</th>
+                          <th>Stato</th>
+                          <th style="text-align:right;">Elimina</th>
+                        </tr>
+                      </thead>
+                      <tbody id="platesFullTbody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+      </div>
+    </section>
+    <section class="orin-window" id="win-diagnostics" data-window="diagnostics" role="dialog" aria-labelledby="win-diagnostics-title" hidden>
+      <header class="orin-window-bar">
+        <h2 class="orin-window-title" id="win-diagnostics-title">Stato della Jetson</h2>
+        <div class="orin-window-tools">
+          <button type="button" class="orin-window-btn" data-window-action="maximize" aria-pressed="false" aria-label="Ingrandisci Stato della Jetson" title="Ingrandisci"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button type="button" class="orin-window-btn" data-window-action="close" aria-label="Chiudi Stato della Jetson" title="Chiudi"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </header>
+      <div class="orin-window-body">
+              <div id="view-diagnostics" class="view-panel view-data">
+                <div class="data-split-zone">
+          
+                  <!-- Metriche HW -->
+                  <div class="glass-panel">
+                    <div class="panel-header-minimal">
+                      <h3>Hardware Jetson Orin Nano</h3>
+                      <span class="status-beacon">Operativo</span>
+                    </div>
+                    <div class="metric-list">
+                      <div class="metric-row">
+                        <span class="metric-label">Temperatura SoC (GPU/CPU)</span>
+                        <strong id="diagTemp" class="metric-value is-accent">61.0 °C (Ottimale)</strong>
+                      </div>
+                      <div class="metric-row">
+                        <span class="metric-label">Memoria Swap NVMe</span>
+                        <strong id="diagSwap" class="metric-value is-ok">4 MB / 3.8 GB (swappiness=10)</strong>
+                      </div>
+                      <div class="metric-row">
+                        <span class="metric-label">RAM Fisica in Uso</span>
+                        <strong id="diagRam" class="metric-value">4.56 GB / 7.6 GB</strong>
+                      </div>
+                      <div class="metric-row">
+                        <span class="metric-label">Potenza Assorbita (INA3221)</span>
+                        <strong id="diagPower" class="metric-value is-ok">16.0 W (Profilo 25W)</strong>
+                      </div>
+                      <div class="metric-row">
+                        <span class="metric-label">Uptime Sistema Jetson</span>
+                        <strong id="diagUptime" class="metric-value">--</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Nodi di Rete -->
+                  <div class="glass-panel">
+                    <div class="panel-header-minimal">
+                      <h3>Nodi e Periferiche di Campo</h3>
+                      <span id="diagNetworkStatus" class="status-beacon">ALL LINKED</span>
+                    </div>
+                    <div class="metric-list">
+                      <div class="metric-row">
+                        <span class="metric-label">Telecamera Piazzale Esterno</span>
+                        <span id="diagCam1Node" class="node-value is-online">192.168.1.22:554</span>
+                      </div>
+                      <div class="metric-row">
+                        <span class="metric-label">Telecamera Magazzino Interno</span>
+                        <span id="diagCam2Node" class="node-value is-online">192.168.1.20:554</span>
+                      </div>
+                      <div class="metric-row">
+                        <span class="metric-label">Telecamera Corridoio Transito</span>
+                        <span id="diagCam3Node" class="node-value is-online">192.168.1.21:554</span>
+                      </div>
+                      <div class="metric-row">
+                        <span class="metric-label">Scheda Relè Waveshare Modbus</span>
+                        <span id="diagRelayNode" class="node-value is-accent is-online">192.168.1.30:4196</span>
+                      </div>
+                      <div class="metric-row">
+                        <span class="metric-label">NAS Ugreen Storage (SMB)</span>
+                        <span id="diagNasNode" class="node-value is-online">192.168.1.11 (sentinel-eventi)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+      </div>
+    </section>
+    <section class="orin-window" id="win-settings" data-window="settings" role="dialog" aria-labelledby="win-settings-title" hidden>
+      <header class="orin-window-bar">
+        <h2 class="orin-window-title" id="win-settings-title">Impostazioni</h2>
+        <div class="orin-window-tools">
+          <button type="button" class="orin-window-btn" data-window-action="maximize" aria-pressed="false" aria-label="Ingrandisci Impostazioni" title="Ingrandisci"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button type="button" class="orin-window-btn" data-window-action="close" aria-label="Chiudi Impostazioni" title="Chiudi"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </header>
+      <div class="orin-window-body">
+              <div id="view-settings" class="view-panel view-data">
+                <div class="data-split-zone">
+
+                  <!-- Colonna 1: ORIN Assistente Vocale & Sintesi Streaming -->
+                  <div class="glass-panel">
+                    <div class="panel-header-minimal">
+                      <div class="ev-head-text">
+                        <h3>ORIN // Assistente Vocale &amp; Riconoscimento Varchi</h3>
+                        <p class="ev-head-sub">Sintesi vocale dinamica e identificazione presenze ai varchi (Gemini 2.5 Flash)</p>
+                      </div>
+                      <span id="orinStatusBeacon" class="status-beacon is-accent">ORIN Attivo</span>
+                    </div>
+
+                    <!-- Scheda Memoria Biometrica Presidente Roberto Capobianco -->
+                    <div class="orin-vip-banner">
+                      <img src="/api/orin/president_photo.jpg" class="orin-vip-avatar" alt="Dott. Roberto Capobianco" onerror="this.src='assets/img/conflavoro-ai-icon-oro.svg'">
+                      <div style="flex:1;">
+                        <span class="orin-vip-tag">Presidenza // Accesso Autorizzato</span>
+                        <div class="orin-vip-title">Dott. Roberto Capobianco</div>
+                        <p class="orin-vip-desc">Presidente Conflavoro PMI in memoria visiva permanente. Riconoscimento a distanza con accoglienza cordiale e apertura automatica cancello carraio (Relè 2).</p>
+                      </div>
+                    </div>
+
+                    <!-- Selezione Voce Carmelo / Sami -->
+                    <div style="margin-top:18px;">
+                      <label class="setting-section-label">PACCHETTO VOCALE DI DIFFUSIONE</label>
+                      <div class="voice-selector-grid">
+                
+                        <label class="voice-card-option active" id="cardVoiceCarmelo">
+                          <input type="radio" name="voicePack" value="carmelo" checked onchange="handleVoiceChange('carmelo')">
+                          <div class="voice-card-body">
+                            <div class="voice-card-header">
+                              <div class="voice-icon-badge">
+                                <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v5a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                              </div>
+                              <div>
+                                <strong class="voice-title">CARMELO</strong>
+                                <span class="voice-sub">Voce Maschile</span>
+                              </div>
+                            </div>
+                            <p class="voice-desc">Timbro profondo e cordiale: caloroso con il personale autorizzato, perentorio verso intrusioni non autorizzate.</p>
+                          </div>
+                        </label>
+
+                        <label class="voice-card-option" id="cardVoiceSami">
+                          <input type="radio" name="voicePack" value="sami" onchange="handleVoiceChange('sami')">
+                          <div class="voice-card-body">
+                            <div class="voice-card-header">
+                              <div class="voice-icon-badge">
+                                <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v5a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                              </div>
+                              <div>
+                                <strong class="voice-title">SAMI</strong>
+                                <span class="voice-sub">Voce Femminile</span>
+                              </div>
+                            </div>
+                            <p class="voice-desc">Dizione cristallina, squillante ed empatica: ideale per ambienti aziendali, presidenza e accoglienza.</p>
+                          </div>
+                        </label>
+
+                      </div>
+                    </div>
+
+                    <!-- Trasmissione Vocale Live su Diffusore Fanvil -->
+                    <div class="setting-box" style="margin-top:18px;">
+                      <label class="setting-section-label" style="margin-bottom:8px;">TRASMETTI MESSAGGIO LIVE SU DIFFUSORE FANVIL (.31)</label>
+                      <div class="orin-quick-tags" style="margin-bottom:10px;">
+                        <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura.')">
+                          <span>Saluto Presidente</span>
+                        </button>
+                        <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Attenzione, area privata Conflavoro PMI sorvegliata da Sentinel AI. Siete pregati di allontanarvi.')">
+                          <span>Avviso Dissuasione</span>
+                        </button>
+                        <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Benvenuto in Conflavoro PMI, accesso autorizzato.')">
+                          <span>Benvenuto Ospite</span>
+                        </button>
+                      </div>
+
+                      <div style="display:flex; gap:10px;">
+                        <input type="text" id="orinLiveInput" class="ultra-input" placeholder="Digita il messaggio da trasmettere sull'altoparlante..." value="Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura.">
+                        <button type="button" id="btnOrinSpeak" class="ultra-primary-btn" onclick="triggerOrinSpeak()" style="padding:9px 18px; white-space:nowrap;">
+                          <span id="orinSpeakBtnText">Parla Live</span>
+                        </button>
+                      </div>
+                      <span id="orinSpeakStatus" style="font-size:12px; color:var(--brand); display:none; margin-top:6px; font-weight:600;"></span>
+                    </div>
+
+                    <!-- Sezione Fallback Locale Offline MP3 -->
+                    <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
+                      <details style="cursor:pointer;">
+                        <summary style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; outline:none;">
+                          ▶ Fallback Locale Offline (Tracce Audio Pre-registrate MP3)
+                        </summary>
+                        <div style="margin-top:12px;">
+                          <select id="selAudioTrack" class="ultra-input" style="margin-bottom:12px; font-weight:600;" onchange="handleTrackChange()">
+                            <option value="01_accesso_consentito">01 // Accesso Consentito (Apertura Varco)</option>
+                            <option value="02_targa_autorizzata">02 // Targa Autorizzata (Apertura Cancello)</option>
+                            <option value="03_avviso_dissuasione" selected>03 // Avviso Dissuasione (Presenza nel Piazzale)</option>
+                            <option value="04_allarme_intrusione">04 // Allarme Intrusione (Violazione Orario Notturno)</option>
+                            <option value="05_targa_non_autorizzata">05 // Targa Non Autorizzata (Accesso Negato)</option>
+                            <option value="06_identikit_acquisito">06 // Identikit Biometrico Acquisito (Dissuasione Mirata)</option>
+                          </select>
+
+                          <div class="audio-player-box setting-box" style="margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                              <button type="button" id="btnPlayTrack" class="ultra-primary-btn" onclick="playRealAudioTrack()" style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; font-size:12px;">
+                                <svg id="playIconSvg" style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span id="playBtnText">Ascolta nel Browser</span>
+                              </button>
+                              <span id="playingTrackLabel" class="track-path" style="font-size:11px;">audio/carmelo/03_avviso_dissuasione.mp3</span>
+                            </div>
+                            <span id="audioPlayingIndicator" class="status-beacon is-accent" style="display:none;">In riproduzione</span>
+                          </div>
+
+                          <button type="button" class="dock-action-btn" onclick="triggerVoice()" style="font-size:11.5px; padding:7px 14px; width:100%;">
+                            <svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 20 5.5v13L3 13.5z"/><path d="M11.6 16.9a3 3 0 1 1-5.8-1.6"/></svg>
+                            <span>Trasmetti Traccia MP3 Offline su Fanvil (.31)</span>
+                          </button>
+                        </div>
+                      </details>
+                    </div>
+
+                  </div>
+
+                  <!-- Colonna 2: Parametri Audio Altoparlante & Temporizzazioni -->
+                  <div class="glass-panel">
+                    <div class="panel-header-minimal">
+                      <div class="ev-head-text">
+                        <h3>Parametri Audio & Attuatori</h3>
+                        <p class="ev-head-sub">Regolazione hardware Fanvil (.31) e Modbus Relè (.30)</p>
+                      </div>
+                      <span class="status-beacon">Hardware collegato</span>
+                    </div>
+
+                    <!-- Volume Altoparlante -->
+                    <div style="margin-top:18px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label class="setting-section-label" style="margin-bottom:0;">VOLUME DIFFUSIONE FANVIL (MULTICAST RTP)</label>
+                        <strong id="valVolume" class="setting-value is-accent">70%</strong>
+                      </div>
+                      <input type="range" id="rngVolume" min="10" max="100" value="70" class="tactical-slider" oninput="updateVolumeLabel(this.value)">
+                      <div class="slider-legend">
+                        <span>10% (Minimo)</span>
+                        <span>50% (Medio)</span>
+                        <span>100% (Massima Potenza)</span>
+                      </div>
+                    </div>
+
+                    <!-- Temporizzazione Relè (Solo Manutentore) -->
+                    <div class="maintainer-only-block" style="margin-top:22px;">
+                      <label class="setting-section-label">TEMPORIZZAZIONE ATTUATORI HARDWARE</label>
+              
+                      <div class="metric-list">
+                        <div class="metric-row">
+                          <div>
+                            <span class="metric-label is-strong">Accensione Fari Piazzale</span>
+                            <p class="metric-sub">Relè 1 Modbus TCP // 192.168.1.30:4196</p>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="number" id="numFaroSec" value="30" min="5" max="300" class="ultra-input" style="width:64px; text-align:center; font-family:var(--font-mono); font-weight:700;">
+                            <span class="unit-label">sec</span>
+                          </div>
+                        </div>
+
+                        <div class="metric-row">
+                          <div>
+                            <span class="metric-label is-strong">Impulso Cancello Carraio</span>
+                            <p class="metric-sub">Relè 2 Modbus TCP (Apertura Automatica LPR)</p>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="number" id="numGateSec" value="3" min="1" max="15" class="ultra-input" style="width:64px; text-align:center; font-family:var(--font-mono); font-weight:700;">
+                            <span class="unit-label">sec</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Salva Configurazione -->
+                    <div style="margin-top:26px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
+                      <span id="saveStatus" class="save-status" style="display:none;">Configurazione salvata</span>
+                      <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:10px 24px; font-size:13px;">Salva Impostazioni</button>
+                    </div>
+
+                  </div>
+
+                  <!-- Riquadro 2.5: Pianificazione Oraria & Modalità di Sorveglianza -->
+                  <div class="glass-panel" style="grid-column: 1 / -1; margin-top: 18px;">
+                    <div class="panel-header-minimal">
+                      <div class="ev-head-text">
+                        <h3>Pianificazione Oraria &amp; Modalità di Sorveglianza</h3>
+                        <p class="ev-head-sub">Regola gli orari di lavoro aziendali e il comportamento di allarmi, fari LED Reolink e diffusore Fanvil</p>
+                      </div>
+                      <span id="securityScheduleBadge" class="status-beacon is-accent">Modalità Automatica</span>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+                      <!-- Selettore Modalità -->
+                      <div class="setting-box">
+                        <label class="setting-section-label">MODALITÀ DI SORVEGLIANZA ATTIVA</label>
+                        <select id="selSecurityMode" class="ultra-input" style="font-weight:600; margin-bottom:8px;" onchange="handleSecurityModeChange(this.value)">
+                          <option value="auto">Automatica // Orario Lavoro + Fascia Notturna</option>
+                          <option value="armed">Armato 24/7 // Sempre Attivo (Fari LED &amp; Voce)</option>
+                          <option value="disarmed">Disarmato // Monitoraggio Silenzioso</option>
+                        </select>
+                        <span id="securityModeDesc" class="setting-hint" style="color:#aaa;">Orario di lavoro: sorveglianza silenziosa senza fari/voce. Fuori orario e weekend: deterrenza attiva istantanea.</span>
+                      </div>
+
+                      <!-- Fascia Oraria Lavorativa -->
+                      <div class="setting-box">
+                        <label class="setting-section-label">FASCIA ORARIA LAVORATIVA (LUNEDÌ — VENERDÌ)</label>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                          <div style="flex:1;">
+                            <span style="font-size:11px; color:#888; text-transform:uppercase;">Inizio Turno</span>
+                            <input type="time" id="inputWorkStart" value="08:00" class="ultra-input" style="font-family:var(--font-mono); font-weight:700; text-align:center;">
+                          </div>
+                          <span style="font-size:18px; color:#666; font-weight:bold; margin-top:14px;">—</span>
+                          <div style="flex:1;">
+                            <span style="font-size:11px; color:#888; text-transform:uppercase;">Fine Turno</span>
+                            <input type="time" id="inputWorkEnd" value="18:30" class="ultra-input" style="font-family:var(--font-mono); font-weight:700; text-align:center;">
+                          </div>
+                        </div>
+                        <span class="setting-hint">Durante queste ore gli operai e i mezzi transitano senza innescare sirene vocali o fari.</span>
+                      </div>
+
+                      <!-- Stato Attuale & Telemetria Sorveglianza -->
+                      <div class="setting-box" style="display:flex; flex-direction:column; justify-content:space-between;">
+                        <div>
+                          <label class="setting-section-label">STATO CORRENTE DECIDER</label>
+                          <div id="securityLiveStateText" style="font-weight:700; font-size:14px; color:#4fc3f7; margin-top:4px;">
+                            Calcolo stato in corso...
+                          </div>
+                          <p id="securityLiveReasonText" style="font-size:12px; color:#aaa; margin-top:4px;">
+                            Verifica parametri con il motore JEV Decider
+                          </p>
+                        </div>
+                        <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                          <span id="scheduleSaveStatus" class="save-status" style="display:none;">Orari aggiornati</span>
+                          <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:8px 18px; font-size:12px;">Salva Orari</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Riquadro 3: Gestione Credenziali & Codici PIN (Solo Manutentore) -->
+                  <div class="glass-panel maintainer-only-block" style="grid-column: 1 / -1; margin-top: 18px;">
+                    <div class="panel-header-minimal">
+                      <div class="ev-head-text">
+                        <h3>Gestione Credenziali & Codici di Accesso</h3>
+                        <p class="ev-head-sub">Configurazione del doppio PIN per accesso Cliente e Manutentore (salvataggio locale Jetson)</p>
+                      </div>
+                      <span class="status-beacon is-accent">Area riservata</span>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
+                      <div class="setting-box">
+                        <label class="setting-section-label">PIN CLIENTE (USO ORDINARIO)</label>
+                        <div style="display:flex; gap:10px;">
+                          <input type="password" id="inputClientPin" class="ultra-input" maxlength="6" value="1111" style="font-family:var(--font-mono); letter-spacing:0.2em; font-weight:700;">
+                          <button type="button" class="pin-eye-btn" onclick="togglePinVisibility('inputClientPin', this)" title="Mostra il codice" aria-label="Mostra o nascondi il codice" aria-pressed="false"><svg class="pin-eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="eye-open" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle class="eye-open" cx="12" cy="12" r="3"/><path class="eye-off" d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.1M6.5 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path class="eye-off" d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><line class="eye-off" x1="3" y1="3" x2="21" y2="21"/></svg></button>
+                        </div>
+                        <span class="setting-hint">Accesso a telecamere, allarmi, targhe e voce/volume</span>
+                      </div>
+
+                      <div class="setting-box">
+                        <label class="setting-section-label">PIN MANUTENTORE (ACCESSO TOTALE)</label>
+                        <div style="display:flex; gap:10px;">
+                          <input type="password" id="inputAdminPin" class="ultra-input" maxlength="6" value="9999" style="font-family:var(--font-mono); letter-spacing:0.2em; font-weight:700;">
+                          <button type="button" class="pin-eye-btn" onclick="togglePinVisibility('inputAdminPin', this)" title="Mostra il codice" aria-label="Mostra o nascondi il codice" aria-pressed="false"><svg class="pin-eye-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="eye-open" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle class="eye-open" cx="12" cy="12" r="3"/><path class="eye-off" d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.4 4.1M6.5 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 4.2-.9"/><path class="eye-off" d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><line class="eye-off" x1="3" y1="3" x2="21" y2="21"/></svg></button>
+                        </div>
+                        <span class="setting-hint">Accesso a telemetria, relè, rete e gestione codici</span>
+                      </div>
+                    </div>
+
+                    <div style="margin-top:18px; display:flex; justify-content:flex-end; align-items:center; gap:14px;">
+                      <span id="pinSaveStatus" class="save-status" style="display:none;">PIN aggiornati</span>
+                      <button type="button" class="ultra-primary-btn" onclick="saveNewPins()" style="padding:8px 20px; font-size:12px;">Aggiorna Codici PIN</button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Barra dei comandi scritti -->
+  <form class="orin-command" id="orinCommandForm" autocomplete="off">
+    <label class="orin-visually-hidden" for="orinCommandInput">Comando per ORIN</label>
+    <div class="orin-command-field">
+      <input type="text" id="orinCommandInput" class="orin-command-input"
+             placeholder="Scrivi cosa vuoi vedere, per esempio: piazzale" spellcheck="false">
+      <button type="submit" class="orin-command-send">Invia</button>
+    </div>
+    <div class="orin-suggestions" aria-label="Comandi rapidi">
+      <button type="button" class="orin-chip" data-command="telecamere">Telecamere</button>
+      <button type="button" class="orin-chip" data-command="piazzale">Piazzale</button>
+      <button type="button" class="orin-chip" data-command="eventi">Eventi</button>
+      <button type="button" class="orin-chip" data-command="targhe">Targhe</button>
+      <button type="button" class="orin-chip" data-command="impostazioni">Impostazioni</button>
+      <button type="button" class="orin-chip" data-command="chiudi tutto">Chiudi tutto</button>
+    </div>
+  </form>
 
   <!-- ──────────────────────────────────────────────────────────────────────────
        MODAL AGGIUNGI TARGA
@@ -952,31 +988,6 @@
     </div>
   </div>
 
-  <!-- ──────────────────────────────────────────────────────────────────────────
-       MOBILE BOTTOM NAVIGATION BAR (FORMATO TELEFONO)
-       ────────────────────────────────────────────────────────────────────────── -->
-  <nav class="mobile-bottom-nav">
-    <button class="bottom-nav-btn active" data-view="wall" title="Video Wall">
-      <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      <span>Wall</span>
-    </button>
-    <button class="bottom-nav-btn" data-view="events" title="Registro Eventi">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-      <span>Eventi</span>
-    </button>
-    <button class="bottom-nav-btn" data-view="plates" title="Whitelist LPR">
-      <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="12" r="2"/></svg>
-      <span>Targhe</span>
-    </button>
-    <button class="bottom-nav-btn maintainer-only-nav" data-view="diagnostics" title="Telemetria Edge">
-      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span>Salute</span>
-    </button>
-    <button class="bottom-nav-btn" data-view="settings" title="Audio & Impostazioni">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Audio</span>
-    </button>
-  </nav>
 
   <!-- ──────────────────────────────────────────────────────────────────────────
        MODALE AUTENTICAZIONE DOPPIO PIN (CLIENTE VS MANUTENTORE)
@@ -1032,5 +1043,8 @@
   </div>
 
   <script src="assets/app.js?v=9.9"></script>
+  <script src="assets/orin-eye.js?v=1"></script>
+  <script src="assets/orin-commands.js?v=1"></script>
+  <script src="assets/orin-shell.js?v=2"></script>
 </body>
 </html>
