@@ -826,7 +826,7 @@ def handle_frigate_review(review_data: dict):
         logger.debug("Frigate review aggregato su '%s' (severity: %s, objects: %s)", camera, severity, objects)
 
 def handle_dashboard_command(topic: str, data: dict):
-    """Gestisce i comandi manuali dalla Dashboard (instradati centralmente su AudioBus con priorità MANUAL)."""
+    """Gestisce i comandi manuali dalla Dashboard (instradati centralmente su AudioBus in thread separato)."""
     try:
         if topic == "sentinel/cmd/speaker/play":
             path = data.get("path")
@@ -834,15 +834,20 @@ def handle_dashboard_command(topic: str, data: dict):
             sound_id = data.get("sound_id", "03_avviso_dissuasione")
             audio_file = path if path and os.path.exists(path) else get_audio_path(sound_id)
             logger.info(">>> [COMANDO DASHBOARD] Riproduzione audio manuale '%s' (vol: %.0f%%) via AudioBus", os.path.basename(audio_file), volume)
-            speaker.play_audio_file(audio_file, volume_percent=volume, priority=Priority.MANUAL)
+            speaker.play_audio_file(audio_file, volume_percent=volume, priority=Priority.ALARM)
         elif topic == "sentinel/cmd/speaker/speak":
             text = str(data.get("text", "")).strip()
             voice = str(data.get("voice", "carmelo")).lower()
             volume = float(data.get("volume", 80.0))
             if text:
-                logger.info(">>> [COMANDO DASHBOARD] Sintesi vocale manuale '%s' (vol: %.0f%%) via ORIN", text[:30], volume)
-                from orin_brain import orin_brain
-                orin_brain.speak(text=text, voice_pack=voice, volume_percent=volume)
+                logger.info(">>> [COMANDO DASHBOARD] Sintesi vocale manuale '%s' (vol: %.0f%%) via ORIN (async)", text[:30], volume)
+                def _bg_speak():
+                    try:
+                        from orin_brain import orin_brain
+                        orin_brain.speak(text=text, voice_pack=voice, volume_percent=volume)
+                    except Exception as be:
+                        logger.warning("Errore sintesi manuale dashboard: %s", be)
+                threading.Thread(target=_bg_speak, name="DashboardManualSpeak", daemon=True).start()
     except Exception as e:
         logger.warning("Errore elaborazione comando dashboard: %s", e)
 

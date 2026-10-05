@@ -172,10 +172,13 @@ def send_orchestrator_cmd(topic: str, payload: dict) -> bool:
     """Invia comandi vocali all'Orchestratore via MQTT per usare l'AudioBus centralizzato."""
     try:
         import paho.mqtt.publish as publish
-        mqtt_host = os.environ.get("MQTT_HOST", "127.0.0.1")
-        mqtt_port = int(os.environ.get("MQTT_PORT", 1883))
-        publish.single(topic, json.dumps(payload), hostname=mqtt_host, port=mqtt_port)
-        logger.info("[MQTT CMD] Inoltrato comando a orchestrator su '%s'", topic)
+        mqtt_host = os.environ.get("FRIGATE_MQTT_HOST", os.environ.get("MQTT_HOST", "127.0.0.1"))
+        mqtt_port = int(os.environ.get("FRIGATE_MQTT_PORT", os.environ.get("MQTT_PORT", "1883")))
+        mqtt_user = os.environ.get("FRIGATE_MQTT_USER", "sentinel")
+        mqtt_pass = os.environ.get("FRIGATE_MQTT_PASSWORD", "")
+        auth = {"username": mqtt_user, "password": mqtt_pass} if mqtt_pass else None
+        publish.single(topic, json.dumps(payload), hostname=mqtt_host, port=mqtt_port, auth=auth)
+        logger.info("[MQTT CMD] Inoltrato comando autenticato a orchestrator su '%s'", topic)
         return True
     except Exception as e:
         logger.debug("[MQTT CMD] Impossibile inviare comando MQTT (%s): fallback su driver locale", e)

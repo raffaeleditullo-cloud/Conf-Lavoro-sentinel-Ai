@@ -258,18 +258,37 @@ class IdentikitProfiler:
         except Exception:
             pass
 
-        # Azione A: Se è il Presidente Roberto, apri il cancello carraio automaticamente!
+        # Azione A: Convalida deterministica HEXAD DEMON per apertura cancello carraio
         if orin_res.get("open_gate") or orin_res.get("is_president"):
-            logger.info(">>> [ORIN ACTION] Presidente Roberto riconosciuto al varco '%s': apertura cancello!", camera)
             try:
-                if self.relay:
-                    self.relay.apri_cancello(channel=1, impulso_secondi=3.0)
-            except Exception as e:
-                logger.warning("Impossibile azionare relè cancello per il Presidente: %s", e)
+                from demon_gate import demon_gate
+                allowed, reason = demon_gate.authorize_gate_open(camera, orin_res, is_armed)
+            except Exception:
+                allowed, reason = False, "DEMON Gate non disponibile"
+
+            if allowed:
+                logger.info(">>> [DEMON ACTION GATE: AUTORIZZATO] Apertura cancello carraio per Presidente Roberto su '%s'", camera)
+                try:
+                    if self.relay:
+                        self.relay.apri_cancello(channel=1, impulso_secondi=3.0)
+                except Exception as e:
+                    logger.warning("Impossibile azionare relè cancello per il Presidente: %s", e)
+            else:
+                logger.info(">>> [DEMON ACTION GATE: BLOCCATO] %s", reason)
 
         # Azione B: Sintesi vocale dinamica con ElevenLabs (Voce Carmelo)
         spoken_msg = orin_res.get("spoken_message")
         if spoken_msg:
+            # Verifica deterministica PEIRA sulla sicurezza e brevità del testo
+            try:
+                from demon_gate import demon_gate
+                is_valid, sanitized_msg = demon_gate.verify_spoken_thought(spoken_msg, max_words=22)
+            except Exception:
+                is_valid, sanitized_msg = True, spoken_msg
+
+            if not is_valid or not sanitized_msg:
+                sanitized_msg = spoken_msg
+
             # Se è il Presidente Roberto parla SEMPRE (accoglienza). Altrimenti, parla solo se il sistema è armato.
             should_speak = orin_res.get("is_president") or is_armed
             if should_speak:
@@ -278,7 +297,7 @@ class IdentikitProfiler:
                     if grant:
                         vol = self.get_volume() if self.get_volume else 100.0
                         v_pack = "carmelo"
-                        ok = orin_brain.speak(spoken_msg, voice_pack=v_pack, volume_percent=vol)
+                        ok = orin_brain.speak(sanitized_msg, voice_pack=v_pack, volume_percent=vol)
                         if not ok and is_armed and not grant.reflex_voiced:
                             # Sintesi fallita e nessun riflesso pronunciato: avviso registrato
                             self._play_recorded_warning(camera)
