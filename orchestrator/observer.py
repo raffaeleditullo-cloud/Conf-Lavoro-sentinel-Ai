@@ -272,6 +272,15 @@ def get_audio_path(sound_id: str) -> str:
         track_path = os.path.join(pack_folder, "03_avviso_dissuasione.mp3")
     return track_path
 
+# Inizializzazione contesto unificato per identikit_profiler (Zero duplicazioni di modulo)
+identikit_profiler.init_context(
+    speaker=speaker,
+    relay=relay,
+    cooldown_check=is_in_cooldown,
+    get_volume=get_voice_volume,
+    get_audio_path=get_audio_path
+)
+
 def is_system_armed() -> tuple:
     """
     Verifica se il sistema è in stato ARMATO (fari e voce attivi)
@@ -557,6 +566,7 @@ def handle_frigate_event(event_data: dict, topic: str):
 
             # Generazione automatica Scheda Identikit Forense
             try:
+                is_armed_now, _ = is_system_armed()
                 status_eval = "MINACCIA CONFERMATA — AZIONE DISSUASIONE ESEGUITA" if deterrence_fired else "TRANSITO IN MONITORAGGIO SILENZIOSO (Pausa Lavoro / Disarmato)"
                 profile = identikit_profiler.generate_profile(
                     event_id=event_id,
@@ -565,14 +575,15 @@ def handle_frigate_event(event_data: dict, topic: str):
                     score=score,
                     box=box,
                     snapshot_url=f"/api/events/{event_id}/snapshot.jpg",
-                    status_evaluation=status_eval
+                    status_evaluation=status_eval,
+                    is_armed=is_armed_now
                 )
                 # Pubblicazione MQTT topic dedicato per aggiornamento Dashboard
                 global _active_mqtt_client
                 if _active_mqtt_client and _active_mqtt_client.is_connected():
                     _active_mqtt_client.publish("sentinel/identikit", json.dumps(profile), qos=0)
             except Exception as e:
-                logger.debug("Avviso pubblicazione identikit: %s", e)
+                logger.warning("Avviso generazione/pubblicazione identikit: %s", e)
 
             # 3. Archiviazione Snapshot sul NAS (una sola volta per ID evento, istantanea)
             if has_snapshot and mark_snapshot_archived(event_id):
@@ -802,6 +813,7 @@ _active_mqtt_client = None
 def on_connect(client, userdata, flags, reason_code, properties):
     global _active_mqtt_client
     _active_mqtt_client = client
+    identikit_profiler.mqtt_client = client
     if not reason_code.is_failure:
         logger.info("Connessione stabilita con successo al broker MQTT (%s:%d)", MQTT_HOST, MQTT_PORT)
         client.subscribe("frigate/#", qos=0)

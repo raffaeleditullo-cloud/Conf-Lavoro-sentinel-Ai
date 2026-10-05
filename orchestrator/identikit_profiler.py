@@ -25,6 +25,29 @@ class IdentikitProfiler:
     def __init__(self, log_dir: str = "/app/logs"):
         self.log_dir = log_dir
         os.makedirs(self.log_dir, exist_ok=True)
+        self.speaker = None
+        self.relay = None
+        self.mqtt_client = None
+        self.cooldown_check = None
+        self.get_volume = None
+        self.get_audio_path = None
+
+    def init_context(
+        self,
+        speaker=None,
+        relay=None,
+        mqtt_client=None,
+        cooldown_check=None,
+        get_volume=None,
+        get_audio_path=None
+    ):
+        """Inietta i riferimenti ai controller attivi senza duplicare i moduli in runtime."""
+        self.speaker = speaker
+        self.relay = relay
+        self.mqtt_client = mqtt_client
+        self.cooldown_check = cooldown_check
+        self.get_volume = get_volume
+        self.get_audio_path = get_audio_path
 
     def generate_profile(
         self,
@@ -36,7 +59,8 @@ class IdentikitProfiler:
         trajectory_vector: tuple = None,
         snapshot_url: str = None,
         status_evaluation: str = None,
-        snapshot_bytes: bytes = None
+        snapshot_bytes: bytes = None,
+        is_armed: bool = True
     ) -> Dict[str, Any]:
         """
         Crea e salva una scheda descrittiva forense dell'evento.
@@ -87,13 +111,23 @@ class IdentikitProfiler:
             "stato_valutazione": status_evaluation or "MINACCIA CONFERMATA — AZIONE DISSVASIONE ESEGUITA"
         }
 
+        # Salva la scheda JSON su disco locale
+        filename = f"{now.strftime('%Y%m%d_%H%M%S')}_{camera}_{event_id[:8]}.json"
+        local_path = os.path.join(self.log_dir, filename)
+        try:
+            with open(local_path, "w", encoding="utf-8") as f:
+                json.dump(profile, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.debug("Impossibile salvare identikit iniziale su disco: %s", e)
+
         # Arricchimento intelligente con ORIN BRAIN (Asincrono in background)
         self._trigger_orin_enrichment_async(
             profile=profile,
             event_id=event_id,
             camera=camera,
             local_json_path=local_path,
-            snapshot_bytes=snapshot_bytes
+            snapshot_bytes=snapshot_bytes,
+            is_armed=is_armed
         )
 
         return profile
@@ -104,13 +138,14 @@ class IdentikitProfiler:
         event_id: str,
         camera: str,
         local_json_path: str,
-        snapshot_bytes: bytes = None
+        snapshot_bytes: bytes = None,
+        is_armed: bool = True
     ):
         """Avvia l'analisi visiva avanzata di ORIN in un thread separato senza bloccare il flusso principale."""
         import threading
         t = threading.Thread(
             target=self._run_orin_enrichment,
-            args=(profile, event_id, camera, local_json_path, snapshot_bytes),
+            args=(profile, event_id, camera, local_json_path, snapshot_bytes, is_armed),
             name=f"OrinEnrichment-{event_id[:8]}",
             daemon=True
         )
@@ -122,7 +157,8 @@ class IdentikitProfiler:
         event_id: str,
         camera: str,
         local_json_path: str,
-        snapshot_bytes: bytes = None
+        snapshot_bytes: bytes = None,
+        is_armed: bool = True
     ):
         """Esegue l'analisi con Gemini 2.5 Flash, gestisce l'accoglienza del Presidente e la voce dinamica."""
         try:
@@ -159,22 +195,25 @@ class IdentikitProfiler:
             logger.debug("ORIN: Nessun fotogramma disponibile per l'evento %s", event_id)
             return
 
-        # Analisi Visiva ORIN
-        orin_res = orin_brain.analyze_frame(img_data, camera=camera, is_armed=True)
+        # Analisi Visiva ORIN con stato armamento reale
+        orin_res = orin_brain.analyze_frame(img_data, camera=camera, is_armed=is_armed)
         if not orin_res or orin_res.get("fallback"):
-            # Fallback di sicurezza: se l'analisi cloud fallisce, riproduci l'avviso locale
-            try:
-                import observer
-                loc_key = observer.CAMERA_LOCATION_MAP.get(camera, camera)
-                in_global_cd = observer.is_in_cooldown("global_speaker_audio", cooldown_seconds=observer.SPEAKER_GLOBAL_COOLDOWN)
-                in_local_cd = observer.is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=observer.AUDIO_COOLDOWN)
-                if not in_global_cd and not in_local_cd:
-                    audio_file = observer.get_audio_path("03_avviso_dissuasione")
-                    vol = observer.get_voice_volume()
-                    logger.info(">>> [ORIN FALLBACK] Analisi non disponibile: avvio avviso vocale locale '%s'", os.path.basename(audio_file))
-                    observer.speaker.play_audio_file(audio_file, volume_percent=vol)
-            except Exception as e:
-                logger.warning("Errore fallback audio: %s", e)
+            # Fallback di sicurezza: se l'analisi cloud fallisce e il sistema è armato, riproduci l'avviso locale
+            if is_armed:
+                try:
+                    can_speak = True
+                    if self.cooldown_check:
+                        in_global = self.cooldown_check("global_speaker_audio", 20.0)
+                        in_local = self.cooldown_check(f"{camera}_audio", 10.0)
+                        can_speak = not in_global and not in_local
+
+                    if can_speak and self.speaker:
+                        audio_file = self.get_audio_path("03_avviso_dissuasione") if self.get_audio_path else "/app/audio/carmelo/03_avviso_dissuasione.mp3"
+                        vol = self.get_volume() if self.get_volume else 100.0
+                        logger.info(">>> [ORIN FALLBACK] Analisi non disponibile: avvio avviso vocale locale '%s'", os.path.basename(audio_file))
+                        self.speaker.play_audio_file(audio_file, volume_percent=vol)
+                except Exception as e:
+                    logger.warning("Errore fallback audio: %s", e)
             return
 
         # Aggiornamento scheda profilo
@@ -191,9 +230,15 @@ class IdentikitProfiler:
 
         # Pubblica aggiornamento via MQTT per la Dashboard
         try:
-            import observer
-            if observer._active_mqtt_client and observer._active_mqtt_client.is_connected():
-                observer._active_mqtt_client.publish("sentinel/identikit", json.dumps(profile), qos=0)
+            client = self.mqtt_client
+            if not client:
+                try:
+                    import observer
+                    client = getattr(observer, "_active_mqtt_client", None)
+                except Exception:
+                    pass
+            if client and client.is_connected():
+                client.publish("sentinel/identikit", json.dumps(profile), qos=0)
         except Exception:
             pass
 
@@ -201,33 +246,37 @@ class IdentikitProfiler:
         if orin_res.get("open_gate") or orin_res.get("is_president"):
             logger.info(">>> [ORIN ACTION] Presidente Roberto riconosciuto al varco '%s': apertura cancello!", camera)
             try:
-                import observer
-                observer.relay.apri_cancello(channel=observer.RELAY_CHANNEL_CANCELLO, impulso_secondi=3.0)
+                if self.relay:
+                    self.relay.apri_cancello(channel=1, impulso_secondi=3.0)
             except Exception as e:
                 logger.warning("Impossibile azionare relè cancello per il Presidente: %s", e)
 
         # Azione B: Sintesi vocale dinamica con ElevenLabs (Voce Carmelo)
         spoken_msg = orin_res.get("spoken_message")
         if spoken_msg:
-            try:
-                import observer
-                loc_key = observer.CAMERA_LOCATION_MAP.get(camera, camera)
-                in_global_cd = observer.is_in_cooldown("global_speaker_audio", cooldown_seconds=observer.SPEAKER_GLOBAL_COOLDOWN)
-                in_local_cd = observer.is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=observer.AUDIO_COOLDOWN)
-                if not in_global_cd and not in_local_cd:
-                    vol = observer.get_voice_volume()
-                    v_pack = "carmelo"
-                    ok = orin_brain.speak(spoken_msg, voice_pack=v_pack, volume_percent=vol)
-                    if not ok:
-                        # Fallback su file locale
-                        audio_file = observer.get_audio_path("03_avviso_dissuasione")
-                        observer.speaker.play_audio_file(audio_file, volume_percent=vol)
-                else:
-                    logger.info(">>> [ORIN VOICE] Annuncio vocale per '%s' soppresso da cooldown attivo.", camera)
-            except Exception as e:
-                logger.warning("Impossibile diffondere voce ORIN: %s", e)
+            # Se è il Presidente Roberto parla SEMPRE (accoglienza). Altrimenti, parla solo se il sistema è armato.
+            should_speak = orin_res.get("is_president") or is_armed
+            if should_speak:
+                try:
+                    can_speak = True
+                    if self.cooldown_check:
+                        in_global = self.cooldown_check("global_speaker_audio", 20.0)
+                        in_local = self.cooldown_check(f"{camera}_audio", 10.0)
+                        can_speak = not in_global and not in_local
+
+                    if can_speak:
+                        vol = self.get_volume() if self.get_volume else 100.0
+                        v_pack = "carmelo"
+                        ok = orin_brain.speak(spoken_msg, voice_pack=v_pack, volume_percent=vol)
+                        if not ok and self.speaker and is_armed:
+                            # Fallback su file locale
+                            audio_file = self.get_audio_path("03_avviso_dissuasione") if self.get_audio_path else "/app/audio/carmelo/03_avviso_dissuasione.mp3"
+                            self.speaker.play_audio_file(audio_file, volume_percent=vol)
+                    else:
+                        logger.info(">>> [ORIN VOICE] Annuncio vocale per '%s' soppresso da cooldown attivo.", camera)
+                except Exception as e:
+                    logger.warning("Impossibile diffondere voce ORIN: %s", e)
 
 
 # Istanza pronta all'uso
 identikit_profiler = IdentikitProfiler()
-
