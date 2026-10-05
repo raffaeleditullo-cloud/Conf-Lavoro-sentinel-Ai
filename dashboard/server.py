@@ -1160,6 +1160,19 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
 
         self.send_error(404, "Endpoint non trovato")
 
+class SentinelHTTPServer(ThreadingHTTPServer):
+    """
+    Server della dashboard con una coda di connessioni adeguata.
+
+    Il valore predefinito di Python e' 5 connessioni in attesa. All'apertura la
+    pagina chiede insieme HTML, fogli di stile, script, immagini e le prime API,
+    e ogni telecamera interroga il server ogni secondo: con piu' schermi aperti
+    la coda si riempie. Linux fa attendere le connessioni in eccesso, Windows le
+    rifiuta, e se la richiesta rifiutata e' app.js la pagina resta senza logica.
+    """
+    request_queue_size = 128   # letto da listen() al momento della creazione
+    daemon_threads = True
+
 def main():
     logger.info("================================================================")
     logger.info("CONF-LAVORO SENTINEL AI — DASHBOARD WEB HUB (FASE 3)")
@@ -1176,8 +1189,7 @@ def main():
         "OK" if speaker_controller else "NON DISPONIBILE"
     )
     logger.info("================================================================")
-    server = ThreadingHTTPServer(("0.0.0.0", PORT), SentinelDashboardHandler)
-    server.daemon_threads = True
+    server = SentinelHTTPServer(("0.0.0.0", PORT), SentinelDashboardHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
