@@ -1,0 +1,4 @@
+# Audio grezzo G.711 mu-law: git non deve mai convertire i finali di riga
+# (con core.autocrlf=true i byte 0x0A verrebbero alterati e l'audio corrotto).
+*.ulaw binary
+*.mp3 binary

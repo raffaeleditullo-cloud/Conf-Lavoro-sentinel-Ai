@@ -84,6 +84,26 @@ ascolta già di suo.
 > Se si sente l'annuncio, il canale è corretto e il problema è eventualmente
 > nel container (manca `ffmpeg` nell'immagine o non è attiva la rete host).
 
+### AudioBus e Riflesso L0 (voce immediata)
+
+Gli annunci non avviano più un processo `ffmpeg` ciascuno: un solo componente,
+l'**AudioBus** (`orchestrator/rtp_audio_bus.py`), trasmette direttamente i pacchetti
+RTP verso lo speaker con lo stesso formato del comando qui sopra, e decide le
+priorità (manomissione > allarmi > riflesso > frase di ORIN). Le tracce MP3 vengono
+convertite una sola volta all'avvio e restano in memoria.
+
+Al primo rilevamento a sistema armato parte il **Riflesso** (`reflex_engine.py`):
+una frase breve già pronta (es. *"Rilevata presenza. Identificazione in corso."*),
+seguita senza pause dalla frase contestuale di ORIN.
+
+| Cosa | Come |
+|------|------|
+| Generare la libreria delle frasi | `python scripts/generate_reflex_library.py` (prima `--check` per verificare il formato) |
+| Senza libreria | il Riflesso usa le tracce `03_avviso_dissuasione` / `04_allarme_intrusione` |
+| Disattivare il Riflesso | `REFLEX_ENABLED=false` nel `.env` |
+| Leggere la latenza nei log | righe `[RIFLESSO L0]` e `AudioBus: IN ONDA ... a N ms dalla richiesta` |
+| Prima parola tagliata | aumentare `FANVIL_RTP_DELAY_MS` (pre-roll di silenzio) |
+
 ---
 
 ## Struttura della cartella

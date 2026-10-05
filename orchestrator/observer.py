@@ -39,6 +39,9 @@ from nas_archiver import UgreenNASArchiver
 from jev_decider import jev_decider
 from identikit_profiler import identikit_profiler
 from reolink_spotlight import reolink_spotlight
+from voice_arbiter import VoiceArbiter
+from reflex_engine import ReflexEngine
+from rtp_audio_bus import Priority
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1. PARAMETRI DI RUNTIME
@@ -61,6 +64,10 @@ USE_REOLINK_SPOTLIGHT = os.environ.get("USE_REOLINK_SPOTLIGHT", "true").lower() 
 USE_EXTERNAL_RELAY_LIGHT = os.environ.get("USE_EXTERNAL_RELAY_LIGHT", "false").lower() in ("true", "1", "yes")
 AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "15.0"))
 SPEAKER_GLOBAL_COOLDOWN = float(os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20.0"))
+
+# Livello 0 — Riflesso immediato: frase breve gia' in RAM diffusa al primo rilevamento,
+# seguita senza pause dalla frase contestuale di ORIN (vedi reflex_engine.py).
+REFLEX_ENABLED = os.environ.get("REFLEX_ENABLED", "true").lower() in ("true", "1", "yes")
 
 # Pezzettino 1: Filtro di Buonsenso per le Sagome (stile Jev / Calibrated Decision)
 # Disabilitato di default (false) per non scartare persone reali a mezzo busto o a distanza ravvicinata nei test
@@ -272,11 +279,23 @@ def get_audio_path(sound_id: str) -> str:
         track_path = os.path.join(pack_folder, "03_avviso_dissuasione.mp3")
     return track_path
 
+# Arbitro della voce: riflesso e pensiero di ORIN non condividono piu' lo stesso cooldown.
+voice_arbiter = VoiceArbiter(local_cooldown=AUDIO_COOLDOWN, global_cooldown=SPEAKER_GLOBAL_COOLDOWN)
+
+# Livello 0 — Riflesso immediato (libreria di frasi caricata in RAM all'avvio)
+reflex = ReflexEngine(
+    bus=speaker.bus,
+    audio_base_dir=AUDIO_BASE_DIR,
+    get_voice_pack=get_voice_pack,
+    get_volume=get_voice_volume,
+    get_audio_path=get_audio_path,
+)
+
 # Inizializzazione contesto unificato per identikit_profiler (Zero duplicazioni di modulo)
 identikit_profiler.init_context(
     speaker=speaker,
     relay=relay,
-    cooldown_check=is_in_cooldown,
+    voice_arbiter=voice_arbiter,
     get_volume=get_voice_volume,
     get_audio_path=get_audio_path
 )
@@ -436,11 +455,12 @@ def is_dynamic_movement(event_id: str, box: list, event_type: str) -> bool:
             logger.warning("Avviso calcolo movimento dinamico: %s", e)
             return True
 
-def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: float = None):
+def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: float = None, persons: int = 1):
     """
     Trigger immediato deterrenza (Faretto + Voce Fanvil):
-    1. Avvio immediato audio senza attendere socket Modbus.
-    2. Cooldown locale per telecamera/zona + Cooldown GLOBALE per altoparlante (anti-eco su più camere).
+    1. Riflesso vocale immediato (Livello 0) senza attendere socket Modbus ne' cloud.
+    2. Turno vocale concesso dal VoiceArbiter (cooldown locale per zona + globale anti-eco
+       su più camere), separato dal turno della frase di ORIN che seguira'.
     3. Cronometro latenza software stampato nei log per verifica oggettiva dei millisecondi.
     4. Accensione faretto in thread separato per azzerare contese socket su MQTT loop.
     """
@@ -465,35 +485,32 @@ def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: fl
         )
         return False
 
-    # 1. Avviso Vocale Fanvil Multicast RTP immediato (prioritario)
-    in_global_cd = is_in_cooldown("global_speaker_audio", cooldown_seconds=SPEAKER_GLOBAL_COOLDOWN)
-    in_local_cd = is_in_cooldown(f"{loc_key}_audio", cooldown_seconds=AUDIO_COOLDOWN)
-
+    # 1. Voce immediata. Il turno concesso qui apre anche la finestra in cui la frase
+    #    contestuale di ORIN avra' sempre la parola (vedi voice_arbiter.py).
     try:
         from orin_brain import orin_brain
         orin_active = orin_brain.is_active()
     except Exception:
         orin_active = False
 
-    if orin_active:
-        logger.info(
-            ">>> [ORIN ACTIVE] Rilevamento su '%s' [loc: %s]%s: delega sintesi vocale contestuale ad assistente multimodale (ElevenLabs/Gemini)",
-            camera, loc_key, latency_str
-        )
-    else:
-        if not in_global_cd and not in_local_cd:
+    voiced_now = REFLEX_ENABLED or not orin_active
+    if voice_arbiter.claim_reflex(camera, loc_key, voiced=voiced_now):
+        if REFLEX_ENABLED:
+            logger.info(">>> AZIONE IMMEDIATA: riflesso vocale per '%s' [loc: %s]%s", camera, loc_key, latency_str)
+            reflex.fire(camera, persons=persons)
+        elif not orin_active:
             audio_file = get_audio_path("03_avviso_dissuasione")
             volume = get_voice_volume()
             logger.info(
                 ">>> AZIONE IMMEDIATA AUDIO (FALLBACK LOCALE): Riproduzione avviso vocale '%s' per '%s' [loc: %s]%s (multicast RTP %s:%d, volume %.0f%%)",
                 os.path.basename(audio_file), camera, loc_key, latency_str, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
             )
-            speaker.play_audio_file(audio_file, volume_percent=volume)
+            speaker.play_audio_file(audio_file, volume_percent=volume, priority=Priority.REFLEX)
         else:
-            if in_global_cd:
-                logger.info(">>> Audio dissuasione per '%s' soppresso da Cooldown Globale Speaker (%ds)", camera, int(SPEAKER_GLOBAL_COOLDOWN))
-            elif in_local_cd:
-                logger.info(">>> Audio dissuasione per '%s' [loc: %s] soppresso da Cooldown Locale (%ds)", camera, loc_key, int(AUDIO_COOLDOWN))
+            logger.info(
+                ">>> [ORIN ACTIVE] Rilevamento su '%s' [loc: %s]%s: riflesso disattivato, la voce sara' quella contestuale di ORIN",
+                camera, loc_key, latency_str
+            )
 
     # 2. Accensione Fari LED integrati Reolink (Spotlight) + opzionale Relè
     if not is_in_cooldown(f"{loc_key}_faro", cooldown_seconds=5.0):
@@ -762,11 +779,14 @@ def handle_rapid_person_topic(topic: str, payload_str: str):
     target = parts[1]
     clean_val = payload_str.strip().upper()
     is_active = False
+    persons = 1
     if clean_val in ("ON", "TRUE", "ACTIVE"):
         is_active = True
     else:
         try:
-            is_active = float(clean_val) > 0
+            count = float(clean_val)
+            is_active = count > 0
+            persons = max(1, int(count))
         except ValueError:
             pass
 
@@ -777,7 +797,7 @@ def handle_rapid_person_topic(topic: str, payload_str: str):
                 ">>> TRIGGER IMMEDIATO PERSONA: intercettato topic '%s' (payload: '%s') -> telecamera '%s' [loc: %s]",
                 topic, payload_str, cam_name, target
             )
-            trigger_person_deterrence(cam_name, zone=target)
+            trigger_person_deterrence(cam_name, zone=target, persons=persons)
         else:
             # Con il filtro proporzioni umane attivo, il trigger audio viene convalidato da frigate/events
             # che possiede le coordinate spaziali del bounding box (box) per scartare sedie e forme quadrate.
@@ -902,6 +922,10 @@ def main():
     logger.info(
         "Altoparlante Fanvil %s: MULTICAST RTP rtp://%s:%d (Pacchetto voce: '%s', volume %.0f%%)",
         SPEAKER_HOST, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, VOICE_PACK, get_voice_volume()
+    )
+    logger.info(
+        "Voce: Riflesso L0 %s | cooldown riflesso locale %ds, globale %ds | pensiero ORIN su turno separato",
+        "ATTIVO" if REFLEX_ENABLED else "DISATTIVATO", int(AUDIO_COOLDOWN), int(SPEAKER_GLOBAL_COOLDOWN)
     )
     logger.info("NAS Ugreen: %s (Condivisione: '%s', Utente: '%s')", NAS_IP, NAS_SHARE, NAS_USER)
     logger.info("════════════════════════════════════════════════════════════════════")

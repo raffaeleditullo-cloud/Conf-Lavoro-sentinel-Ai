@@ -1,0 +1,15 @@
+{
+  "_descrizione": "Frasi del Riflesso L0. Brevi (1-2 s), neutre-autorevoli: devono funzionare anche se il soggetto si rivela autorizzato, perche' la frase contestuale di ORIN segue subito dopo. stage: first|repeat, time: any|day|night, cameras: [] = tutte, min_persons: numero minimo di persone.",
+  "clips": [
+    {"id": "r01_presenza",        "text": "Rilevata presenza. Identificazione in corso.",       "stage": "first",  "time": "any",   "cameras": [],            "min_persons": 1},
+    {"id": "r02_inquadrato",      "text": "Attenzione. Sei inquadrato.",                         "stage": "first",  "time": "any",   "cameras": [],            "min_persons": 1},
+    {"id": "r03_alt_notte",       "text": "Alt. Area sorvegliata, ti vedo.",                     "stage": "first",  "time": "night", "cameras": [],            "min_persons": 1},
+    {"id": "r04_gruppo",          "text": "Rilevate più persone. Identificazione in corso.",     "stage": "first",  "time": "any",   "cameras": [],            "min_persons": 2},
+    {"id": "r05_corridoio",       "text": "Fermo. Questo passaggio è riservato.",                "stage": "first",  "time": "any",   "cameras": ["corridoio"], "min_persons": 1},
+    {"id": "r06_magazzino",       "text": "Attenzione. Area magazzino sorvegliata.",             "stage": "first",  "time": "any",   "cameras": ["magazzino"], "min_persons": 1},
+    {"id": "r07_piazzale",        "text": "Attenzione. Piazzale sotto controllo.",               "stage": "first",  "time": "any",   "cameras": ["piazzale"],  "min_persons": 1},
+    {"id": "r08_ancora_qui",      "text": "Sei ancora qui. Ultimo avviso.",                      "stage": "repeat", "time": "any",   "cameras": [],            "min_persons": 1},
+    {"id": "r09_gia_visto",       "text": "Ti ho già visto. Segnalazione inviata.",              "stage": "repeat", "time": "any",   "cameras": [],            "min_persons": 1},
+    {"id": "r10_intrusione_notte","text": "Allarme. Intrusione registrata.",                     "stage": "repeat", "time": "night", "cameras": [],            "min_persons": 1}
+  ]
+}

@@ -28,7 +28,7 @@ class IdentikitProfiler:
         self.speaker = None
         self.relay = None
         self.mqtt_client = None
-        self.cooldown_check = None
+        self.voice_arbiter = None
         self.get_volume = None
         self.get_audio_path = None
 
@@ -37,7 +37,7 @@ class IdentikitProfiler:
         speaker=None,
         relay=None,
         mqtt_client=None,
-        cooldown_check=None,
+        voice_arbiter=None,
         get_volume=None,
         get_audio_path=None
     ):
@@ -45,9 +45,26 @@ class IdentikitProfiler:
         self.speaker = speaker
         self.relay = relay
         self.mqtt_client = mqtt_client
-        self.cooldown_check = cooldown_check
+        self.voice_arbiter = voice_arbiter
         self.get_volume = get_volume
         self.get_audio_path = get_audio_path
+
+    def _claim_thought(self, camera: str):
+        """Chiede la parola all'arbitro della voce (sempre concessa se non configurato)."""
+        if self.voice_arbiter is None:
+            from voice_arbiter import ThoughtGrant
+            return ThoughtGrant(granted=True)
+        return self.voice_arbiter.claim_thought(camera)
+
+    def _play_recorded_warning(self, camera: str):
+        """Ripiego: diffonde l'avviso registrato di dissuasione con la priorita' del pensiero."""
+        if not self.speaker:
+            return
+        from rtp_audio_bus import Priority
+        audio_file = self.get_audio_path("03_avviso_dissuasione") if self.get_audio_path else "/app/audio/carmelo/03_avviso_dissuasione.mp3"
+        vol = self.get_volume() if self.get_volume else 100.0
+        logger.info(">>> [ORIN FALLBACK] Avviso vocale registrato '%s' per '%s'", os.path.basename(audio_file), camera)
+        self.speaker.play_audio_file(audio_file, volume_percent=vol, priority=Priority.THOUGHT, queue=True)
 
     def generate_profile(
         self,
@@ -198,20 +215,13 @@ class IdentikitProfiler:
         # Analisi Visiva ORIN con stato armamento reale
         orin_res = orin_brain.analyze_frame(img_data, camera=camera, is_armed=is_armed)
         if not orin_res or orin_res.get("fallback"):
-            # Fallback di sicurezza: se l'analisi cloud fallisce e il sistema è armato, riproduci l'avviso locale
+            # Fallback di sicurezza: analisi cloud fallita a sistema armato. L'avviso registrato
+            # serve solo se il riflesso non ha gia' parlato per questo rilevamento.
             if is_armed:
                 try:
-                    can_speak = True
-                    if self.cooldown_check:
-                        in_global = self.cooldown_check("global_speaker_audio", 20.0)
-                        in_local = self.cooldown_check(f"{camera}_audio", 10.0)
-                        can_speak = not in_global and not in_local
-
-                    if can_speak and self.speaker:
-                        audio_file = self.get_audio_path("03_avviso_dissuasione") if self.get_audio_path else "/app/audio/carmelo/03_avviso_dissuasione.mp3"
-                        vol = self.get_volume() if self.get_volume else 100.0
-                        logger.info(">>> [ORIN FALLBACK] Analisi non disponibile: avvio avviso vocale locale '%s'", os.path.basename(audio_file))
-                        self.speaker.play_audio_file(audio_file, volume_percent=vol)
+                    grant = self._claim_thought(camera)
+                    if grant and not grant.reflex_voiced:
+                        self._play_recorded_warning(camera)
                 except Exception as e:
                     logger.warning("Errore fallback audio: %s", e)
             return
@@ -230,13 +240,9 @@ class IdentikitProfiler:
 
         # Pubblica aggiornamento via MQTT per la Dashboard
         try:
+            # Il client viene iniettato da observer.on_connect: niente 'import observer',
+            # che ricaricherebbe una seconda copia del modulo con controller duplicati.
             client = self.mqtt_client
-            if not client:
-                try:
-                    import observer
-                    client = getattr(observer, "_active_mqtt_client", None)
-                except Exception:
-                    pass
             if client and client.is_connected():
                 client.publish("sentinel/identikit", json.dumps(profile), qos=0)
         except Exception:
@@ -258,22 +264,16 @@ class IdentikitProfiler:
             should_speak = orin_res.get("is_president") or is_armed
             if should_speak:
                 try:
-                    can_speak = True
-                    if self.cooldown_check:
-                        in_global = self.cooldown_check("global_speaker_audio", 20.0)
-                        in_local = self.cooldown_check(f"{camera}_audio", 10.0)
-                        can_speak = not in_global and not in_local
-
-                    if can_speak:
+                    grant = self._claim_thought(camera)
+                    if grant:
                         vol = self.get_volume() if self.get_volume else 100.0
                         v_pack = "carmelo"
                         ok = orin_brain.speak(spoken_msg, voice_pack=v_pack, volume_percent=vol)
-                        if not ok and self.speaker and is_armed:
-                            # Fallback su file locale
-                            audio_file = self.get_audio_path("03_avviso_dissuasione") if self.get_audio_path else "/app/audio/carmelo/03_avviso_dissuasione.mp3"
-                            self.speaker.play_audio_file(audio_file, volume_percent=vol)
+                        if not ok and is_armed and not grant.reflex_voiced:
+                            # Sintesi fallita e nessun riflesso pronunciato: avviso registrato
+                            self._play_recorded_warning(camera)
                     else:
-                        logger.info(">>> [ORIN VOICE] Annuncio vocale per '%s' soppresso da cooldown attivo.", camera)
+                        logger.info(">>> [ORIN VOICE] Annuncio vocale per '%s' soppresso: turno vocale gia' concesso.", camera)
                 except Exception as e:
                     logger.warning("Impossibile diffondere voce ORIN: %s", e)
 

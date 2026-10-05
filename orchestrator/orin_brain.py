@@ -237,13 +237,15 @@ class OrinBrain:
         text: str,
         voice_pack: str = "carmelo",
         volume_percent: float = 70.0,
-        multicast_ip: str = "239.255.1.1",
-        multicast_port: int = 5004
     ) -> bool:
         """
-        Sintetizza in tempo reale il testo con ElevenLabs (voce di Carmelo o SAMI)
-        e lo trasmette direttamente via stream Multicast RTP verso il Fanvil A233.
-        Zero salvataggio di file MP3 su disco (zero I/O overhead).
+        Sintetizza il testo con ElevenLabs (voce di Carmelo o SAMI) direttamente in
+        G.711 mu-law 8 kHz (output_format=ulaw_8000) e lo consegna all'AudioBus,
+        che lo diffonde sul Fanvil A233 senza processi ffmpeg ne' file temporanei.
+
+        La frase ha priorita' THOUGHT ed e' accodata: se il Riflesso (Livello 0)
+        e' ancora in onda, ORIN parla subito dopo, senza pause.
+        Restituisce True se l'annuncio e' stato accettato dall'AudioBus.
         """
         if not text or not text.strip():
             return False
@@ -253,119 +255,123 @@ class OrinBrain:
         if not spoken_text or not spoken_text.strip():
             spoken_text = text
 
-        # 2. Controllo Cache Locale Permanente SHA256 (0ms latenza, 0 costi ElevenLabs)
-        cache_key = hashlib.sha256(f"{voice_pack}::{spoken_text}".encode("utf-8")).hexdigest()[:20]
-        cache_file = os.path.join(AUDIO_CACHE_DIR, f"{cache_key}.mp3")
+        # 2. Cache locale permanente SHA256 (0 ms di sintesi, 0 crediti ElevenLabs)
+        audio_ulaw = self._read_voice_cache(voice_pack, spoken_text)
 
-        audio_bytes = None
-        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 100:
-            try:
-                with open(cache_file, "rb") as cf:
-                    audio_bytes = cf.read()
-                logger.info(">>> [ORIN VOICE CACHE] Riproduzione istantanea da cache locale (0ms, 0 crediti): '%s'", cache_key)
-            except Exception as e:
-                logger.debug("Impossibile leggere file di cache: %s", e)
-
-        vol_float = max(0.1, min(1.0, float(volume_percent) / 100.0))
-
-        # Avvio processo FFmpeg in streaming pipe (stdin -> RTP G.711 mu-law)
-        import subprocess
-        import shutil
-        ffmpeg_bin = shutil.which("ffmpeg") or "ffmpeg"
-
-        # adelay: 250ms per consentire l'apertura fisica del relè/amplificatore del Fanvil A233
-        # -re: pacing nativo in tempo reale (evita il buffer overflow UDP sul Fanvil)
-        # -f mp3: specifica esplicita del formato in ingresso sullo stdin
-        cmd = [
-            ffmpeg_bin,
-            "-hide_banner", "-loglevel", "warning", "-nostdin",
-            "-re",
-            "-f", "mp3",
-            "-i", "pipe:0",
-            "-af", f"adelay=250|250,volume={vol_float:.2f}",
-            "-ac", "1",
-            "-ar", "8000",
-            "-acodec", "pcm_mulaw",
-            "-payload_type", "0",
-            "-f", "rtp",
-            f"rtp://{multicast_ip}:{multicast_port}"
-        ]
-
-        # Se non è presente in cache, effettua la sintesi con ElevenLabs
-        if not audio_bytes:
-            eleven_key = os.environ.get("ELEVENLABS_API_KEY")
-            if not eleven_key:
-                secret_path = os.path.expanduser("~/.secrets/ElevenLabs Api.txt")
-                if os.path.exists(secret_path):
-                    try:
-                        with open(secret_path, "r", encoding="utf-8") as sf:
-                            eleven_key = sf.read().strip()
-                    except Exception:
-                        pass
-
-            # Se non c'è la chiave ElevenLabs e non è in cache, fallback offline
-            if not eleven_key:
-                logger.info(">>> [ORIN VOICE] ELEVENLABS_API_KEY non trovata: riproduzione traccia offline di fallback.")
+        # 3. Sintesi ElevenLabs se la frase non e' in cache
+        if not audio_ulaw:
+            audio_ulaw = self._synthesize_ulaw(spoken_text, voice_pack, volume_percent)
+            if not audio_ulaw:
                 return False
+            self._write_voice_cache(voice_pack, spoken_text, audio_ulaw)
 
-            # Mappatura voci ufficiali Conflavoro
-            voices = {
-                "carmelo": "HuK8QKF35exsCh2e7fLT",  # Carmelo La Rosa (Autorevole, calda)
-                "sami": "Ap2b3ZnSIW7h0QbBbxCq"       # Alessandra (Elegante, perentoria)
-            }
-            voice_id = voices.get(voice_pack.lower(), voices["carmelo"])
-            tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
+        # 4. Diffusione tramite AudioBus (unico proprietario dell'altoparlante)
+        from rtp_audio_bus import Priority, get_audio_bus
+        return get_audio_bus().play(
+            audio_ulaw,
+            priority=Priority.THOUGHT,
+            label=f"ORIN:{voice_pack}",
+            volume_percent=volume_percent,
+            queue=True,
+        )
 
-            try:
-                logger.info(">>> [ORIN VOICE] Avvio sintesi ElevenLabs (%s) -> '%s' (vol: %.0f%%)", voice_pack, spoken_text, volume_percent)
-                payload = {
-                    "text": spoken_text,
-                    "model_id": "eleven_turbo_v2_5",
-                    "voice_settings": {
-                        "stability": 0.70,
-                        "similarity_boost": 0.85
-                    }
-                }
+    @staticmethod
+    def _voice_cache_key(voice_pack: str, spoken_text: str) -> str:
+        return hashlib.sha256(f"{voice_pack}::{spoken_text}".encode("utf-8")).hexdigest()[:20]
 
-                req = urllib.request.Request(
-                    tts_url,
-                    data=json.dumps(payload).encode("utf-8"),
-                    headers={
-                        "xi-api-key": eleven_key,
-                        "Content-Type": "application/json",
-                        "Accept": "audio/mpeg"
-                    }
-                )
-
-                # Scarica l'audio completo da ElevenLabs in RAM (~300-500ms)
-                with urllib.request.urlopen(req, timeout=8.0) as resp:
-                    audio_bytes = resp.read()
-
-                if not audio_bytes:
-                    logger.warning(">>> [ORIN VOICE] Nessun dato audio ricevuto da ElevenLabs.")
-                    return False
-
-                # Salva in cache permanente per le prossime volte (0 costi futuri)
-                try:
-                    with open(cache_file, "wb") as cf:
-                        cf.write(audio_bytes)
-                    logger.info(">>> [ORIN VOICE CACHE] Salvato nuovo audio in cache locale: '%s'", cache_key)
-                except Exception as ce:
-                    logger.debug("Impossibile salvare cache audio: %s", ce)
-
-            except Exception as e:
-                logger.warning(">>> [ORIN VOICE] Errore streaming ElevenLabs: %s (uso fallback locale)", e)
-                return False
-
-        # Trasmissione FFmpeg a velocità naturale verso Fanvil RTP
+    def _read_voice_cache(self, voice_pack: str, spoken_text: str) -> Optional[bytes]:
+        """Legge la frase dalla cache mu-law; converte una sola volta le vecchie voci MP3."""
+        from ulaw_audio import ensure_ulaw
+        key = self._voice_cache_key(voice_pack, spoken_text)
+        ulaw_file = os.path.join(AUDIO_CACHE_DIR, f"{key}.ulaw")
+        legacy_mp3 = os.path.join(AUDIO_CACHE_DIR, f"{key}.mp3")
         try:
-            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-            proc.communicate(input=audio_bytes, timeout=45.0)
-            logger.info(">>> [ORIN VOICE] Trasmessa con successo su Fanvil RTP %s:%d", multicast_ip, multicast_port)
-            return True
+            if os.path.exists(ulaw_file) and os.path.getsize(ulaw_file) > 100:
+                with open(ulaw_file, "rb") as cf:
+                    audio = cf.read()
+                logger.info(">>> [ORIN VOICE CACHE] Frase pronta da cache locale (0 crediti): '%s'", key)
+                return audio
+            if os.path.exists(legacy_mp3) and os.path.getsize(legacy_mp3) > 100:
+                with open(legacy_mp3, "rb") as cf:
+                    audio = ensure_ulaw(cf.read(), declared="mp3", source=legacy_mp3)
+                if audio:
+                    self._write_voice_cache(voice_pack, spoken_text, audio)
+                    logger.info(">>> [ORIN VOICE CACHE] Voce MP3 storica convertita in mu-law: '%s'", key)
+                return audio
         except Exception as e:
-            logger.warning(">>> [ORIN VOICE] Errore streaming FFmpeg verso Fanvil: %s", e)
-            return False
+            logger.debug("Impossibile leggere la cache vocale: %s", e)
+        return None
+
+    def _write_voice_cache(self, voice_pack: str, spoken_text: str, audio_ulaw: bytes):
+        key = self._voice_cache_key(voice_pack, spoken_text)
+        try:
+            with open(os.path.join(AUDIO_CACHE_DIR, f"{key}.ulaw"), "wb") as cf:
+                cf.write(audio_ulaw)
+            logger.info(">>> [ORIN VOICE CACHE] Salvata nuova frase in cache locale: '%s'", key)
+        except Exception as ce:
+            logger.debug("Impossibile salvare cache audio: %s", ce)
+
+    @staticmethod
+    def _synthesize_ulaw(spoken_text: str, voice_pack: str, volume_percent: float) -> Optional[bytes]:
+        """Sintesi ElevenLabs in mu-law 8 kHz grezzo (il formato nativo del Fanvil)."""
+        from ulaw_audio import ensure_ulaw
+
+        eleven_key = os.environ.get("ELEVENLABS_API_KEY")
+        if not eleven_key:
+            secret_path = os.path.expanduser("~/.secrets/ElevenLabs Api.txt")
+            if os.path.exists(secret_path):
+                try:
+                    with open(secret_path, "r", encoding="utf-8") as sf:
+                        eleven_key = sf.read().strip()
+                except Exception:
+                    pass
+        if not eleven_key:
+            logger.info(">>> [ORIN VOICE] ELEVENLABS_API_KEY non trovata: riproduzione traccia offline di fallback.")
+            return None
+
+        # Mappatura voci ufficiali Conflavoro
+        voices = {
+            "carmelo": "HuK8QKF35exsCh2e7fLT",  # Carmelo La Rosa (Autorevole, calda)
+            "sami": "Ap2b3ZnSIW7h0QbBbxCq"       # Alessandra (Elegante, perentoria)
+        }
+        voice_id = voices.get(voice_pack.lower(), voices["carmelo"])
+        tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?output_format=ulaw_8000"
+
+        try:
+            t0 = time.time()
+            logger.info(">>> [ORIN VOICE] Avvio sintesi ElevenLabs (%s) -> '%s' (vol: %.0f%%)", voice_pack, spoken_text, volume_percent)
+            payload = {
+                "text": spoken_text,
+                "model_id": "eleven_turbo_v2_5",
+                "voice_settings": {
+                    "stability": 0.70,
+                    "similarity_boost": 0.85
+                }
+            }
+            req = urllib.request.Request(
+                tts_url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "xi-api-key": eleven_key,
+                    "Content-Type": "application/json",
+                    "Accept": "*/*"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=8.0) as resp:
+                raw = resp.read()
+
+            audio_ulaw = ensure_ulaw(raw, declared="ulaw", source="ElevenLabs")
+            if not audio_ulaw:
+                logger.warning(">>> [ORIN VOICE] Nessun dato audio valido ricevuto da ElevenLabs.")
+                return None
+            logger.info(
+                ">>> [ORIN VOICE] Sintesi completata in %.0f ms (%.1f s di audio mu-law)",
+                (time.time() - t0) * 1000.0, len(audio_ulaw) / 8000.0
+            )
+            return audio_ulaw
+        except Exception as e:
+            logger.warning(">>> [ORIN VOICE] Errore sintesi ElevenLabs: %s (uso fallback locale)", e)
+            return None
 
 
 # Istanza singleton globale
