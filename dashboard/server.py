@@ -165,9 +165,21 @@ reolink_spotlight = None
 try:
     from reolink_spotlight import reolink_spotlight as _reolink_spotlight
     reolink_spotlight = _reolink_spotlight
-    logger.info("[HARDWARE] ReolinkSpotlightController caricato con successo.")
-except Exception as _rl_err:
-    logger.warning("[HARDWARE] ReolinkSpotlightController non caricato da %s: %s", DRIVERS_DIR, _rl_err)
+except Exception:
+    pass
+
+def send_orchestrator_cmd(topic: str, payload: dict) -> bool:
+    """Invia comandi vocali all'Orchestratore via MQTT per usare l'AudioBus centralizzato."""
+    try:
+        import paho.mqtt.publish as publish
+        mqtt_host = os.environ.get("MQTT_HOST", "127.0.0.1")
+        mqtt_port = int(os.environ.get("MQTT_PORT", 1883))
+        publish.single(topic, json.dumps(payload), hostname=mqtt_host, port=mqtt_port)
+        logger.info("[MQTT CMD] Inoltrato comando a orchestrator su '%s'", topic)
+        return True
+    except Exception as e:
+        logger.debug("[MQTT CMD] Impossibile inviare comando MQTT (%s): fallback su driver locale", e)
+        return False
 
 def get_jetson_metrics():
     """Legge la telemetria reale da sysfs, /proc/meminfo e /proc/uptime su Jetson Orin Nano."""
@@ -929,6 +941,17 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 pack, track, audio_path, fanvil_multicast_ip, fanvil_multicast_port, volume
             )
 
+            # 1. Inoltro prioritario via MQTT all'AudioBus dell'orchestratore (evita sovrapposizioni)
+            if send_orchestrator_cmd("sentinel/cmd/speaker/play", {
+                "path": audio_path, "volume": volume, "sound_id": track, "pack": pack
+            }):
+                self._send_json({
+                    "success": True, "action": "voice", "pack": pack, "track": track,
+                    "volume": volume, "transport": "mqtt-audiobus",
+                    "target": f"rtp://{fanvil_multicast_ip}:{fanvil_multicast_port}"
+                })
+                return
+
             if speaker_controller is None:
                 logger.error("Comando vocale ignorato: driver altoparlante non caricato.")
                 self._send_json({
@@ -1100,6 +1123,14 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 text = str(data.get("text", "")).strip()
                 voice = str(data.get("voice", "carmelo")).lower()
                 volume = float(data.get("volume", 70))
+                # 1. Inoltro prioritario via MQTT all'AudioBus centralizzato
+                if send_orchestrator_cmd("sentinel/cmd/speaker/speak", {
+                    "text": text, "voice": voice, "volume": volume
+                }):
+                    self._send_json({"success": True, "spoken_text": text, "voice": voice, "transport": "mqtt-audiobus"})
+                    return
+
+                # Fallback su driver locale
                 sys.path.insert(0, DRIVERS_DIR)
                 from orin_brain import orin_brain
                 ok = orin_brain.speak(text=text, voice_pack=voice, volume_percent=volume)

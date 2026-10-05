@@ -825,6 +825,27 @@ def handle_frigate_review(review_data: dict):
     if "person" in objects or severity == "alert":
         logger.debug("Frigate review aggregato su '%s' (severity: %s, objects: %s)", camera, severity, objects)
 
+def handle_dashboard_command(topic: str, data: dict):
+    """Gestisce i comandi manuali dalla Dashboard (instradati centralmente su AudioBus con priorità MANUAL)."""
+    try:
+        if topic == "sentinel/cmd/speaker/play":
+            path = data.get("path")
+            volume = float(data.get("volume", 80.0))
+            sound_id = data.get("sound_id", "03_avviso_dissuasione")
+            audio_file = path if path and os.path.exists(path) else get_audio_path(sound_id)
+            logger.info(">>> [COMANDO DASHBOARD] Riproduzione audio manuale '%s' (vol: %.0f%%) via AudioBus", os.path.basename(audio_file), volume)
+            speaker.play_audio_file(audio_file, volume_percent=volume, priority=Priority.MANUAL)
+        elif topic == "sentinel/cmd/speaker/speak":
+            text = str(data.get("text", "")).strip()
+            voice = str(data.get("voice", "carmelo")).lower()
+            volume = float(data.get("volume", 80.0))
+            if text:
+                logger.info(">>> [COMANDO DASHBOARD] Sintesi vocale manuale '%s' (vol: %.0f%%) via ORIN", text[:30], volume)
+                from orin_brain import orin_brain
+                orin_brain.speak(text=text, voice_pack=voice, volume_percent=volume)
+    except Exception as e:
+        logger.warning("Errore elaborazione comando dashboard: %s", e)
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 5. CALLBACK MQTT
 # ──────────────────────────────────────────────────────────────────────────────
@@ -836,8 +857,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
     identikit_profiler.mqtt_client = client
     if not reason_code.is_failure:
         logger.info("Connessione stabilita con successo al broker MQTT (%s:%d)", MQTT_HOST, MQTT_PORT)
-        client.subscribe("frigate/#", qos=0)
-        logger.info("Sentinel AI Orchestrator attivo su 'frigate/#' — decision engine operativo.")
+        client.subscribe([("frigate/#", 0), ("sentinel/cmd/#", 0)])
+        logger.info("Sentinel AI Orchestrator attivo su 'frigate/#' e 'sentinel/cmd/#' — decision engine operativo.")
     else:
         logger.error("Fallimento connessione al broker MQTT (%s:%d): %s", MQTT_HOST, MQTT_PORT, reason_code)
 
@@ -890,6 +911,8 @@ def on_message(client, userdata, msg):
                     handle_lpr_update(parsed_json)
                 elif topic == "frigate/stats":
                     handle_frigate_stats(parsed_json)
+                elif topic.startswith("sentinel/cmd/"):
+                    handle_dashboard_command(topic, parsed_json)
 
             else:
                 record["type"] = "text"

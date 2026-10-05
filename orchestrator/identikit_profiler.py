@@ -31,6 +31,7 @@ class IdentikitProfiler:
         self.voice_arbiter = None
         self.get_volume = None
         self.get_audio_path = None
+        self._analyzed_events = set()
 
     def init_context(
         self,
@@ -159,6 +160,15 @@ class IdentikitProfiler:
         is_armed: bool = True
     ):
         """Avvia l'analisi visiva avanzata di ORIN in un thread separato senza bloccare il flusso principale."""
+        # Deduplicazione: analizza ogni event_id una sola volta, evitando chiamate cloud duplicate per update continui
+        if not event_id:
+            return
+        if event_id in self._analyzed_events:
+            return
+        self._analyzed_events.add(event_id)
+        if len(self._analyzed_events) > 2000:
+            self._analyzed_events.clear()
+
         import threading
         t = threading.Thread(
             target=self._run_orin_enrichment,

@@ -7,3 +7,6 @@
 pymodbus==3.8.3
 # requests: Apache-2.0 (altoparlante Fanvil A233 e proxy API Frigate)
 requests==2.32.3
+# paho-mqtt: Dual EPL-2.0 / EDL-1.0 (inoltro comandi audio centralizzati all'AudioBus dell'orchestratore)
+paho-mqtt==2.1.0
+

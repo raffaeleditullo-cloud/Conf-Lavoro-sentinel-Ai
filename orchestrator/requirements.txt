@@ -7,3 +7,8 @@ pymodbus==3.8.3
 requests==2.32.3
 # smbprotocol: MIT (per connessione diretta e sicura SMB v2/v3 al NAS Ugreen senza bisogno di mount root di sistema)
 smbprotocol==1.15.0
+# Pillow: HPND (ottimizzazione e ridimensionamento immagini per modelli VLM OpenRouter)
+Pillow>=10.0.0
+# websockets: BSD-3-Clause (streaming ultra-low latency verso ElevenLabs)
+websockets>=12.0
+
