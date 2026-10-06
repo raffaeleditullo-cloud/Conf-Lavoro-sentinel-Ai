@@ -50,6 +50,13 @@ const CASI = [
   ['accendi la luce del piazzale', { tipo: 'azione', azione: 'faro' }],
   ['manda l\'avviso', { tipo: 'azione', azione: 'voce' }],
   ['dissuasione', { tipo: 'azione', azione: 'voce' }],
+  ['riprodurre solo al piazzale', { tipo: 'azione', azione: 'voce', telecamera: 1 }],
+  ['riproduci al piazzale', { tipo: 'azione', azione: 'voce', telecamera: 1 }],
+  ['trasmetti al piazzale', { tipo: 'azione', azione: 'voce', telecamera: 1 }],
+  ['parla al piazzale', { tipo: 'azione', azione: 'voce', telecamera: 1 }],
+  ['audio piazzale', { tipo: 'azione', azione: 'voce', telecamera: 1 }],
+  ['trasmettere a una cam', { tipo: 'scelta-varco', azione: 'voce' }],
+  ['parla: varco chiuso', { tipo: 'parla-testo', testo: 'varco chiuso' }],
   ['apri il cancello', { tipo: 'azione', azione: 'cancello', conferma: true }],
 
   // Altro

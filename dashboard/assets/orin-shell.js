@@ -923,14 +923,20 @@
   let pttSeconds = 0;
   let isPttRecording = false;
 
+  let pttStream = null;
+  let pttRecorder = null;
+  let pttChunks = [];
+  let pttSpeechRec = null;
+
   const chatMicBtn = $('btnChatMic');
   const chatInput = $('orinCommandInput');
   let originalPlaceholder = chatInput ? chatInput.placeholder : 'Scrivi cosa vuoi vedere o cosa dire al varco...';
 
-  function startPttRecording() {
+  async function startPttRecording() {
     if (isPttRecording) return;
     isPttRecording = true;
     pttSeconds = 0;
+    pttChunks = [];
     if (pttBtn) pttBtn.classList.add('is-active');
     if (chatMicBtn) chatMicBtn.classList.add('is-recording');
 
@@ -958,9 +964,57 @@
         chatInput.placeholder = `🔴 In trasmissione audio (${m}:${s})... Parla pure`;
       }
     }, 1000);
+
+    // 1. Acquisizione reale stream microfono dal browser
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        pttStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+        let mimeType = 'audio/webm;codecs=opus';
+        if (typeof MediaRecorder !== 'undefined') {
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = MediaRecorder.isTypeSupported('audio/webm')
+              ? 'audio/webm'
+              : (MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg' : '');
+          }
+          pttRecorder = mimeType ? new MediaRecorder(pttStream, { mimeType }) : new MediaRecorder(pttStream);
+          pttRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) pttChunks.push(e.data);
+          };
+          pttRecorder.start(100);
+        }
+      } catch (err) {
+        console.warn('[Sentinel PTT] Accesso microfono negato o non disponibile:', err);
+        say('Permesso microfono non concesso dal browser. Assicurati di aver consentito l\'accesso.', { alert: true });
+      }
+    }
+
+    // 2. Riconoscimento vocale simultaneo per trascrizione se supportato
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRec) {
+      try {
+        pttSpeechRec = new SpeechRec();
+        pttSpeechRec.lang = 'it-IT';
+        pttSpeechRec.continuous = true;
+        pttSpeechRec.interimResults = true;
+        pttSpeechRec.onresult = (evt) => {
+          let trans = '';
+          for (let i = evt.resultIndex; i < evt.results.length; ++i) {
+            trans += evt.results[i][0].transcript;
+          }
+          if (trans.trim() && chatInput) {
+            chatInput.value = trans.trim();
+          }
+        };
+        pttSpeechRec.start();
+      } catch (e) {
+        pttSpeechRec = null;
+      }
+    }
   }
 
-  function stopPttRecording() {
+  async function stopPttRecording() {
     if (!isPttRecording) return;
     isPttRecording = false;
     if (pttInterval) {
@@ -981,9 +1035,82 @@
     if (pttLabel) pttLabel.textContent = 'PREMI E PARLA';
     if (pttTimer) pttTimer.style.display = 'none';
 
+    if (pttSpeechRec) {
+      try { pttSpeechRec.stop(); } catch (e) {}
+      pttSpeechRec = null;
+    }
+
+    const recordedSeconds = Math.max(1, pttSeconds);
     const target = $('selPttTarget') ? $('selPttTarget').value : 'fanvil';
     const targetLabel = target === 'fanvil' ? 'tutti i varchi' : target;
-    say(`Messaggio vocale (${pttSeconds}s) trasmesso a ${targetLabel} sull'altoparlante Fanvil.`);
+
+    // Se il registratore era attivo e ha catturato audio
+    if (pttRecorder && pttRecorder.state !== 'inactive') {
+      pttRecorder.onstop = async () => {
+        if (pttStream) {
+          pttStream.getTracks().forEach((t) => t.stop());
+          pttStream = null;
+        }
+
+        if (pttChunks.length === 0) {
+          say('Nessun suono registrato dal microfono.');
+          return;
+        }
+
+        const mime = pttRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(pttChunks, { type: mime });
+        pttChunks = [];
+
+        say(`Diffusione vocale (${recordedSeconds}s) in corso verso ${targetLabel} sull'altoparlante Fanvil...`);
+
+        try {
+          const res = await fetch(`/api/speaker/live_audio?seconds=${recordedSeconds}&target=${encodeURIComponent(target)}`, {
+            method: 'POST',
+            body: audioBlob,
+            headers: { 'Content-Type': mime }
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.success) {
+            say(`Voce diffusa con successo sull'altoparlante Fanvil (${data.duration_sec || recordedSeconds}s).`);
+            if (chatInput) chatInput.value = '';
+          } else {
+            say(`Errore diffusione voce: ${data.error || 'Server non raggiungibile'}`, { alert: true });
+          }
+        } catch (err) {
+          say(`Errore di rete trasmissione audio: ${err.message}`, { alert: true });
+        }
+      };
+
+      try {
+        pttRecorder.stop();
+      } catch (err) {
+        console.warn('[Sentinel PTT] Errore stop recorder:', err);
+      }
+    } else {
+      // Fallback: se il microfono non era disponibile ma l'utente ha scritto o dettato del testo
+      const fallbackText = chatInput ? chatInput.value.trim() : '';
+      if (fallbackText) {
+        say(`Diffusione vocale del testo: "${fallbackText}"...`);
+        try {
+          const res = await fetch('/api/orin/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: fallbackText, voice: 'carmelo', volume: 80 })
+          });
+          const d = await res.json().catch(() => ({}));
+          if (res.ok && d.success) {
+            say(`Messaggio vocale diffuso sull'altoparlante: "${fallbackText}".`);
+            chatInput.value = '';
+          } else {
+            say(`Errore sintesi vocale: ${d.error || 'errore server'}`, { alert: true });
+          }
+        } catch (e) {
+          say(`Errore trasmissione: ${e.message}`, { alert: true });
+        }
+      } else {
+        say('Microfono non attivo o permesso negato. Controlla i permessi audio del browser.', { alert: true });
+      }
+    }
   }
 
   if (pttBtn) {
@@ -1149,11 +1276,37 @@
         closeEverything();
         say(r.risposta);
         return;
+      case 'scelta-varco':
+        say(r.risposta, { actions: r.azioni });
+        return;
+      case 'parla-testo':
+        say(r.risposta);
+        fetch('/api/orin/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: r.testo, voice: 'carmelo', volume: 80 })
+        }).then(res => res.json()).then(data => {
+          if (data && data.success) {
+            say(`Messaggio vocale diffuso sull'altoparlante: "${r.testo}".`);
+          } else {
+            say(`Errore sintesi vocale: ${data ? data.error : 'server non raggiungibile'}`, { alert: true });
+          }
+        }).catch(err => {
+          say(`Errore trasmissione: ${err.message}`, { alert: true });
+        });
+        return;
       case 'azione':
         if (r.conferma) {
           pendingConfirm = r.azione;
           say(r.risposta, { actions: [{ label: 'Sì, apri', command: 'si' }, { label: 'Annulla', command: 'no' }] });
         } else {
+          if (r.telecamera) {
+            const camNames = { 1: 'piazzale', 2: 'magazzino', 3: 'corridoio' };
+            const camKey = camNames[r.telecamera] || 'piazzale';
+            if (r.azione === 'faro' || r.azione === 'voce') {
+              fetch(`/api/spotlight/${camKey}`, { method: 'POST' }).catch(() => {});
+            }
+          }
           runActuator(r.azione, r.risposta);
         }
         return;

@@ -25,8 +25,8 @@
   const VOCABOLARIO = {
     // id = numero usato da openCamModal(n) nella dashboard
     telecamere: [
-      { id: 1, nome: 'il piazzale', parole: ['piazzale', 'esterno', 'parcheggio', 'ingresso', 'cortile'] },
-      { id: 2, nome: 'il magazzino', parole: ['magazzino', 'capannone', 'interno', 'scaffali', 'deposito'] },
+      { id: 1, nome: 'il piazzale', parole: ['piazzale', 'esterno', 'parcheggio', 'ingresso', 'cortile', 'carrabile'] },
+      { id: 2, nome: 'il magazzino', parole: ['magazzino', 'capannone', 'interno', 'scaffali', 'deposito', 'pedonale'] },
       { id: 3, nome: 'il corridoio', parole: ['corridoio', 'passaggio', 'transito'] }
     ],
     numeri: {
@@ -42,12 +42,17 @@
       diagnostics: { titolo: 'lo stato della Jetson', parole: ['diagnostica', 'telemetria', 'jetson', 'hardware', 'temperatura', 'salute'] },
       settings: { titolo: 'le impostazioni', parole: ['impostazioni', 'impostazione', 'configurazione', 'audio', 'volume', 'voce', 'voci', 'orari', 'orario', 'pin', 'sorveglianza'] },
       connectors: { titolo: 'i connettori cloud', parole: ['connettori', 'connettore', 'cloud', 'google', 'drive', 'integrazioni', 'collegamenti', 'nodi'] },
-      ptt: { titolo: "l'interfono vocale", parole: ['microfono', 'interfono', 'registratore', 'parla', 'parlare', 'citofono', 'voce live'] }
+      ptt: { titolo: "l'interfono vocale", parole: ['microfono', 'interfono', 'registratore', 'citofono', 'voce live'] }
     },
     identikit: ['identikit', 'scheda', 'dossier'],
     azioni: {
       faro: ['faro', 'fari', 'luce', 'luci', 'faretto', 'faretti', 'illumina'],
-      voce: ['dissuasione', 'dissuadi', 'avviso', 'sirena', 'annuncio', 'altoparlante'],
+      voce: [
+        'dissuasione', 'dissuadi', 'avviso', 'avvisa', 'sirena', 'annuncio', 'annuncia',
+        'altoparlante', 'cassa', 'audio', 'riproduci', 'riprodurre', 'riproduzione',
+        'trasmetti', 'trasmettere', 'trasmissione', 'diffondi', 'diffondere', 'suona', 'suonare',
+        'parla', 'parlare', 'comunica', 'comunicare'
+      ],
       cancello: ['cancello', 'portone', 'sbarra']
     },
     blocca: ['blocca', 'esci', 'logout', 'disconnetti'],
@@ -59,13 +64,14 @@
     conferma: ['si', 'confermo', 'conferma', 'ok', 'procedi', 'vai'],
     // Parole che non cambiano il significato del comando
     vuote: [
-      'il', 'lo', 'la', 'l', 'i', 'gli', 'le', 'un', 'di', 'del', 'dello', 'della', 'dei', 'degli', 'delle',
+      'il', 'lo', 'la', 'l', 'i', 'gli', 'le', 'un', 'una', 'uno', 'di', 'del', 'dello', 'della', 'dei', 'degli', 'delle',
       'al', 'allo', 'alla', 'ai', 'agli', 'alle', 'sul', 'sulla', 'nel', 'nella', 'da', 'dal', 'dalla',
       'per', 'favore', 'piacere', 'mi', 'me', 'ti', 'ci', 'fammi', 'fai', 'puoi', 'potresti', 'vorrei',
       'voglio', 'apri', 'aprimi', 'mostra', 'mostrami', 'vedere', 'vedi', 'visualizza', 'guarda',
       'inquadra', 'dammi', 'metti', 'su', 'e', 'a', 'in', 'con', 'ora', 'adesso', 'subito', 'orin',
       'ehi', 'ciao', 'grazie', 'accendi', 'attiva', 'lancia', 'manda', 'fai', 'partire', 'quella',
-      'quello', 'questa', 'questo', 'che', 'cosa', 'come', 'va', 'sei', 'tutto', 'ok'
+      'quello', 'questa', 'questo', 'che', 'cosa', 'come', 'va', 'sei', 'tutto', 'ok',
+      'solo', 'soltanto', 'solamente', 'varco', 'varchi'
     ]
   };
 
@@ -197,6 +203,18 @@
     const finestra = trovaFinestra(token);
     const azione = trovaAzione(token);
 
+    // Sintesi vocale diretta o dettatura da diffondere ("parla: ...", "dì: ...", "annuncia: ...")
+    const matchParla = String(testo || '').match(/^(?:parla|di|dì|annuncia)\s*[:]\s*(.+)$/i) ||
+                       String(testo || '').match(/^(?:parla|di|dì|annuncia)\s+(?:a\s+tutti\s+|sul\s+fanvil\s+)?(?:che|di)\s+(.+)$/i);
+    if (matchParla && matchParla[1].trim()) {
+      const msg = matchParla[1].trim();
+      return {
+        tipo: 'parla-testo',
+        testo: msg,
+        risposta: `Trasmetto l'annuncio vocale: "${msg}"`
+      };
+    }
+
     if (chiudere) {
       if (azione === 'cancello') {
         return { tipo: 'risposta', risposta: 'Il cancello si richiude da solo dopo l\'impulso.' };
@@ -217,9 +235,40 @@
       };
     }
     if (azione === 'faro') {
+      if (telecamera) {
+        return {
+          tipo: 'azione',
+          azione: 'faro',
+          telecamera: telecamera.id,
+          targetNome: telecamera.nome,
+          risposta: `Accendo i fari per ${telecamera.nome}.`
+        };
+      }
       return { tipo: 'azione', azione: 'faro', risposta: 'Accendo i fari del piazzale.' };
     }
     if (azione === 'voce') {
+      if (telecamera) {
+        return {
+          tipo: 'azione',
+          azione: 'voce',
+          telecamera: telecamera.id,
+          targetNome: telecamera.nome,
+          risposta: `Mando l'avviso vocale per ${telecamera.nome}.`
+        };
+      }
+      if (!telecamera && contiene(token, VOCABOLARIO.nomiTelecamera)) {
+        return {
+          tipo: 'scelta-varco',
+          azione: 'voce',
+          risposta: 'Su quale telecamera vuoi trasmettere? Scegli Piazzale, Magazzino o Corridoio.',
+          azioni: [
+            { label: 'Piazzale', command: 'riproduci al piazzale' },
+            { label: 'Magazzino', command: 'riproduci al magazzino' },
+            { label: 'Corridoio', command: 'riproduci al corridoio' },
+            { label: 'Tutti i varchi', command: 'manda l\'avviso' }
+          ]
+        };
+      }
       return { tipo: 'azione', azione: 'voce', risposta: 'Mando l\'avviso sull\'altoparlante.' };
     }
 

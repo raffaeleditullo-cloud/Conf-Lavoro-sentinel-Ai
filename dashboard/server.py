@@ -19,7 +19,7 @@ import socket
 import logging
 import sqlite3
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1003,6 +1003,68 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 "target": f"rtp://{fanvil_multicast_ip}:{fanvil_multicast_port}"
             })
             return
+
+        elif parsed.path == "/api/speaker/live_audio":
+            try:
+                query_params = parse_qs(parsed.query)
+                vol_param = query_params.get("volume", [str(fanvil_default_volume)])[0]
+                try:
+                    volume = float(vol_param)
+                except ValueError:
+                    volume = fanvil_default_volume
+                volume = max(0.0, min(100.0, volume))
+
+                if len(body) < 100:
+                    logger.warning("[LIVE PTT] Flusso audio vuoto o troppo breve (%d byte)", len(body))
+                    self._send_json({"success": False, "error": "Registrazione audio troppo breve (meno di 100 byte)"}, status=400)
+                    return
+
+                logger.info("[LIVE PTT] Ricevuti %d byte di audio live da diffondere sul Fanvil A233", len(body))
+
+                # Conversione immediata via ffmpeg in G.711 mu-law 8 kHz mono (formato nativo Fanvil)
+                ulaw_bytes = None
+                try:
+                    sys.path.insert(0, DRIVERS_DIR)
+                    from ulaw_audio import _ffmpeg_to_ulaw
+                    ulaw_bytes = _ffmpeg_to_ulaw("pipe:0", stdin_data=body)
+                except Exception as fe:
+                    logger.error("[LIVE PTT] Errore decodifica ffmpeg per live audio: %s", fe)
+
+                if not ulaw_bytes or len(ulaw_bytes) == 0:
+                    logger.error("[LIVE PTT] Impossibile convertire l'audio live in formato mu-law 8 kHz")
+                    self._send_json({"success": False, "error": "Decodifica audio fallita (ffmpeg)"}, status=500)
+                    return
+
+                # Diffusione RTP immediata via AudioBus (thread-safe, senza ritardi)
+                try:
+                    from rtp_audio_bus import Priority, get_audio_bus
+                    bus = get_audio_bus(fanvil_multicast_ip, fanvil_multicast_port)
+                    duration_s = round(len(ulaw_bytes) / 8000.0, 2)
+                    ok = bus.play(
+                        ulaw_bytes,
+                        priority=Priority.MANUAL,
+                        label=f"Live PTT ({duration_s}s)",
+                        volume_percent=volume,
+                        queue=False
+                    )
+                    logger.info(">>> [LIVE PTT] Trasmessi %.2fs di voce mu-law (%d byte) su rtp://%s:%d (esito: %s)",
+                                duration_s, len(ulaw_bytes), fanvil_multicast_ip, fanvil_multicast_port, ok)
+                    self._send_json({
+                        "success": ok,
+                        "duration_sec": duration_s,
+                        "bytes_pcm": len(ulaw_bytes),
+                        "target": f"rtp://{fanvil_multicast_ip}:{fanvil_multicast_port}",
+                        "volume": volume
+                    })
+                    return
+                except Exception as be:
+                    logger.error("[LIVE PTT] Errore trasmissione su AudioBus: %s", be)
+                    self._send_json({"success": False, "error": f"Errore AudioBus: {be}"}, status=500)
+                    return
+            except Exception as e:
+                logger.error("[LIVE PTT] Eccezione gestore live audio: %s", e)
+                self._send_json({"success": False, "error": str(e)}, status=500)
+                return
 
         elif parsed.path == "/api/plates":
             try:
