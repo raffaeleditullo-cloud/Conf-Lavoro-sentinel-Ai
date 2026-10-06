@@ -544,13 +544,21 @@
   let pttSeconds = 0;
   let isPttRecording = false;
 
+  const chatMicBtn = $('btnChatMic');
+  const chatInput = $('orinCommandInput');
+  let originalPlaceholder = chatInput ? chatInput.placeholder : 'Scrivi cosa vuoi vedere o cosa dire al varco...';
+
   function startPttRecording() {
     if (isPttRecording) return;
     isPttRecording = true;
     pttSeconds = 0;
     if (pttBtn) pttBtn.classList.add('is-active');
-    const dockPtt = $('dockBtnPtt');
-    if (dockPtt) dockPtt.classList.add('is-recording');
+    if (chatMicBtn) chatMicBtn.classList.add('is-recording');
+
+    if (chatInput) {
+      originalPlaceholder = chatInput.placeholder;
+      chatInput.placeholder = '🔴 In trasmissione audio... Parla pure (rilascia per inviare)';
+    }
 
     if (pttBeacon) {
       pttBeacon.textContent = 'IN TRASMISSIONE DIRETTA';
@@ -567,6 +575,9 @@
       const m = String(Math.floor(pttSeconds / 60)).padStart(2, '0');
       const s = String(pttSeconds % 60).padStart(2, '0');
       if (pttTimer) pttTimer.textContent = `${m}:${s}`;
+      if (chatInput) {
+        chatInput.placeholder = `🔴 In trasmissione audio (${m}:${s})... Parla pure`;
+      }
     }, 1000);
   }
 
@@ -578,8 +589,11 @@
       pttInterval = null;
     }
     if (pttBtn) pttBtn.classList.remove('is-active');
-    const dockPtt = $('dockBtnPtt');
-    if (dockPtt) dockPtt.classList.remove('is-recording');
+    if (chatMicBtn) chatMicBtn.classList.remove('is-recording');
+
+    if (chatInput) {
+      chatInput.placeholder = originalPlaceholder;
+    }
 
     if (pttBeacon) {
       pttBeacon.textContent = 'Pronto alla trasmissione';
@@ -589,7 +603,8 @@
     if (pttTimer) pttTimer.style.display = 'none';
 
     const target = $('selPttTarget') ? $('selPttTarget').value : 'fanvil';
-    say(`Messaggio vocale (${pttSeconds}s) trasmesso a ${target === 'fanvil' ? 'tutti i varchi' : target}.`);
+    const targetLabel = target === 'fanvil' ? 'tutti i varchi' : target;
+    say(`Messaggio vocale (${pttSeconds}s) trasmesso a ${targetLabel} sull'altoparlante Fanvil.`);
   }
 
   if (pttBtn) {
@@ -602,7 +617,18 @@
     pttBtn.addEventListener('pointerleave', stopPttRecording);
   }
 
-  // Supporto Spacebar per Push-to-Talk quando win-ptt è aperto
+  // Supporto microfono integrato nella barra di ricerca
+  if (chatMicBtn) {
+    chatMicBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startPttRecording();
+    });
+    chatMicBtn.addEventListener('pointerup', stopPttRecording);
+    chatMicBtn.addEventListener('pointercancel', stopPttRecording);
+    chatMicBtn.addEventListener('pointerleave', stopPttRecording);
+  }
+
+  // Supporto Spacebar per Push-to-Talk quando win-ptt è aperto o si tiene premuto
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !e.repeat) {
       const pttWin = $('win-ptt');

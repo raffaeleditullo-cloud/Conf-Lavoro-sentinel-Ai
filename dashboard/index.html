@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Roboto:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/styles.css?v=9.9">
-  <link rel="stylesheet" href="assets/orin.css?v=3">
+  <link rel="stylesheet" href="assets/orin.css?v=4">
 </head>
 <body class="orin">
 
@@ -58,70 +58,103 @@
       </div>
     </div>
 
-    <!-- Gruppo Applicazioni Principali (Squircle Icons stile smartphone) -->
+    <!-- Gruppo Applicazioni Principali (Icone Applicazione stile iOS / iPadOS) -->
     <div class="dock-apps">
-      <!-- 1. Telecamere Live (CCTV Wall) -->
-      <button type="button" class="dock-app-btn" id="dockBtnWall" data-app="wall" title="Telecamere Live (CCTV Wall)" aria-label="Telecamere Live">
-        <div class="dock-app-icon">
-          <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <!-- 1. App Telecamere Live -->
+      <button type="button" class="dock-app-btn app-wall" id="dockBtnWall" data-app="wall"
+              data-tooltip-title="Telecamere Live 4K"
+              data-tooltip-desc="Muro video dei varchi in tempo reale: Piazzale, Magazzino e Corridoio"
+              aria-label="Telecamere Live">
+        <div class="dock-app-tile">
+          <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="3" ry="3"/></svg>
         </div>
         <span class="dock-app-label">Cam</span>
         <span class="dock-active-indicator"></span>
+        <div class="dock-tooltip">
+          <strong class="tooltip-title">Telecamere Live 4K</strong>
+          <span class="tooltip-desc">Muro video dei varchi in tempo reale: Piazzale, Magazzino e Corridoio.</span>
+        </div>
       </button>
 
-      <!-- 2. Registro Eventi & Registrazioni -->
-      <button type="button" class="dock-app-btn" id="dockBtnEvents" data-app="events" title="Registro Eventi & Video NAS" aria-label="Registro Eventi">
-        <div class="dock-app-icon">
-          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <!-- 2. App Registro Eventi & Video NAS -->
+      <button type="button" class="dock-app-btn app-events" id="dockBtnEvents" data-app="events"
+              data-tooltip-title="Registro Eventi &amp; NAS"
+              data-tooltip-desc="Archivio registrazioni video MP4 e snapshot biometrici salvati su NAS Ugreen"
+              aria-label="Registro Eventi">
+        <div class="dock-app-tile">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         </div>
         <span class="dock-app-label">Eventi</span>
         <span class="dock-active-indicator"></span>
+        <div class="dock-tooltip">
+          <strong class="tooltip-title">Registro Eventi &amp; NAS</strong>
+          <span class="tooltip-desc">Archivio registrazioni video MP4 e snapshot salvati su storage NAS Ugreen.</span>
+        </div>
       </button>
 
-      <!-- 3. Whitelist Targhe Autorizzate -->
-      <button type="button" class="dock-app-btn" id="dockBtnPlates" data-app="plates" title="Whitelist Targhe Autorizzate" aria-label="Whitelist Targhe">
-        <div class="dock-app-icon">
-          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="7" cy="12" r="1.5"/><circle cx="17" cy="12" r="1.5"/><path d="M10 10h4v4h-4z"/></svg>
+      <!-- 3. App Whitelist Targhe Autorizzate -->
+      <button type="button" class="dock-app-btn app-plates" id="dockBtnPlates" data-app="plates"
+              data-tooltip-title="Whitelist Targhe LPR"
+              data-tooltip-desc="Elenco veicoli autorizzati con apertura automatica del cancello carrabile"
+              aria-label="Whitelist Targhe">
+        <div class="dock-app-tile">
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="7.5" cy="12" r="1.5"/><circle cx="16.5" cy="12" r="1.5"/><path d="M10.5 10h3v4h-3z"/></svg>
         </div>
         <span class="dock-app-label">Targhe</span>
         <span class="dock-active-indicator"></span>
+        <div class="dock-tooltip">
+          <strong class="tooltip-title">Whitelist Targhe LPR</strong>
+          <span class="tooltip-desc">Elenco veicoli autorizzati con apertura automatica del cancello carrabile.</span>
+        </div>
       </button>
 
-      <!-- 4. Connettori Cloud & Integrazioni -->
-      <button type="button" class="dock-app-btn" id="dockBtnConnectors" data-app="connectors" title="Connettori Cloud & Google" aria-label="Connettori Cloud">
-        <div class="dock-app-icon">
+      <!-- 4. App Connettori Cloud & Integrazioni -->
+      <button type="button" class="dock-app-btn app-connectors" id="dockBtnConnectors" data-app="connectors"
+              data-tooltip-title="Connettori Cloud &amp; Rete"
+              data-tooltip-desc="Stato sincronizzazione Google Drive, NAS SMB, bus MQTT e relè Modbus"
+              aria-label="Connettori Cloud">
+        <div class="dock-app-tile">
           <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
         </div>
         <span class="dock-app-label">Cloud</span>
         <span class="dock-active-indicator"></span>
-      </button>
-
-      <!-- 5. Registratore / Microfono Live Altoparlante (Push-to-Talk) -->
-      <button type="button" class="dock-app-btn is-ptt" id="dockBtnPtt" data-app="ptt" title="Interfono Live Altoparlante (Push-to-Talk)" aria-label="Microfono Live">
-        <div class="dock-app-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <div class="dock-tooltip">
+          <strong class="tooltip-title">Connettori Cloud &amp; Rete</strong>
+          <span class="tooltip-desc">Stato di sincronizzazione Google Drive, storage NAS, MQTT e relè Modbus.</span>
         </div>
-        <span class="dock-app-label">Voce</span>
-        <span class="dock-active-indicator"></span>
       </button>
 
-      <!-- 6. Impostazioni & Orari -->
-      <button type="button" class="dock-app-btn" id="dockBtnSettings" data-app="settings" title="Impostazioni & Pianificazione Oraria" aria-label="Impostazioni">
-        <div class="dock-app-icon">
+      <!-- 5. App Impostazioni & Orari -->
+      <button type="button" class="dock-app-btn app-settings" id="dockBtnSettings" data-app="settings"
+              data-tooltip-title="Impostazioni &amp; Sorveglianza"
+              data-tooltip-desc="Pacchetti vocali, volume diffusore Fanvil, orari di lavoro e codici PIN"
+              aria-label="Impostazioni">
+        <div class="dock-app-tile">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </div>
         <span class="dock-app-label">Config</span>
         <span class="dock-active-indicator"></span>
+        <div class="dock-tooltip">
+          <strong class="tooltip-title">Impostazioni &amp; Sorveglianza</strong>
+          <span class="tooltip-desc">Regolazione volume diffusore Fanvil, orari lavorativi e gestione PIN.</span>
+        </div>
       </button>
     </div>
 
     <!-- Tasto Esc / Uscita in basso -->
     <div class="dock-footer">
-      <button type="button" class="dock-app-btn is-exit" id="dockBtnLock" data-app="lock" title="Blocca Sessione (Esc)" aria-label="Blocca Sessione">
-        <div class="dock-app-icon">
+      <button type="button" class="dock-app-btn is-exit app-lock" id="dockBtnLock" data-app="lock"
+              data-tooltip-title="Blocca Sessione (Esc)"
+              data-tooltip-desc="Chiudi tutte le finestre aperte e torna al tastierino di sicurezza PIN"
+              aria-label="Blocca Sessione">
+        <div class="dock-app-tile">
           <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </div>
         <span class="dock-app-label">Esc</span>
+        <div class="dock-tooltip">
+          <strong class="tooltip-title">Blocca Sessione (Esc)</strong>
+          <span class="tooltip-desc">Chiudi tutte le finestre e torna al tastierino di sicurezza PIN.</span>
+        </div>
       </button>
     </div>
   </nav>
@@ -1149,8 +1182,14 @@
     <label class="orin-visually-hidden" for="orinCommandInput">Comando per ORIN</label>
     <div class="orin-command-field">
       <input type="text" id="orinCommandInput" class="orin-command-input"
-             placeholder="Scrivi cosa vuoi vedere, per esempio: piazzale" spellcheck="false">
-      <button type="submit" class="orin-command-send">Invia</button>
+             placeholder="Scrivi cosa vuoi vedere o cosa dire al varco..." spellcheck="false">
+      <div class="orin-command-actions">
+        <button type="submit" class="orin-command-send">Invia</button>
+        <button type="button" class="orin-command-mic" id="btnChatMic"
+                title="Tieni premuto per parlare dall'altoparlante della telecamera" aria-label="Microfono Live">
+          <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+      </div>
     </div>
     <div class="orin-suggestions" aria-label="Comandi rapidi">
       <button type="button" class="orin-chip" data-command="telecamere">Telecamere</button>
@@ -1405,6 +1444,6 @@
   <script src="assets/app.js?v=9.9"></script>
   <script src="assets/orin-eye.js?v=1"></script>
   <script src="assets/orin-commands.js?v=2"></script>
-  <script src="assets/orin-shell.js?v=3"></script>
+  <script src="assets/orin-shell.js?v=4"></script>
 </body>
 </html>
