@@ -1082,7 +1082,8 @@
             say(`Voce diffusa con successo sull'altoparlante Fanvil (${data.duration_sec || recordedSeconds}s).`);
             if (chatInput) chatInput.value = '';
           } else {
-            say(`Errore diffusione voce: ${data.error || 'Server non raggiungibile'}`, { alert: true });
+            const errDetail = data.error || (res.status === 404 ? 'Endpoint non attivo: riavviare container sentinel_dashboard' : `Errore HTTP ${res.status}`);
+            say(`Errore diffusione voce: ${errDetail}`, { alert: true });
           }
         } catch (err) {
           say(`Errore di rete trasmissione audio: ${err.message}`, { alert: true });
