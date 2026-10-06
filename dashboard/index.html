@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Roboto:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/styles.css?v=9.9">
-  <link rel="stylesheet" href="assets/orin.css?v=11">
+  <link rel="stylesheet" href="assets/orin.css?v=12">
 </head>
 <body class="orin">
 
@@ -188,7 +188,7 @@
         </div>
         <div class="snap-bar-presets">
           <!-- Preset 1: 50 / 50 Affiancate -->
-          <div class="snap-preset-col" title="Affianca 50 / 50">
+          <div class="snap-preset-col" data-preset="split-2" title="Affianca 50 / 50">
             <span class="snap-col-tag">50 / 50</span>
             <div class="snap-box-wrap split-2">
               <div class="snap-slot" data-snap-target="half-left"><span>SX</span></div>
@@ -196,7 +196,7 @@
             </div>
           </div>
           <!-- Preset 2: 4 Quadranti -->
-          <div class="snap-preset-col" title="Griglia a 4 Finestre">
+          <div class="snap-preset-col" data-preset="split-4" title="Griglia a 4 Finestre">
             <span class="snap-col-tag">4 Riquadri</span>
             <div class="snap-box-wrap split-4">
               <div class="snap-slot" data-snap-target="quad-tl"><span>TL</span></div>
@@ -206,7 +206,7 @@
             </div>
           </div>
           <!-- Preset 3: 6 Finestre -->
-          <div class="snap-preset-col" title="Griglia a 6 Finestre contemporanee">
+          <div class="snap-preset-col" data-preset="split-6" title="Griglia a 6 Finestre contemporanee">
             <span class="snap-col-tag">6 Finestre</span>
             <div class="snap-box-wrap split-6">
               <div class="snap-slot" data-snap-target="grid-6-1"><span>1</span></div>
@@ -218,7 +218,7 @@
             </div>
           </div>
           <!-- Preset 4: Tutto Schermo -->
-          <div class="snap-preset-col is-single" title="A Tutto Schermo">
+          <div class="snap-preset-col is-single" data-preset="split-1" title="A Tutto Schermo">
             <span class="snap-col-tag">Intero</span>
             <div class="snap-box-wrap split-1">
               <div class="snap-slot full" data-snap-target="full"><span>Max</span></div>
@@ -1460,6 +1460,6 @@
   <script src="assets/app.js?v=9.9"></script>
   <script src="assets/orin-eye.js?v=1"></script>
   <script src="assets/orin-commands.js?v=2"></script>
-  <script src="assets/orin-shell.js?v=7"></script>
+  <script src="assets/orin-shell.js?v=8"></script>
 </body>
 </html>

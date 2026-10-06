@@ -109,7 +109,12 @@
       win.hidden = false;
       win.classList.remove('is-minimized');
       updateRoom();
-      placeWindow(win);
+
+      const placedInLayout = autoPlaceInActiveLayout(win);
+      if (!placedInLayout) {
+        placeWindow(win);
+      }
+
       const eyeBox = $('orinEyeStage').getBoundingClientRect();
       const box = win.getBoundingClientRect();
       win.style.setProperty('--orin-origin',
@@ -120,6 +125,9 @@
       }
     } else if (win.classList.contains('is-minimized')) {
       win.classList.remove('is-minimized');
+      if (!win.dataset.currentSlot || !getWindowInSlot(win.dataset.currentSlot)) {
+        autoPlaceInActiveLayout(win);
+      }
     }
     focusWindow(win);
     updateRoom();
@@ -129,6 +137,7 @@
   function minimizeWindow(key) {
     const win = $(`win-${key}`);
     if (!win || win.hidden) return false;
+    win.dataset.currentSlot = '';
     win.classList.add('is-minimized');
     win.classList.remove('is-focused');
     if (eyeState.focus === win) eyeState.focus = null;
@@ -141,6 +150,8 @@
   function closeWindow(key) {
     const win = $(`win-${key}`);
     if (!win || win.hidden) return false;
+    win.dataset.currentSlot = '';
+    win.dataset.currentLayout = '';
     win.hidden = true;
     win.classList.remove('is-focused');
     win.classList.remove('is-minimized');
@@ -152,7 +163,12 @@
   }
 
   function closeEverything() {
-    windows.forEach((w) => closeWindow(w.dataset.window));
+    currentActiveLayout = null;
+    windows.forEach((w) => {
+      w.dataset.currentSlot = '';
+      w.dataset.currentLayout = '';
+      closeWindow(w.dataset.window);
+    });
     if (typeof expandedCamId !== 'undefined' && expandedCamId !== null) closeCamModal();
     const identikit = $('identikitModal');
     if (identikit && identikit.classList.contains('open')) closeIdentikitModal();
@@ -259,6 +275,137 @@
     focusWindow(win);
   }
 
+  const WIN_LABELS = {
+    'wall': 'Cam',
+    'events': 'Eventi',
+    'plates': 'Targhe',
+    'connectors': 'Cloud',
+    'settings': 'Config',
+    'diagnostics': 'Jetson',
+    'ptt': 'Voce'
+  };
+
+  const SNAP_LAYOUTS = {
+    'split-2': {
+      id: 'split-2',
+      name: '50 / 50 Affiancate',
+      capacity: 2,
+      slots: ['half-left', 'half-right'],
+      slotLabels: { 'half-left': 'SX', 'half-right': 'DX' }
+    },
+    'split-4': {
+      id: 'split-4',
+      name: '4 Quadranti',
+      capacity: 4,
+      slots: ['quad-tl', 'quad-tr', 'quad-bl', 'quad-br'],
+      slotLabels: { 'quad-tl': 'TL', 'quad-tr': 'TR', 'quad-bl': 'BL', 'quad-br': 'BR' }
+    },
+    'split-6': {
+      id: 'split-6',
+      name: '6 Finestre',
+      capacity: 6,
+      slots: ['grid-6-1', 'grid-6-2', 'grid-6-3', 'grid-6-4', 'grid-6-5', 'grid-6-6'],
+      slotLabels: { 'grid-6-1': '1', 'grid-6-2': '2', 'grid-6-3': '3', 'grid-6-4': '4', 'grid-6-5': '5', 'grid-6-6': '6' }
+    },
+    'split-1': {
+      id: 'split-1',
+      name: 'Intero',
+      capacity: 1,
+      slots: ['full'],
+      slotLabels: { 'full': 'Max' }
+    }
+  };
+
+  let currentActiveLayout = null; // memorizza la struttura scelta (es. 'split-6')
+
+  function getLayoutBySlot(slotTarget) {
+    if (!slotTarget) return null;
+    if (slotTarget.startsWith('half-')) return SNAP_LAYOUTS['split-2'];
+    if (slotTarget.startsWith('quad-')) return SNAP_LAYOUTS['split-4'];
+    if (slotTarget.startsWith('grid-6-')) return SNAP_LAYOUTS['split-6'];
+    if (slotTarget === 'full') return SNAP_LAYOUTS['split-1'];
+    return null;
+  }
+
+  function getWindowInSlot(slotTarget) {
+    if (!slotTarget) return null;
+    return windows.find(w => !w.hidden && !w.classList.contains('is-minimized') && w.dataset.currentSlot === slotTarget) || null;
+  }
+
+  function getDefaultSlotLabel(slotTarget) {
+    const layout = getLayoutBySlot(slotTarget);
+    if (layout && layout.slotLabels && layout.slotLabels[slotTarget]) {
+      return layout.slotLabels[slotTarget];
+    }
+    return '+';
+  }
+
+  // Posiziona automaticamente una finestra appena aperta nel primo slot libero della struttura attiva
+  function autoPlaceInActiveLayout(win) {
+    if (!currentActiveLayout) return false;
+    const layout = SNAP_LAYOUTS[currentActiveLayout];
+    if (!layout) return false;
+
+    for (const slot of layout.slots) {
+      const occ = getWindowInSlot(slot);
+      if (!occ || occ === win) {
+        win.dataset.currentLayout = layout.id;
+        win.dataset.currentSlot = slot;
+        snapWindow(win, slot);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Applica una struttura a tutte le finestre aperte, adattandole automaticamente (stile Windows 11)
+  function applyLayoutWithWindow(primaryWin, primarySlot) {
+    if (!primaryWin || !primarySlot) return;
+
+    const targetLayout = getLayoutBySlot(primarySlot);
+    if (!targetLayout) {
+      if (primarySlot === 'full') {
+        currentActiveLayout = 'split-1';
+        primaryWin.dataset.currentLayout = 'split-1';
+        primaryWin.dataset.currentSlot = 'full';
+        snapWindow(primaryWin, 'full');
+      }
+      return;
+    }
+
+    currentActiveLayout = targetLayout.id;
+
+    // Tutte le finestre aperte e non ridotte a icona
+    const openWins = openWindows().filter(w => !w.classList.contains('is-minimized'));
+    const otherWins = openWins.filter(w => w !== primaryWin);
+
+    // 1. Assegna lo slot primario scelto alla finestra primaria
+    primaryWin.dataset.currentLayout = targetLayout.id;
+    primaryWin.dataset.currentSlot = primarySlot;
+    snapWindow(primaryWin, primarySlot);
+
+    // 2. Prepara gli slot rimanenti di questo layout
+    const availableSlots = targetLayout.slots.filter(s => s !== primarySlot);
+
+    // 3. Adatta automaticamente tutte le altre finestre aperte alla nuova struttura
+    otherWins.forEach((w) => {
+      if (availableSlots.length > 0) {
+        const nextSlot = availableSlots.shift();
+        w.dataset.currentLayout = targetLayout.id;
+        w.dataset.currentSlot = nextSlot;
+        snapWindow(w, nextSlot);
+      } else {
+        // Se le finestre aperte superano la capienza della struttura scelta (es. 5 aperte ma scelta 50/50):
+        // vengono ridotte a icona nella dock mantenendo l'indicatore di attività acceso
+        w.dataset.currentSlot = '';
+        minimizeWindow(w.dataset.window);
+      }
+    });
+
+    say(`Struttura ${targetLayout.name} applicata a ${openWins.length} finestre.`);
+    syncDockIndicators();
+  }
+
   function getLayoutRect(layout) {
     const area = layer.getBoundingClientRect();
     const W = area.width;
@@ -285,7 +432,7 @@
   const snapGhost = $('orinSnapGhost');
   let activeSnapTarget = null;
 
-  function showGhost(layout) {
+  function showGhost(layout, targetWin, occupiedWin) {
     if (!snapGhost) return;
     const rect = getLayoutRect(layout);
     if (!rect) {
@@ -296,17 +443,75 @@
     snapGhost.style.top = `${rect.top}px`;
     snapGhost.style.width = `${rect.width}px`;
     snapGhost.style.height = `${rect.height}px`;
+
+    const targetName = targetWin ? (WIN_LABELS[targetWin.dataset.window] || targetWin.dataset.window) : '';
+    let ghostHtml = '';
+    if (targetName) {
+      if (occupiedWin && occupiedWin !== targetWin) {
+        const occName = WIN_LABELS[occupiedWin.dataset.window] || occupiedWin.dataset.window;
+        ghostHtml = `<div class="ghost-badge is-swap">Sposta <strong>${targetName}</strong> qui <span class="ghost-swap">(scambia con ${occName})</span></div>`;
+      } else {
+        ghostHtml = `<div class="ghost-badge">Posiziona <strong>${targetName}</strong> qui</div>`;
+      }
+    }
+    snapGhost.innerHTML = ghostHtml;
     snapGhost.classList.add('is-active');
   }
 
   function hideGhost() {
     if (!snapGhost) return;
     snapGhost.classList.remove('is-active');
+    snapGhost.innerHTML = '';
   }
 
-  function openSnapBar() {
-    if (snapBar && !snapBar.classList.contains('is-visible')) {
-      snapBar.classList.add('is-visible');
+  // Aggiorna lo stato visivo degli slot nella barra Snap: mostra le finestre già posizionate e gli slot liberi
+  function renderSnapBarState(draggedWin) {
+    if (!snapBar) return;
+
+    // Evidenzia la colonna preset del layout attualmente attivo
+    snapBar.querySelectorAll('.snap-preset-col').forEach(col => {
+      const preset = col.dataset.preset;
+      col.classList.toggle('is-active-layout', Boolean(preset && preset === currentActiveLayout));
+    });
+
+    // Per ogni slot, mostra se è occupato da una finestra o libero
+    snapBar.querySelectorAll('.snap-slot').forEach(slot => {
+      const target = slot.dataset.snapTarget;
+      if (!target) return;
+
+      const span = slot.querySelector('span');
+      const occupiedWin = getWindowInSlot(target);
+
+      slot.classList.remove('is-occupied', 'is-current', 'is-empty');
+
+      if (occupiedWin && !occupiedWin.hidden && !occupiedWin.classList.contains('is-minimized')) {
+        const appKey = occupiedWin.dataset.window;
+        const appName = WIN_LABELS[appKey] || appKey;
+
+        if (occupiedWin === draggedWin) {
+          slot.classList.add('is-current');
+          slot.title = `${appName} (Finestra attuale)`;
+          if (span) span.textContent = appName;
+        } else {
+          slot.classList.add('is-occupied');
+          slot.title = `Occupato da: ${appName} (Trascina per scambiare)`;
+          if (span) span.textContent = appName;
+        }
+      } else {
+        slot.classList.add('is-empty');
+        const defaultLabel = getDefaultSlotLabel(target);
+        if (span) span.textContent = defaultLabel;
+        slot.title = `Slot libero - Trascina qui per posizionare`;
+      }
+    });
+  }
+
+  function openSnapBar(draggedWin) {
+    if (snapBar) {
+      renderSnapBarState(draggedWin);
+      if (!snapBar.classList.contains('is-visible')) {
+        snapBar.classList.add('is-visible');
+      }
     }
   }
 
@@ -325,7 +530,7 @@
         e.stopPropagation();
         const topWin = topWindow();
         if (topWin && slot.dataset.snapTarget) {
-          snapWindow(topWin, slot.dataset.snapTarget);
+          applyLayoutWithWindow(topWin, slot.dataset.snapTarget);
           closeSnapBar();
         }
       });
@@ -409,7 +614,7 @@
           e.stopPropagation();
           snapWrap.classList.remove('is-open');
           const layout = opt.dataset.snap;
-          snapWindow(win, layout);
+          applyLayoutWithWindow(win, layout);
         });
       });
     }
@@ -514,19 +719,21 @@
 
         // Rilevamento trascinamento verso l'alto (Snap Assist stile Windows 11)
         if (e.clientY < 75 || top < 25) {
-          openSnapBar();
+          openSnapBar(win);
         } else if (e.clientY > 160 && activeSnapTarget === null) {
           closeSnapBar();
         }
 
         // Rileva se il cursore sta sopra uno slot della barra snap in alto
         let hitTarget = null;
+        let occupiedOnHit = null;
         if (snapBar && snapBar.classList.contains('is-visible')) {
           const elUnder = document.elementFromPoint(e.clientX, e.clientY);
           const slot = elUnder ? elUnder.closest('.snap-slot') : null;
           snapBar.querySelectorAll('.snap-slot').forEach(s => s.classList.toggle('is-hovered', s === slot));
           if (slot && slot.dataset.snapTarget) {
             hitTarget = slot.dataset.snapTarget;
+            occupiedOnHit = getWindowInSlot(hitTarget);
           }
         }
 
@@ -539,11 +746,12 @@
           } else if (e.clientY < 8) {
             hitTarget = 'full';
           }
+          if (hitTarget) occupiedOnHit = getWindowInSlot(hitTarget);
         }
 
         if (hitTarget) {
           activeSnapTarget = hitTarget;
-          showGhost(hitTarget);
+          showGhost(hitTarget, win, occupiedOnHit);
         } else {
           const elUnder = document.elementFromPoint(e.clientX, e.clientY);
           if (!snapBar || !snapBar.contains(elUnder)) {
@@ -557,7 +765,7 @@
         if (!drag) return;
         drag = null;
         if (activeSnapTarget) {
-          snapWindow(win, activeSnapTarget);
+          applyLayoutWithWindow(win, activeSnapTarget);
         }
         closeSnapBar();
       };
