@@ -101,8 +101,8 @@
   function openWindow(key) {
     const win = $(`win-${key}`);
     if (!win) return false;
-    if (key === 'diagnostics' && role() !== 'maintainer') {
-      say('Lo stato della Jetson è riservato al manutentore. Entra con il suo PIN.');
+    if ((key === 'diagnostics' || key === 'connectors') && role() !== 'maintainer') {
+      say(`La sezione ${key === 'diagnostics' ? 'diagnostica Jetson' : 'connettori cloud'} è riservata all'amministratore. Entra con il PIN manutentore (9999).`);
       return false;
     }
     if (win.hidden) {
@@ -1069,8 +1069,13 @@
 
   const originalApplyRole = window.applyRole;
   window.applyRole = function (newRole) {
-    originalApplyRole(newRole);
-    if (newRole !== 'maintainer') closeWindow('diagnostics');
+    if (typeof originalApplyRole === 'function') originalApplyRole(newRole);
+    if (newRole !== 'maintainer') {
+      closeWindow('diagnostics');
+      closeWindow('connectors');
+      closeSystemDrawer();
+    }
+    syncDockIndicators();
     pollDrawerTelemetry();
   };
 

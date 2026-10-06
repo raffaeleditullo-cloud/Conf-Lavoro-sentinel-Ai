@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Roboto:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/styles.css?v=9.9">
-  <link rel="stylesheet" href="assets/orin.css?v=13">
+  <link rel="stylesheet" href="assets/orin.css?v=14">
 </head>
 <body class="orin">
 
@@ -90,14 +90,14 @@
         <div class="dock-badge">Questa è l'app targhe</div>
       </button>
 
-      <!-- 4. App Connettori Cloud & Integrazioni -->
-      <button type="button" class="dock-app-btn" id="dockBtnConnectors" data-app="connectors" aria-label="Connettori Cloud">
+      <!-- 4. App Connettori Cloud & Integrazioni (Solo Manutentore) -->
+      <button type="button" class="dock-app-btn maintainer-only-block" id="dockBtnConnectors" data-app="connectors" aria-label="Connettori Cloud">
         <div class="dock-app-icon">
           <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
         </div>
         <span class="dock-app-label">Cloud</span>
         <span class="dock-active-indicator"></span>
-        <div class="dock-badge">Questa è l'app cloud</div>
+        <div class="dock-badge">Questa è l'app cloud (Manutentore)</div>
       </button>
 
       <!-- 5. App Impostazioni & Orari -->
@@ -143,16 +143,16 @@
       </div>
     </div>
 
-    <!-- Zona Destra: Chip Temperatura e Hamburger Diagnostica -->
+    <!-- Zona Destra: Chip Temperatura e Hamburger Diagnostica (Solo Manutentore) -->
     <div class="hud-right-zone">
-      <!-- Chip Temperatura SoC Jetson (visibile in tempo reale) -->
-      <div id="topbarTempChip" class="topbar-temp-chip" onclick="toggleSystemDrawer()" title="Diagnostica hardware Jetson Orin Nano">
+      <!-- Chip Temperatura SoC Jetson (visibile in tempo reale solo al manutentore) -->
+      <div id="topbarTempChip" class="topbar-temp-chip maintainer-only-block" onclick="toggleSystemDrawer()" title="Diagnostica hardware Jetson Orin Nano">
         <span>🌡️</span>
         <span id="topbarTempText">--.- °C</span>
       </div>
 
-      <!-- Hamburger Menu Diagnostica di Sistema & Telemetria -->
-      <button type="button" class="btn-system-drawer" id="btnSystemDrawer" onclick="toggleSystemDrawer()" aria-label="Apri diagnostica di sistema" title="Diagnostica &amp; Telemetria ORIN">
+      <!-- Hamburger Menu Diagnostica di Sistema & Telemetria (Solo manutentore) -->
+      <button type="button" class="btn-system-drawer maintainer-only-block" id="btnSystemDrawer" onclick="toggleSystemDrawer()" aria-label="Apri diagnostica di sistema" title="Diagnostica &amp; Telemetria ORIN (Manutentore)">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
 
@@ -683,7 +683,7 @@
 
                     <!-- Trasmissione Vocale Live su Diffusore Fanvil -->
                     <div class="setting-box" style="margin-top:18px;">
-                      <label class="setting-section-label" style="margin-bottom:8px;">TRASMETTI MESSAGGIO LIVE SU DIFFUSORE FANVIL (.31)</label>
+                      <label class="setting-section-label" style="margin-bottom:8px;">DIFFUSIONE MESSAGGI AL VARCO</label>
                       <div class="orin-quick-tags" style="margin-bottom:10px;">
                         <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura.')">
                           <span>Saluto Presidente</span>
@@ -705,11 +705,11 @@
                       <span id="orinSpeakStatus" style="font-size:12px; color:var(--brand); display:none; margin-top:6px; font-weight:600;"></span>
                     </div>
 
-                    <!-- Sezione Fallback Locale Offline MP3 -->
-                    <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
+                    <!-- Sezione Fallback Locale Offline MP3 (Solo Manutentore) -->
+                    <div class="maintainer-only-block" style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border);">
                       <details style="cursor:pointer;">
                         <summary style="font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; outline:none;">
-                          ▶ Fallback Locale Offline (Tracce Audio Pre-registrate MP3)
+                          ▶ Diagnostica Fallback Locale (Tracce Audio MP3 Manutentore)
                         </summary>
                         <div style="margin-top:12px;">
                           <select id="selAudioTrack" class="ultra-input" style="margin-bottom:12px; font-weight:600;" onchange="handleTrackChange()">
@@ -755,7 +755,7 @@
                     <!-- Volume Altoparlante -->
                     <div style="margin-top:18px;">
                       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <label class="setting-section-label" style="margin-bottom:0;">VOLUME DIFFUSIONE FANVIL (MULTICAST RTP)</label>
+                        <label class="setting-section-label" style="margin-bottom:0;">VOLUME ALTOPARLANTE VARCO</label>
                         <strong id="valVolume" class="setting-value is-accent">70%</strong>
                       </div>
                       <input type="range" id="rngVolume" min="10" max="100" value="70" class="tactical-slider" oninput="updateVolumeLabel(this.value)">
@@ -828,7 +828,7 @@
                       <!-- Fascia Oraria Lavorativa -->
                       <div class="setting-box">
                         <label class="setting-section-label">FASCIA ORARIA LAVORATIVA (LUNEDÌ — VENERDÌ)</label>
-                        <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
                           <div style="flex:1;">
                             <span style="font-size:11px; color:#888; text-transform:uppercase;">Inizio Turno</span>
                             <input type="time" id="inputWorkStart" value="08:00" class="ultra-input" style="font-family:var(--font-mono); font-weight:700; text-align:center;">
@@ -840,22 +840,22 @@
                           </div>
                         </div>
                         <span class="setting-hint">Durante queste ore gli operai e i mezzi transitano senza innescare sirene vocali o fari.</span>
+                        <div style="margin-top:12px; display:flex; justify-content:flex-end; align-items:center; gap:10px;">
+                          <span id="scheduleSaveStatus" class="save-status" style="display:none;">Orari aggiornati</span>
+                          <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:8px 18px; font-size:12px;">Salva Orari</button>
+                        </div>
                       </div>
 
-                      <!-- Stato Attuale & Telemetria Sorveglianza -->
-                      <div class="setting-box" style="display:flex; flex-direction:column; justify-content:space-between;">
+                      <!-- Telemetria Sorveglianza Decider (Solo Manutentore) -->
+                      <div class="setting-box maintainer-only-block" style="display:flex; flex-direction:column; justify-content:space-between;">
                         <div>
-                          <label class="setting-section-label">STATO CORRENTE DECIDER</label>
+                          <label class="setting-section-label">STATO CORRENTE DECIDER (JEV)</label>
                           <div id="securityLiveStateText" style="font-weight:700; font-size:14px; color:#4fc3f7; margin-top:4px;">
                             Calcolo stato in corso...
                           </div>
                           <p id="securityLiveReasonText" style="font-size:12px; color:#aaa; margin-top:4px;">
                             Verifica parametri con il motore JEV Decider
                           </p>
-                        </div>
-                        <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-                          <span id="scheduleSaveStatus" class="save-status" style="display:none;">Orari aggiornati</span>
-                          <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:8px 18px; font-size:12px;">Salva Orari</button>
                         </div>
                       </div>
                     </div>
@@ -1460,6 +1460,6 @@
   <script src="assets/app.js?v=9.9"></script>
   <script src="assets/orin-eye.js?v=1"></script>
   <script src="assets/orin-commands.js?v=2"></script>
-  <script src="assets/orin-shell.js?v=8"></script>
+  <script src="assets/orin-shell.js?v=9"></script>
 </body>
 </html>

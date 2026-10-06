@@ -1851,3 +1851,30 @@ body.orin {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   VISIBILITÀ BASATA SU RUOLO (Cliente vs Manutentore)
+   ══════════════════════════════════════════════════════════════════════════════ */
+body[data-role="client"] .maintainer-only-block,
+body[data-role="client"] .maintainer-only-nav,
+body:not([data-role="maintainer"]) .maintainer-only-block,
+body:not([data-role="maintainer"]) .maintainer-only-nav {
+  display: none !important;
+}
+
+body[data-role="maintainer"] .maintainer-only-block {
+  display: block;
+}
+body[data-role="maintainer"] .maintainer-only-block.setting-box {
+  display: flex;
+}
+body[data-role="maintainer"] button.maintainer-only-block,
+body[data-role="maintainer"] .btn-system-drawer.maintainer-only-block {
+  display: grid !important;
+}
+body[data-role="maintainer"] .topbar-temp-chip.maintainer-only-block {
+  display: inline-flex !important;
+}
+body[data-role="maintainer"] .dock-app-btn.maintainer-only-block {
+  display: flex !important;
+}
+
