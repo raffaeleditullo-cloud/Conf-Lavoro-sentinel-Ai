@@ -3,13 +3,13 @@ name: sentinel-ai-runtime
 description: >-
   Guida operativa e knowledge-base permanente per Conf-Lavoro Sentinel AI.
   Documenta l'architettura collaudata su Jetson Orin Nano, le configurazioni Frigate 0.17.2,
-  i protocolli low-latency (RTSP vs HTTP-FLV Reolink), i parametri di rilevamento, i filtri anti-fantasma,
-  la dissuasione vocale Fanvil RTP e la procedura di manutenzione e deploy.
+  il motore di riflesso immediato R2-D2, l'AudioBus RTP Python nativo, VoiceArbiter,
+  il Gate deterministico HEXAD DEMON, il verbalizzatore KERYX e il piano di interazione bidirezionale.
 ---
 
-# CONF-LAVORO SENTINEL AI — Architettura & Runtime Runbook
+# CONF-LAVORO SENTINEL AI — Architettura & Knowledge-Base Permanente
 
-Questo documento funge da knowledge-base certificata per l'ambiente di produzione di Sentinel AI su **Jetson Orin Nano Super Dev Kit (8GB)**.
+Questo documento è la memoria tecnica certificata per l'ambiente di produzione di Sentinel AI su **Jetson Orin Nano Super Dev Kit (8GB)**.
 
 ---
 
@@ -17,81 +17,78 @@ Questo documento funge da knowledge-base certificata per l'ambiente di produzion
 
 | Dispositivo | Indirizzo IP / Porta | Protocollo | Ruolo / Note |
 |---|---|---|---|
-| **Jetson Orin Nano** | `192.168.1.10` | SSH / Host network | Nodo di calcolo Edge (Frigate, TensorRT, Orchestrator, Dashboard) |
-| **Cam Piazzale Esterno** | `192.168.1.22` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
-| **Cam Magazzino Interno** | `192.168.1.20` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
-| **Cam Corridoio Transito** | `192.168.1.21` | RTSP (:554) / HTTP (:80) / RTMP (:1935) | Reolink RLC-811A 4K (Main 4K, Sub 640x360) |
+| **Jetson Orin Nano** | `192.168.1.10` | SSH / Host network | Nodo Edge (Frigate 0.17.2, TensorRT, Orchestrator, Dashboard) |
+| **Cam Piazzale Esterno** | `192.168.1.22` | HTTP-FLV / RTSP (:554) | Reolink RLC-811A 4K (Main 4K, Sub 640x360, Mic integrato) |
+| **Cam Magazzino Interno** | `192.168.1.20` | HTTP-FLV / RTSP (:554) | Reolink RLC-811A 4K (Main 4K, Sub 640x360, Mic integrato) |
+| **Cam Corridoio Transito**| `192.168.1.21` | HTTP-FLV / RTSP (:554) | Reolink RLC-811A 4K (Main 4K, Sub 640x360, Mic integrato) |
 | **Relè Waveshare** | `192.168.1.30:4196` | Modbus TCP (Porta 4196) | Ch 1: Faretto 220V (30s) \| Ch 2: Cancello Carrabile (3s) |
-| **Altoparlante Fanvil A233** | `192.168.1.31` | Multicast RTP `239.255.1.1:5004` | Codec G.711 µ-law mono, pre-roll 150ms |
+| **Altoparlante Fanvil A233** | `192.168.1.31` | Multicast RTP `239.255.1.1:5004` | Codec G.711 µ-law mono, pre-roll 250ms, hold 3000ms |
 | **NAS Ugreen** | `192.168.1.11` | SMB / CIFS (`sentinel-eventi`) | Archiviazione automatica snapshot e clip MP4 |
 
 ---
 
-## 2. Regole d'Oro di Configurazione (Hard Rules)
+## 2. Architettura Audio a Due Livelli ("R2-D2 Droide")
 
-1. **Preset Frigate su Jetson:**
-   - In `config/config.yml` sotto `ffmpeg.inputs`, usare **esclusivamente**:
-     ```yaml
-     input_args: preset-rtsp-restream
-     ```
-   - ⚠️ **MAI aggiungere flag supplementari** a un preset (es. `preset-rtsp-restream -fflags nobuffer...` crasha NVDEC con `NvMMLiteOpen Block 261`).
-2. **Detection FPS & TensorRT:**
-   - `fps: 10` sulle 3 telecamere.
-   - Il detector TensorRT gira a **~33.9ms** di tempo d'inferenza (consumo CPU/GPU ottimale).
-   - Non abbassare `min_initialized: 2`, `threshold: 0.75`, `min_score: 0.60`.
-3. **Threading per Attuatori:**
-   - In `orchestrator/observer.py`, qualsiasi comando di attuazione verso hardware TCP (Relè Modbus) **deve essere eseguito in un thread separato** (`threading.Thread(daemon=True)`), per non bloccare mai il loop principale MQTT.
+Per azzerare la latenza percepita (in precedenza 4-6 secondi), il sistema adotta un modello a riflesso e pensiero:
 
----
+```
+[Movimento Telecamera] 
+         │
+         ├──► (0.2s - 250ms)  L0 RIFLESSO LOCALE: AudioBus suona clip breve da RAM ("Attenzione, sei inquadrato")
+         │
+         └──► (2.0s - 2.8s)  L1 PENSIERO ORIN: Gemini Flash analizza la scena + ElevenLabs Flash v2.5 genera frase su misura
+                                   │
+                                   ▼
+                              AudioBus aggancia la frase dell'AI senza pause sullo stesso canale
+```
 
-## 3. Algoritmi Anti-Fantasma (Filtri Decision Maker)
-
-### Pezzettino 1: Filtro Sagome Proporzioni Umane (`HUMAN_RATIO_FILTER_ENABLED=true`)
-- Un essere umano in piedi o che cammina ha un aspect ratio $H/W \ge 1.20$ (tipico $1.8 \div 2.8$).
-- Forme con $H/W < 1.20$ (sedie, scatole, ombre a terra, riflessi) vengono scartate prima del trigger audio.
-- Oggetti con area $> 45\%$ dello schermo (a ridosso della lente) vengono ignorati.
-
-### Pezzettino 2: Filtro Movimento Dinamico & Traiettoria (`MOVEMENT_FILTER_ENABLED=true`)
-- Mantiene in cache la traiettoria euclidea dei centroidi $[cx, cy]$ per ogni `track_id`.
-- Se una sagoma è statica o compie oscillazioni minime ($< 2.5\%$ dello schermo) per $\ge 3$ update, il trigger audio ripetuto viene soppresso.
-
-### JEV Adaptive Decider (`JEV_DECIDER_ENABLED=true`)
-- Decision engine contestuale auto-adattivo basato su profili ambientali certificati:
-  1. `piazzale` (Esterno, pensilina/parcheggio): $H/W \ge 1.10$, soppressione ombre e auto ferme.
-  2. `magazzino` (Interno, vista dall'alto corsie merci): $H/W \ge 1.05$, soppressione bancali, scatoloni e sedie da ufficio.
-  3. `corridoio` (Transito stretto ad altezza occhi): $H/W \ge 1.25$, massima reattività immediata sul varco.
-
-### Generatore Identikit Forense Istantaneo (`orchestrator/identikit_profiler.py`)
-- Ad ogni allarme confermato, estrae una scheda forense con ID evento, timestamp, telecamera, confidenza IA, proporzioni $H/W$, dinamica di transito e link a snapshot/clip.
-- Viene salvata su disco (`identikit_{cam}_{id}.json`) e pubblicata via MQTT su `sentinel/identikit` per la Dashboard Web.
+### Componenti Chiave:
+1. **`orchestrator/ulaw_audio.py`**: Codec puro Python conforme ITU-T G.711 µ-law. Converte i suoni una volta sola all'avvio e li mantiene in RAM.
+2. **`orchestrator/rtp_audio_bus.py`**: Unico proprietario dell'altoparlante Fanvil. Trasmette pacchetti RTP UDP multicast da 20ms (160 byte) direttamente da Python, eliminando per sempre i sottoprocessi `ffmpeg`.
+   - Gerarchia di priorità: `TAMPER (50) > ALARM (40) > REFLEX (30) > THOUGHT (20) > MANUAL (10)`.
+3. **`orchestrator/voice_arbiter.py`**: Risolve il blocco del cooldown vocale. Il riflesso e la frase contestuale di ORIN condividono lo stesso turno di parola: il riflesso parla e apre una finestra di ascolto garantita per ORIN.
+4. **`orchestrator/reflex_engine.py`**: Gestisce la libreria di 20 frasi pre-sintetizzate (10 Carmelo + 10 Sami) suddivise per telecamera, orario (giorno/notte) e recidiva.
+5. **`orchestrator/keryx_verbalizer.py`**: Motore fonetico e prosodico derivato da SKILL DEMON (conversione numeri in parole, riparazione accenti, virgole di respiro, mappatura acronimi tecnici).
+6. **`orchestrator/demon_gate.py`**: Gate deterministico HEXAD. Impedisce ad allucinazioni VLM o spoofing visivo (es. foto mostrata alla lente) di aprire il cancello fisico. Verifica inoltre la lunghezza e conformità delle frasi parlate (PEIRA).
 
 ---
 
-## 4. Dissuasione Vocale Sprint & Latenze Collaudate
+## 3. Gestione della Dashboard e Routing Centralizzato
 
-- **File Audio Sprint:** `orchestrator/audio/carmelo/03_avviso_dissuasione.mp3` e `sami/03_avviso_dissuasione.mp3`
-  - Durata: **2.1 secondi** (dimezzata rispetto ai 4.4s originari).
-  - Testo: *"Alt! Area videosorvegliata. Allontanarsi immediatamente!"*
-- **Latenza Software Misurata:**
-  - Media tra **180ms e 300ms** dal momento della conferma di Frigate al comando audio.
-- **Cooldown Globale Speaker:**
-  - `SPEAKER_GLOBAL_COOLDOWN_SECONDS=20` (protegge dall'eco tra telecamere consecutive, lasciando la finestra aperta per un secondo intruso dopo 20s).
+- La Dashboard Web comunica con l'Orchestratore tramite il topic MQTT `sentinel/cmd/speaker/#` (con credenziali autenticate).
+- I comandi manuali di dissuasione o test vocale vengono accodati all'AudioBus centrale con priorità, impedendo che due sorgenti parlino contemporaneamente sullo stesso canale multicast.
+- L'analisi delle immagini da parte di ORIN è deduplicata (`_analyzed_events`): per ciascun intruso viene effettuata una sola chiamata a OpenRouter, abbattendo del 90% i costi API.
 
 ---
 
-## 5. Comandi di Manutenzione Rapida sulla Jetson
+## 4. Roadmap Prossima Fase: Interazione Bidirezionale (Chat & Push-to-Talk)
+
+### Fase A — Chat Testuale Operatore con l'Occhio Cibernetico ORIN:
+- Direttamente dall'interfaccia Dashboard Web (accanto al feed telecamere):
+- L'utente scrive un comando in linguaggio naturale (es. *"ORIN, chiedi al corriere per chi è il pacco"* oppure *"Avvisa di attendere due minuti"*).
+- Gemini Flash riceve il comando + l'ultimo fotogramma della telecamera attiva, sintetizza la risposta appropriata ed ElevenLabs la pronuncia dal varco.
+- Tempo di reazione stimato: **1.5 - 2.0 secondi**.
+
+### Fase B — Push-to-Talk (Microfono da Smartphone/Browser):
+- Pulsante microfono nell'interfaccia web.
+- L'operatore tiene premuto, parla nel telefono e l'audio PCM/µ-law viene inviato direttamente in streaming al Fanvil A233.
+- Tempo di reazione stimato: **< 200 millisecondi** (voce diretta in tempo reale).
+
+### Fase C — Microfoni Reolink e Privacy:
+- Le telecamere Reolink RLC-811A montano un microfono integrato sul flusso RTSP/FLV.
+- Per conformità GDPR / Statuto Lavoratori, l'ascolto non è mai continuo (vietata intercettazione ambientale), ma si apre solo per 5-10 secondi a seguito di una domanda dell'AI.
+
+---
+
+## 5. Comandi di Manutenzione e Riavvio
 
 ```bash
-# Entrare nella directory di lavoro
-cd /home/alessio/sentinel-ai
-
-# Aggiornamento ed esecuzione automatica
+cd ~/sentinel-ai
 git pull
-bash deploy_sprint.sh
+docker compose restart orchestrator dashboard
+```
 
-# Monitoraggio in tempo reale dei log decisionali
-docker compose logs -f orchestrator
-
-# Ripristino configurazione di emergenza
-bash deploy_sprint.sh --revert
+Verifica log in tempo reale:
+```bash
+docker compose logs -f --tail 20 orchestrator | grep -E "RIFLESSO|ORIN|AudioBus|Latenza"
 ```
