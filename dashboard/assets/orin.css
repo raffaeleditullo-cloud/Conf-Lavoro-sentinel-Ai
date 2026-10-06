@@ -434,13 +434,16 @@ body.orin.has-windows .orin-windows {
 
 .orin-command-field {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
-  padding: 6px 6px 6px 24px;
+  padding: 6px 8px 6px 24px;
   background: var(--orin-bianco);
   border-radius: 999px;
   box-shadow: var(--orin-elev-3);
   transition: box-shadow 0.2s ease;
+  box-sizing: border-box;
 }
 
 .orin-command-field:focus-within {
@@ -845,32 +848,42 @@ body.orin {
   visibility: visible;
   transform: translateY(-50%) translateX(0);
 }
-  line-height: 1.35;
-}
 
 /* ══════════════════════════════════════════════════════════════════════════════
    AZIONI CHAT E PULSANTE MICROFONO INTEGRATO NELLA BARRA DI RICERCA
    ══════════════════════════════════════════════════════════════════════════════ */
 .orin-command-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.orin-command-send {
+  height: 44px !important;
+  padding: 0 20px !important;
+  flex-shrink: 0 !important;
 }
 
 .orin-command-mic {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 0;
-  background: linear-gradient(135deg, #ff5722 0%, #d84315 100%);
-  color: #ffffff;
-  display: grid;
-  place-items: center;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  border-radius: 50% !important;
+  border: 0 !important;
+  background: linear-gradient(135deg, #ff5722 0%, #d84315 100%) !important;
+  color: #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 4px 12px rgba(216, 67, 21, 0.4);
-  flex-shrink: 0;
+  flex-shrink: 0 !important;
   outline: none;
+  padding: 0;
 }
 
 .orin-command-mic:hover {
