@@ -1,22 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="none">
   <defs>
-    <linearGradient id="gear-gold" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#fbbf24"/>
-      <stop offset="50%" stop-color="#d97706"/>
-      <stop offset="100%" stop-color="#92400e"/>
+    <linearGradient id="tile-bg-settings" x1="0" y1="0" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#0f172a"/>
     </linearGradient>
-    <filter id="gear-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#fbbf24" flood-opacity="0.45"/>
+    <linearGradient id="tile-border-settings" x1="0" y1="0" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#d97706" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="tile-shadow-settings" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.5"/>
     </filter>
   </defs>
-  <!-- Icona Impostazioni & Configurazione Senza Sfondo -->
-  <g filter="url(#gear-glow)">
-    <!-- Ingranaggio di precisione primario -->
-    <path d="M24 16a8 8 0 1 0 0 16 8 8 0 0 0 0-16z" stroke="#ffffff" stroke-width="2.5" fill="none"/>
-    <path d="M24 8v3m0 26v3M8 24h3m26 0h3M12.7 12.7l2.1 2.1m18.4 18.4l2.1 2.1M12.7 35.3l2.1-2.1m18.4-18.4l2.1-2.1"
-          stroke="url(#gear-gold)" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="24" cy="24" r="3.5" fill="url(#gear-gold)"/>
-    <!-- Cursore slider di regolazione volume/parametri -->
-    <path d="M6 38h14m-7-3v6" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Piastrella Sfondo Professionale High-Tech -->
+  <g filter="url(#tile-shadow-settings)">
+    <rect x="2" y="2" width="48" height="48" rx="13" fill="url(#tile-bg-settings)" stroke="url(#tile-border-settings)" stroke-width="1.2"/>
+    <path d="M12 3.5h28" stroke="#fbbf24" stroke-width="1" stroke-linecap="round" opacity="0.45"/>
+  </g>
+
+  <!-- Icona Impostazioni & Parametri di Sistema Professionale -->
+  <g>
+    <!-- Ingranaggio di precisione centrale -->
+    <circle cx="26" cy="24" r="5.5" stroke="#f8fafc" stroke-width="2" fill="rgba(251, 191, 36, 0.15)"/>
+    <circle cx="26" cy="24" r="2.2" fill="#fbbf24"/>
+    <!-- Denti dell'ingranaggio a 90° e 45° -->
+    <path d="M26 13v3.5m0 15v3.5M15 24h3.5m15 0h3.5M18.2 16.2l2.5 2.5m10.6 10.6l2.5 2.5M18.2 31.8l2.5-2.5m10.6-10.6l2.5-2.5"
+          stroke="#f8fafc" stroke-width="2.2" stroke-linecap="round"/>
+    <!-- Cursore slider di precisione volume Fanvil / orari in basso -->
+    <line x1="16" y1="39" x2="36" y2="39" stroke="rgba(255, 255, 255, 0.25)" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="24" cy="39" r="2.5" fill="#fbbf24" stroke="#0f172a" stroke-width="1"/>
   </g>
 </svg>
