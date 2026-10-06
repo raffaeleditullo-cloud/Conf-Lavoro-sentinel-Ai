@@ -195,28 +195,30 @@ class IdentikitProfiler:
 
         # Recupera i byte dello snapshot se non forniti direttamente
         img_data = snapshot_bytes
-        if not img_data:
-            # 1. Prova a leggere da /media/frigate/clips/
-            clips_dir = os.environ.get("CLIPS_DIR", "/media/frigate/clips")
-            local_clip_img = os.path.join(clips_dir, f"{camera}-{event_id}.jpg")
-            if os.path.exists(local_clip_img):
-                try:
-                    with open(local_clip_img, "rb") as f:
-                        img_data = f.read()
-                except Exception:
-                    pass
-
-        # 2. Prova a scaricare dall'API locale di Frigate
-        if not img_data:
+        if not img_data and event_id:
+            # 1. Prova prima a scaricare l'immagine pulita (senza bounding box) dall'API locale di Frigate
             frigate_host = os.environ.get("FRIGATE_HOST", "127.0.0.1")
             frigate_port = int(os.environ.get("FRIGATE_PORT", "5000"))
-            snap_url = f"http://{frigate_host}:{frigate_port}/api/events/{event_id}/snapshot.jpg"
+            snap_url = f"http://{frigate_host}:{frigate_port}/api/events/{event_id}/snapshot.jpg?bbox=0"
             import urllib.request
             try:
                 with urllib.request.urlopen(snap_url, timeout=2.0) as resp:
                     img_data = resp.read()
             except Exception:
                 pass
+
+        # 2. Ripiego sul file locale salvato su disco da Frigate
+        if not img_data and event_id:
+            clips_dir = os.environ.get("CLIPS_DIR", "/media/frigate/clips")
+            clean_clip_img = os.path.join(clips_dir, f"{camera}-{event_id}-clean.png")
+            local_clip_img = os.path.join(clips_dir, f"{camera}-{event_id}.jpg")
+            target_path = clean_clip_img if os.path.exists(clean_clip_img) else local_clip_img
+            if os.path.exists(target_path):
+                try:
+                    with open(target_path, "rb") as f:
+                        img_data = f.read()
+                except Exception:
+                    pass
 
         if not img_data:
             logger.debug("ORIN: Nessun fotogramma disponibile per l'evento %s", event_id)
@@ -288,8 +290,15 @@ class IdentikitProfiler:
                 logger.warning("PEIRA non disponibile (%s): frase di ORIN non pronunciata.", e)
                 is_valid, sanitized_msg = False, ""
 
-            # Se è il Presidente Roberto parla SEMPRE (accoglienza). Altrimenti, parla solo se il sistema è armato.
-            should_speak = orin_res.get("is_president") or is_armed
+            # Verifica deterministica di presenza umana reale e minaccia confermata
+            is_pres = orin_res.get("is_president", False)
+            threat = str(orin_res.get("threat_level", "none")).lower()
+            is_person = orin_res.get("is_person_present", True)
+            has_valid_speech = bool(is_valid and sanitized_msg and sanitized_msg.strip())
+
+            # Se è il Presidente parla sempre (accoglienza).
+            # Altrimenti parla solo se armato E c'è una persona viva E minaccia non è 'none' E c'è una frase valida.
+            should_speak = is_pres or (is_armed and is_person and threat in ("low", "medium", "high") and has_valid_speech)
             if should_speak:
                 try:
                     grant = self._claim_thought(camera)

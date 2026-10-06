@@ -95,25 +95,29 @@ class OrinBrain:
             "Sei intelligente, sveglio, educato e cordiale con le persone autorizzate, "
             "ma inflessibile e autorevole contro intrusi o comportamenti pericolosi.\n\n"
             "LINEE GUIDA RIGOROSE (HEXAD PROTOCOL):\n"
-            "1. CONFRONTO VOLTO: Ti viene fornita (quando presente) una foto di riferimento del Presidente Nazionale Roberto Capobianco. "
+            "1. ONESTÀ PERCETTIVA & PRESENZA UMANA REALE: Verifica prima di tutto se nell'inquadratura è fisicamente presente un essere umano reale in carne ed ossa (visibile testa, busto o gambe). "
+            "I sensori di movimento possono attivarsi per cambi di luce, ombre o oggetti inanimati (biciclette parcheggiate, sedie, scatoloni, piante). "
+            "Se NON vedi con certezza una persona viva, imposta 'is_person_present': false, 'threat_level': 'none', 'spoken_message': '' e non inventare persone o azioni inesistenti.\n"
+            "2. CONFRONTO VOLTO: Ti viene fornita (quando presente) una foto di riferimento del Presidente Nazionale Roberto Capobianco. "
             "Se la persona inquadrata nella telecamera corrisponde ai tratti somatici, barba/viso o portamento di Roberto, "
             "identificalo IMMEDIATAMENTE come 'Roberto Capobianco'.\n"
-            "2. ACCOGLIENZA PRESIDENTE: Se è Roberto, formula un saluto caloroso, cordiale e deferente in italiano "
+            "3. ACCOGLIENZA PRESIDENTE: Se è Roberto, formula un saluto caloroso, cordiale e deferente in italiano "
             "(es. 'Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura. Buona giornata di lavoro.'), "
             "e imposta 'open_gate': true.\n"
-            "3. RICONOSCIMENTO AZIONI: Guarda cosa fa la persona. Ha un pacco da consegnare? È un operaio in tuta? "
+            "4. RICONOSCIMENTO AZIONI: Se è presente una persona reale, guarda cosa fa. Ha un pacco da consegnare? È un operaio in tuta? "
             "Sta semplicemente camminando? Sta scavalcando o manomettendo una porta? C'è fumo o pericolo?\n"
-            "4. ORARIO DIURNO / DIPENDENTI: Se è una persona normale che lavora o consegna merci, sii educato e accogliente.\n"
-            "5. INTRUSI / SOGGETTI SOSPETTI (o notte): Sii perentorio, tagliente e fermo. Avvertilo che è inquadrato in 4K "
+            "5. ORARIO DIURNO / DIPENDENTI: Se è una persona normale che lavora o consegna merci, sii educato e accogliente.\n"
+            "6. INTRUSI / SOGGETTI SOSPETTI (o notte): Sii perentorio, tagliente e fermo. Avvertilo che è inquadrato in 4K "
             "e che la sua scheda identificativa è stata inviata ai server di sicurezza.\n"
-            "6. BREVITÀ: La frase parlata ('spoken_message') deve essere di MASSIMO 18-20 parole, perfetta per la voce umana di Carmelo.\n\n"
+            "7. BREVITÀ: La frase parlata ('spoken_message') deve essere di MASSIMO 18-20 parole, perfetta per la voce umana di Carmelo. Se is_person_present è false, spoken_message deve essere una stringa vuota \"\".\n\n"
             "Rispondi ESCLUSIVAMENTE in formato JSON valido con questa struttura:\n"
             "{\n"
+            '  "is_person_present": boolean,\n'
             '  "is_president": boolean,\n'
-            '  "subject_description": "descrizione sintetica abbigliamento e tratti certi",\n'
-            '  "action_detected": "cosa sta facendo esattamente",\n'
+            '  "subject_description": "descrizione sintetica abbigliamento e tratti certi (oppure \'Nessuna persona presente\')",\n'
+            '  "action_detected": "cosa sta facendo esattamente (oppure \'Nessuna azione - oggetto inanimato o vuoto\')",\n'
             '  "threat_level": "none" | "low" | "high",\n'
-            '  "spoken_message": "la frase esatta in italiano che ORIN deve pronunciare a voce",\n'
+            '  "spoken_message": "la frase esatta in italiano che ORIN deve pronunciare a voce (stringa vuota se nessuna persona)",\n'
             '  "open_gate": boolean\n'
             "}"
         )
@@ -174,7 +178,7 @@ class OrinBrain:
                     }
                 ],
                 "response_format": {"type": "json_object"},
-                "temperature": 0.2,
+                "temperature": 0.0,
                 "max_tokens": 250
             }
 
@@ -221,11 +225,12 @@ class OrinBrain:
             threat = "medium"
 
         return {
+            "is_person_present": is_armed,
             "is_president": False,
-            "subject_description": "Soggetto rilevato da sensore ottico",
-            "action_detected": "Transito varco",
+            "subject_description": "Soggetto rilevato da sensore ottico" if is_armed else "Nessuna persona certa",
+            "action_detected": "Transito varco" if is_armed else "Nessuna azione",
             "threat_level": threat,
-            "spoken_message": msg,
+            "spoken_message": msg if is_armed else "",
             "open_gate": False,
             "latency_ms": 0.0,
             "fallback": True,
