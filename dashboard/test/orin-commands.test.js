@@ -33,6 +33,8 @@ const CASI = [
   ['impostazoni', { tipo: 'apri-finestra', finestra: 'settings' }],
   ['stato jetson', { tipo: 'apri-finestra', finestra: 'diagnostics' }],
   ['telemetria', { tipo: 'apri-finestra', finestra: 'diagnostics' }],
+  ['connettori', { tipo: 'apri-finestra', finestra: 'connectors' }],
+  ['microfono', { tipo: 'apri-finestra', finestra: 'ptt' }],
 
   // Chiusura
   ['chiudi tutto', { tipo: 'chiudi-tutto' }],

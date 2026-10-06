@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Roboto:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/styles.css?v=9.9">
-  <link rel="stylesheet" href="assets/orin.css?v=2">
+  <link rel="stylesheet" href="assets/orin.css?v=3">
 </head>
 <body class="orin">
 
@@ -46,6 +46,89 @@
        vivono dentro finestre che si aprono su comando. Aspetto: assets/orin.css;
        finestre e occhio: orin-shell.js, orin-eye.js; comandi: orin-commands.js.
        ────────────────────────────────────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       ORIN SLIM APP DOCK (Barra Laterale Fissa a Sinistra)
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <nav class="orin-dock" id="orinDock" aria-label="Dock Applicazioni ORIN">
+    <!-- Brand in alto con micro occhio animato -->
+    <div class="dock-brand" title="ORIN Cybernetic AI">
+      <div class="dock-logo-box" onclick="closeEverything(); say('Tutte le finestre sono state chiuse.');">
+        <span class="dock-logo-text">ORIN</span>
+        <span class="dock-status-pip" id="dockStatusPip" title="Sistema attivo"></span>
+      </div>
+    </div>
+
+    <!-- Gruppo Applicazioni Principali (Squircle Icons stile smartphone) -->
+    <div class="dock-apps">
+      <!-- 1. Telecamere Live (CCTV Wall) -->
+      <button type="button" class="dock-app-btn" id="dockBtnWall" data-app="wall" title="Telecamere Live (CCTV Wall)" aria-label="Telecamere Live">
+        <div class="dock-app-icon">
+          <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </div>
+        <span class="dock-app-label">Cam</span>
+        <span class="dock-active-indicator"></span>
+      </button>
+
+      <!-- 2. Registro Eventi & Registrazioni -->
+      <button type="button" class="dock-app-btn" id="dockBtnEvents" data-app="events" title="Registro Eventi & Video NAS" aria-label="Registro Eventi">
+        <div class="dock-app-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <span class="dock-app-label">Eventi</span>
+        <span class="dock-active-indicator"></span>
+      </button>
+
+      <!-- 3. Whitelist Targhe Autorizzate -->
+      <button type="button" class="dock-app-btn" id="dockBtnPlates" data-app="plates" title="Whitelist Targhe Autorizzate" aria-label="Whitelist Targhe">
+        <div class="dock-app-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="7" cy="12" r="1.5"/><circle cx="17" cy="12" r="1.5"/><path d="M10 10h4v4h-4z"/></svg>
+        </div>
+        <span class="dock-app-label">Targhe</span>
+        <span class="dock-active-indicator"></span>
+      </button>
+
+      <!-- 4. Connettori Cloud & Integrazioni -->
+      <button type="button" class="dock-app-btn" id="dockBtnConnectors" data-app="connectors" title="Connettori Cloud & Google" aria-label="Connettori Cloud">
+        <div class="dock-app-icon">
+          <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        </div>
+        <span class="dock-app-label">Cloud</span>
+        <span class="dock-active-indicator"></span>
+      </button>
+
+      <!-- 5. Registratore / Microfono Live Altoparlante (Push-to-Talk) -->
+      <button type="button" class="dock-app-btn is-ptt" id="dockBtnPtt" data-app="ptt" title="Interfono Live Altoparlante (Push-to-Talk)" aria-label="Microfono Live">
+        <div class="dock-app-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </div>
+        <span class="dock-app-label">Voce</span>
+        <span class="dock-active-indicator"></span>
+      </button>
+
+      <!-- 6. Impostazioni & Orari -->
+      <button type="button" class="dock-app-btn" id="dockBtnSettings" data-app="settings" title="Impostazioni & Pianificazione Oraria" aria-label="Impostazioni">
+        <div class="dock-app-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <span class="dock-app-label">Config</span>
+        <span class="dock-active-indicator"></span>
+      </button>
+    </div>
+
+    <!-- Tasto Esc / Uscita in basso -->
+    <div class="dock-footer">
+      <button type="button" class="dock-app-btn is-exit" id="dockBtnLock" data-app="lock" title="Blocca Sessione (Esc)" aria-label="Blocca Sessione">
+        <div class="dock-app-icon">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </div>
+        <span class="dock-app-label">Esc</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       ORIN — TOPBAR PULITA (Brand, Stato Protezione, Chip Temp & Hamburger)
+       ────────────────────────────────────────────────────────────────────────── -->
   <header class="orin-topbar">
     <div class="orin-brand">
       <span class="orin-wordmark">ORIN</span>
@@ -54,49 +137,36 @@
 
     <!-- Stato di protezione: aggiornato da app.js (pollSecurityState) -->
     <div class="hud-security-zone">
-        <div id="securityStatus" class="security-status" title="Stato di protezione del sistema">
-          <svg class="security-status-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-          <span class="security-status-text">
-            <span id="securityStatusLabel">Protetto</span>
-            <span class="security-status-dot"></span>
-          </span>
-        </div>
+      <div id="securityStatus" class="security-status" title="Stato di protezione del sistema">
+        <svg class="security-status-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span class="security-status-text">
+          <span id="securityStatusLabel">Protetto</span>
+          <span class="security-status-dot"></span>
+        </span>
+      </div>
     </div>
 
-    <!-- Rilevatore, scheda identikit, ruolo e blocco: aggiornati da app.js -->
+    <!-- Zona Destra: Chip Temperatura e Hamburger Diagnostica -->
     <div class="hud-right-zone">
-        <button id="hudMenuBtn" class="hud-menu-btn" type="button"
-                aria-label="Apri il menu" aria-expanded="false" aria-controls="hudMenu"
-                onclick="toggleHudMenu()">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
+      <!-- Chip Temperatura SoC Jetson (visibile in tempo reale) -->
+      <div id="topbarTempChip" class="topbar-temp-chip" onclick="toggleSystemDrawer()" title="Diagnostica hardware Jetson Orin Nano">
+        <span>🌡️</span>
+        <span id="topbarTempText">--.- °C</span>
+      </div>
 
-        <div id="hudMenu" class="hud-menu">
-          <!-- Stato del rilevatore (watchdog anti-blocco) -->
-          <div id="detectorVitalityBadge" class="vitality-badge standby" title="In attesa di segnale">
-            <svg class="vitality-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l2.5-7 4 14 2.5-7h7"/></svg>
-            <span class="vitality-dot"></span>
-            <span id="vitalityText" class="vitality-label">In attesa di segnale</span>
-          </div>
+      <!-- Hamburger Menu Diagnostica di Sistema & Telemetria -->
+      <button type="button" class="btn-system-drawer" id="btnSystemDrawer" onclick="toggleSystemDrawer()" aria-label="Apri diagnostica di sistema" title="Diagnostica &amp; Telemetria ORIN">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
 
-          <!-- Pulsante Accesso Rapido Scheda Identikit Forense -->
-          <button id="btnQuickIdentikit" type="button" class="ultra-primary-btn" onclick="openLatestIdentikit()" title="Visualizza Scheda Identikit Forense dell'ultimo rilevamento" style="font-size:12px; padding:7px 14px;">
-            <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            <span>Scheda Identikit</span>
-          </button>
-
-          <!-- Ruolo in corso e uscita verso il tastierino -->
-          <div class="hud-role-zone">
-            <div id="roleBadge" class="role-pill client">
-              <span class="role-indicator-dot"></span>
-              <span id="roleLabel">Cliente</span>
-            </div>
-            <button id="btnRoleLock" class="role-lock-btn" title="Blocca la sessione e torna al tastierino" onclick="lockSession()">
-              <svg class="role-lock-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span class="role-lock-label">Blocca sessione</span>
-            </button>
-          </div>
-        </div>
+      <!-- Contenitore compatibilità app.js (elementi aggiornati in background) -->
+      <div id="hudMenu" class="hud-menu" style="display:none;" aria-hidden="true">
+        <div id="detectorVitalityBadge" class="vitality-badge standby"><span class="vitality-dot"></span><span id="vitalityText" class="vitality-label">In attesa di segnale</span></div>
+        <button id="btnQuickIdentikit" type="button" onclick="openLatestIdentikit()"></button>
+        <div id="roleBadge" class="role-pill client"><span class="role-indicator-dot"></span><span id="roleLabel">Cliente</span></div>
+        <button id="btnRoleLock" onclick="lockSession()"></button>
+        <button id="hudMenuBtn" type="button" onclick="toggleHudMenu()"></button>
+      </div>
     </div>
   </header>
 
@@ -782,7 +852,297 @@
               </div>
       </div>
     </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════════════
+         FINESTRA: CONNETTORI CLOUD & INTEGRAZIONI (win-connectors)
+         ══════════════════════════════════════════════════════════════════════════ -->
+    <section class="orin-window" id="win-connectors" data-window="connectors" role="dialog" aria-labelledby="win-connectors-title" hidden>
+      <header class="orin-window-bar">
+        <h2 class="orin-window-title" id="win-connectors-title">Connettori Cloud &amp; Integrazioni</h2>
+        <div class="orin-window-tools">
+          <button type="button" class="orin-window-btn" data-window-action="maximize" aria-pressed="false" aria-label="Ingrandisci Connettori" title="Ingrandisci"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button type="button" class="orin-window-btn" data-window-action="close" aria-label="Chiudi Connettori" title="Chiudi"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </header>
+      <div class="orin-window-body">
+        <div class="view-panel view-data">
+          <div class="glass-panel">
+            <div class="panel-header-minimal">
+              <div class="ev-head-text">
+                <h3>Connettori Attivi &amp; Servizi di Rete</h3>
+                <p class="ev-head-sub">Integrazioni esterne, storage cloud, bus messaggi e attuatori di campo</p>
+              </div>
+              <span class="status-beacon is-accent">Tutti i nodi operativi</span>
+            </div>
+
+            <div class="connector-cards-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+              <!-- Connettore 1: Google Cloud -->
+              <div class="setting-box connector-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="connector-icon-badge" style="background:#e8f0fe; color:#1a73e8; padding:8px; border-radius:8px; display:grid; place-items:center;">
+                      <svg style="width:20px; height:20px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                    </div>
+                    <div>
+                      <strong style="font-size:14px; color:var(--text-title);">Google Workspace / Drive</strong>
+                      <div style="font-size:11px; color:var(--text-muted);">Backup Cloud &amp; Identikit</div>
+                    </div>
+                  </div>
+                  <span class="cam-status-pill online" style="font-size:10px;">Attivo</span>
+                </div>
+                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Archiviazione ridondata istantanea dei metadati forensi e delle schede biometriche su cloud protetto.</p>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="say('Connettore Google verificato: sincronizzazione attiva.');">Verifica Sincronizzazione</button>
+                </div>
+              </div>
+
+              <!-- Connettore 2: NAS Ugreen Storage -->
+              <div class="setting-box connector-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="connector-icon-badge" style="background:#e6f4ea; color:#137333; padding:8px; border-radius:8px; display:grid; place-items:center;">
+                      <svg style="width:20px; height:20px; fill:currentColor;" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                    </div>
+                    <div>
+                      <strong style="font-size:14px; color:var(--text-title);">NAS Ugreen (SMB / CIFS)</strong>
+                      <div style="font-size:11px; color:var(--text-muted);">//192.168.1.11/sentinel-eventi</div>
+                    </div>
+                  </div>
+                  <span class="cam-status-pill online" style="font-size:10px;">Collegato</span>
+                </div>
+                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Storage locale ad alta capacità per clip video MP4 continue e snapshot in risoluzione 4K.</p>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="renderEvents(); say('Archivio NAS Ugreen aggiornato.');">Sfoglia Archivio</button>
+                </div>
+              </div>
+
+              <!-- Connettore 3: Broker MQTT Mosquitto -->
+              <div class="setting-box connector-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="connector-icon-badge" style="background:#fce8e6; color:#c5221f; padding:8px; border-radius:8px; display:grid; place-items:center;">
+                      <svg style="width:20px; height:20px; fill:currentColor;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                    </div>
+                    <div>
+                      <strong style="font-size:14px; color:var(--text-title);">Bus Messaggi MQTT</strong>
+                      <div style="font-size:11px; color:var(--text-muted);">127.0.0.1:1883 (Autenticato)</div>
+                    </div>
+                  </div>
+                  <span class="cam-status-pill online" style="font-size:10px;">In Onda</span>
+                </div>
+                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Dorsale telemetrica per trigger varchi Frigate, priorità AudioBus e comandi Dashboard.</p>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="say('Broker MQTT attivo con latenza inferiore a 1ms.');">Test Bus</button>
+                </div>
+              </div>
+
+              <!-- Connettore 4: Diffusore Audio IP Fanvil A233 -->
+              <div class="setting-box connector-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="connector-icon-badge" style="background:#fef7e0; color:#b06000; padding:8px; border-radius:8px; display:grid; place-items:center;">
+                      <svg style="width:20px; height:20px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                    </div>
+                    <div>
+                      <strong style="font-size:14px; color:var(--text-title);">Altoparlante Fanvil A233</strong>
+                      <div style="font-size:11px; color:var(--text-muted);">192.168.1.31 // RTP Multicast 5004</div>
+                    </div>
+                  </div>
+                  <span class="cam-status-pill online" style="font-size:10px;">Pronto</span>
+                </div>
+                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Canale audio ad alta fedeltà G.711 µ-law mono con pre-roll 250ms e coda RTP prioritaria.</p>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="triggerVoice();">Test Suono</button>
+                </div>
+              </div>
+
+              <!-- Connettore 5: Modbus Waveshare Relè -->
+              <div class="setting-box connector-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="connector-icon-badge" style="background:#f3e8fd; color:#8430ce; padding:8px; border-radius:8px; display:grid; place-items:center;">
+                      <svg style="width:20px; height:20px; fill:currentColor;" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </div>
+                    <div>
+                      <strong style="font-size:14px; color:var(--text-title);">Scheda Relè Waveshare TCP</strong>
+                      <div style="font-size:11px; color:var(--text-muted);">192.168.1.30:4196 (Modbus)</div>
+                    </div>
+                  </div>
+                  <span class="cam-status-pill online" style="font-size:10px;">Online</span>
+                </div>
+                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Ch 1: Fari 220V Piazzale (30s) | Ch 2: Impulso Cancello Carrabile (3s con Gate DEMON).</p>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="triggerFaro();">Accendi Fari</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════════════
+         FINESTRA: INTERFONO LIVE & REGISTRATORE PUSH-TO-TALK (win-ptt)
+         ══════════════════════════════════════════════════════════════════════════ -->
+    <section class="orin-window" id="win-ptt" data-window="ptt" role="dialog" aria-labelledby="win-ptt-title" hidden>
+      <header class="orin-window-bar">
+        <h2 class="orin-window-title" id="win-ptt-title">Interfono Live &amp; Registratore</h2>
+        <div class="orin-window-tools">
+          <button type="button" class="orin-window-btn" data-window-action="maximize" aria-pressed="false" aria-label="Ingrandisci Interfono" title="Ingrandisci"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button type="button" class="orin-window-btn" data-window-action="close" aria-label="Chiudi Interfono" title="Chiudi"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </header>
+      <div class="orin-window-body">
+        <div class="view-panel view-data" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:16px 0;">
+          <div class="ptt-stage" style="width:100%; max-width:440px;">
+            <span class="status-beacon is-accent" id="pttStatusBeacon" style="margin-bottom:14px;">Pronto alla trasmissione</span>
+            <h3 style="margin:8px 0 4px; font-size:19px; color:var(--text-title); font-family:var(--font-brand);">Parla dall'Altoparlante del Varco</h3>
+            <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:20px;">Tieni premuto il pulsante microfono per trasmettere la tua voce in tempo reale sul diffusore Fanvil A233.</p>
+
+            <!-- Selettore Destinazione -->
+            <div style="margin-bottom:20px; text-align:left; background:var(--bg-subtle); padding:12px 16px; border-radius:12px; border:1px solid var(--border);">
+              <label style="display:block; font-size:11px; font-weight:700; color:var(--text-faint); margin-bottom:6px; text-transform:uppercase;">DESTINAZIONE AUDIO</label>
+              <select id="selPttTarget" class="ultra-input" style="font-weight:600;">
+                <option value="fanvil">Tutti i varchi (Diffusore Fanvil A233 Generale)</option>
+                <option value="piazzale">Varco 1 // Piazzale Esterno</option>
+                <option value="magazzino">Varco 2 // Magazzino Interno</option>
+                <option value="corridoio">Varco 3 // Corridoio Transito</option>
+              </select>
+            </div>
+
+            <!-- Grande Pulsante Push-to-Talk -->
+            <div class="ptt-button-wrap" style="position:relative; margin:20px auto 26px; width:140px; height:140px;">
+              <div class="ptt-wave-ring" id="pttWaveRing"></div>
+              <button type="button" id="btnPttMic" class="ptt-big-mic-btn" aria-label="Tieni premuto per parlare" title="Tieni premuto per parlare">
+                <svg class="ptt-mic-svg" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                <span class="ptt-mic-label" id="pttMicLabel">PREMI E PARLA</span>
+              </button>
+            </div>
+
+            <div id="pttTimerDisplay" style="font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--brand); display:none;">00:00</div>
+            <p style="font-size:11px; color:var(--text-faint); margin-top:8px;">Puoi anche tenere premuta la barra Spazio per parlare</p>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════
+       SYSTEM DRAWER (Cassetto Laterale da Destra per Diagnostica & Telemetria)
+       ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="systemDrawerBackdrop" class="system-drawer-backdrop" onclick="closeSystemDrawer()"></div>
+  <aside id="systemDrawer" class="system-drawer" aria-label="Diagnostica Hardware &amp; Sistema">
+    <div class="system-drawer-header">
+      <div class="system-drawer-title-row">
+        <div class="system-drawer-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        </div>
+        <div>
+          <h3 class="system-drawer-title">Diagnostica &amp; Telemetria</h3>
+          <span class="system-drawer-subtitle">Jetson Orin Nano · Sentinel AI</span>
+        </div>
+      </div>
+      <button type="button" class="system-drawer-close" onclick="closeSystemDrawer()" aria-label="Chiudi diagnostica">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="system-drawer-body">
+      <!-- Blocco Riservato se in Ruolo Cliente -->
+      <div id="drawerAdminRestricted" class="drawer-restricted-banner" style="display:none;">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <div>
+          <strong>Modalità Cliente</strong>
+          <p>I parametri hardware e di configurazione sono riservati all'amministratore (PIN 9999).</p>
+        </div>
+      </div>
+
+      <!-- Scheda 1: Telemetria SoC Jetson Orin Nano -->
+      <div class="drawer-card" id="drawerTelemetryCard">
+        <div class="drawer-card-header">
+          <span class="drawer-card-tag">TELEMETRIA HARDWARE</span>
+          <span class="status-beacon is-accent" id="drawerHwStatus">Operativo</span>
+        </div>
+
+        <!-- Temperatura SoC -->
+        <div class="drawer-temp-hero">
+          <div class="temp-indicator-visual" id="drawerTempVisual">
+            <svg viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+          </div>
+          <div class="temp-data-col">
+            <span class="temp-legend">TEMPERATURA SOC (GPU/CPU)</span>
+            <div class="temp-number-row">
+              <span id="drawerTempNum" class="temp-big-val">--.- °C</span>
+              <span id="drawerTempPill" class="temp-status-pill is-optimal">Ottimale</span>
+            </div>
+          </div>
+        </div>
+        <div class="temp-bar-track">
+          <div id="drawerTempBar" class="temp-bar-fill" style="width: 50%;"></div>
+        </div>
+
+        <!-- Metriche CPU / TensorRT / RAM / Swap / Potenza -->
+        <div class="drawer-metric-grid">
+          <div class="drawer-metric-item">
+            <span class="d-metric-label">TensorRT Detector</span>
+            <strong id="drawerTrtFps" class="d-metric-val">18.8 FPS</strong>
+            <span id="drawerTrtLatency" class="d-metric-sub">~33.9 ms</span>
+          </div>
+          <div class="drawer-metric-item">
+            <span class="d-metric-label">RAM Fisica</span>
+            <strong id="drawerRamVal" class="d-metric-val">4.56 GB / 7.6 GB</strong>
+            <span id="drawerRamSub" class="d-metric-sub">~3.0 GB liberi</span>
+          </div>
+          <div class="drawer-metric-item">
+            <span class="d-metric-label">Swap NVMe</span>
+            <strong id="drawerSwapVal" class="d-metric-val">4 MB / 3.8 GB</strong>
+            <span class="d-metric-sub">swappiness=10</span>
+          </div>
+          <div class="drawer-metric-item">
+            <span class="d-metric-label">Potenza Assorbita</span>
+            <strong id="drawerPowerVal" class="d-metric-val">16.0 W</strong>
+            <span class="d-metric-sub">Profilo 25W</span>
+          </div>
+        </div>
+
+        <div class="drawer-uptime-row">
+          <span>Uptime Sistema:</span>
+          <strong id="drawerUptimeVal">--</strong>
+        </div>
+      </div>
+
+      <!-- Scheda 2: Sicurezza & Varchi -->
+      <div class="drawer-card">
+        <div class="drawer-card-header">
+          <span class="drawer-card-tag">STATO SICUREZZA</span>
+          <span class="status-beacon" id="drawerSecBadge">Protetto</span>
+        </div>
+        <div class="drawer-actions-stack">
+          <button type="button" class="drawer-action-btn" onclick="openLatestIdentikit(); closeSystemDrawer();">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <span>Visualizza Ultimo Identikit Forense</span>
+          </button>
+          <button type="button" class="drawer-action-btn" onclick="openWindow('connectors'); closeSystemDrawer();">
+            <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+            <span>Stato Connettori &amp; Nodi di Rete</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Scheda 3: Gestione Sessione & Ruoli -->
+      <div class="drawer-card">
+        <div class="drawer-card-header">
+          <span class="drawer-card-tag">ACCESSO &amp; PRIVILEGI</span>
+          <span id="drawerRolePill" class="role-pill client">Cliente</span>
+        </div>
+        <p class="drawer-help-text">Per accedere alla configurazione hardware avanzata, passa al profilo Manutentore.</p>
+        <button type="button" class="drawer-lock-btn" onclick="lockSession(); closeSystemDrawer();">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>Blocca Sessione / Cambia Ruolo</span>
+        </button>
+      </div>
+    </div>
+  </aside>
 
   <!-- Barra dei comandi scritti -->
   <form class="orin-command" id="orinCommandForm" autocomplete="off">
@@ -1044,7 +1404,7 @@
 
   <script src="assets/app.js?v=9.9"></script>
   <script src="assets/orin-eye.js?v=1"></script>
-  <script src="assets/orin-commands.js?v=1"></script>
-  <script src="assets/orin-shell.js?v=2"></script>
+  <script src="assets/orin-commands.js?v=2"></script>
+  <script src="assets/orin-shell.js?v=3"></script>
 </body>
 </html>

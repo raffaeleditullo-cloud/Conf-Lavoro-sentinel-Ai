@@ -40,7 +40,9 @@
       events: { titolo: 'gli eventi', parole: ['eventi', 'evento', 'allarmi', 'archivio', 'registro', 'storico', 'evidenze', 'registrazioni', 'rilevamenti'] },
       plates: { titolo: 'le targhe', parole: ['targhe', 'targa', 'whitelist', 'veicoli'] },
       diagnostics: { titolo: 'lo stato della Jetson', parole: ['diagnostica', 'telemetria', 'jetson', 'hardware', 'temperatura', 'salute'] },
-      settings: { titolo: 'le impostazioni', parole: ['impostazioni', 'impostazione', 'configurazione', 'audio', 'volume', 'voce', 'voci', 'orari', 'orario', 'pin', 'sorveglianza'] }
+      settings: { titolo: 'le impostazioni', parole: ['impostazioni', 'impostazione', 'configurazione', 'audio', 'volume', 'voce', 'voci', 'orari', 'orario', 'pin', 'sorveglianza'] },
+      connectors: { titolo: 'i connettori cloud', parole: ['connettori', 'connettore', 'cloud', 'google', 'drive', 'integrazioni', 'collegamenti', 'nodi'] },
+      ptt: { titolo: "l'interfono vocale", parole: ['microfono', 'interfono', 'registratore', 'parla', 'parlare', 'citofono', 'voce live'] }
     },
     identikit: ['identikit', 'scheda', 'dossier'],
     azioni: {

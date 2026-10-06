@@ -47,7 +47,7 @@
   }
 
   // ────────────────────────────────────────────────────────────────────────────
-  // 2. FINESTRE
+  // 2. FINESTRE & WINDOW MANAGER (Stile Windows con Snap Layouts e Resize Handles)
   // ────────────────────────────────────────────────────────────────────────────
   const layer = $('orinWindows');
   const windows = Array.from(document.querySelectorAll('.orin-window'));
@@ -62,19 +62,29 @@
 
   function updateRoom() {
     document.body.classList.toggle('has-windows', openWindows().length > 0);
+    syncDockIndicators();
+  }
+
+  function syncDockIndicators() {
+    const openKeys = openWindows().filter(w => !w.classList.contains('is-minimized')).map(w => w.dataset.window);
+    document.querySelectorAll('.dock-app-btn[data-app]').forEach(btn => {
+      const app = btn.dataset.app;
+      btn.classList.toggle('is-active', openKeys.includes(app));
+    });
   }
 
   function focusWindow(win) {
     win.style.zIndex = String(++zTop);
     windows.forEach((w) => w.classList.toggle('is-focused', w === win));
     eyeState.focus = win;
+    syncDockIndicators();
   }
 
   function topWindow() {
-    return openWindows().sort((a, b) => Number(b.style.zIndex) - Number(a.style.zIndex))[0] || null;
+    return openWindows().filter(w => !w.classList.contains('is-minimized'))
+      .sort((a, b) => Number(b.style.zIndex) - Number(a.style.zIndex))[0] || null;
   }
 
-  // Prima apertura: al centro, con un piccolo scalino per ogni finestra gia' aperta
   function placeWindow(win) {
     if (win.dataset.placed) return;
     const area = layer.getBoundingClientRect();
@@ -97,9 +107,9 @@
     }
     if (win.hidden) {
       win.hidden = false;
-      updateRoom();          // prima si riduce la stanza, poi si centra la finestra
+      win.classList.remove('is-minimized');
+      updateRoom();
       placeWindow(win);
-      // La finestra nasce dalla direzione dell'occhio
       const eyeBox = $('orinEyeStage').getBoundingClientRect();
       const box = win.getBoundingClientRect();
       win.style.setProperty('--orin-origin',
@@ -108,9 +118,23 @@
         win.classList.add('is-opening');
         requestAnimationFrame(() => requestAnimationFrame(() => win.classList.remove('is-opening')));
       }
+    } else if (win.classList.contains('is-minimized')) {
+      win.classList.remove('is-minimized');
     }
     focusWindow(win);
     updateRoom();
+    return true;
+  }
+
+  function minimizeWindow(key) {
+    const win = $(`win-${key}`);
+    if (!win || win.hidden) return false;
+    win.classList.add('is-minimized');
+    win.classList.remove('is-focused');
+    if (eyeState.focus === win) eyeState.focus = null;
+    const next = topWindow();
+    if (next) focusWindow(next);
+    syncDockIndicators();
     return true;
   }
 
@@ -119,6 +143,7 @@
     if (!win || win.hidden) return false;
     win.hidden = true;
     win.classList.remove('is-focused');
+    win.classList.remove('is-minimized');
     if (eyeState.focus === win) eyeState.focus = null;
     const next = topWindow();
     if (next) focusWindow(next);
@@ -131,11 +156,13 @@
     if (typeof expandedCamId !== 'undefined' && expandedCamId !== null) closeCamModal();
     const identikit = $('identikitModal');
     if (identikit && identikit.classList.contains('open')) closeIdentikitModal();
+    syncDockIndicators();
   }
 
   function toggleMaximize(win) {
     const max = !win.classList.contains('is-max');
     win.classList.toggle('is-max', max);
+    win.classList.remove('is-minimized');
     const btn = win.querySelector('[data-window-action="maximize"]');
     if (btn) {
       btn.setAttribute('aria-pressed', String(max));
@@ -143,38 +170,455 @@
     }
   }
 
-  // Pulsanti della barra, messa a fuoco e trascinamento
+  // Snap Window (Suddivisione e aggancio stile Windows Snap Assist)
+  function snapWindow(win, layout) {
+    win.classList.remove('is-max');
+    win.classList.remove('is-minimized');
+    const area = layer.getBoundingClientRect();
+    const W = area.width;
+    const H = area.height;
+
+    switch (layout) {
+      case 'half-left':
+        win.style.left = '0px';
+        win.style.top = '0px';
+        win.style.width = `${Math.round(W * 0.5)}px`;
+        win.style.height = `${H}px`;
+        break;
+      case 'half-right':
+        win.style.left = `${Math.round(W * 0.5)}px`;
+        win.style.top = '0px';
+        win.style.width = `${Math.round(W * 0.5)}px`;
+        win.style.height = `${H}px`;
+        break;
+      case 'quad-tl':
+        win.style.left = '0px';
+        win.style.top = '0px';
+        win.style.width = `${Math.round(W * 0.5)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'quad-tr':
+        win.style.left = `${Math.round(W * 0.5)}px`;
+        win.style.top = '0px';
+        win.style.width = `${Math.round(W * 0.5)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'quad-bl':
+        win.style.left = '0px';
+        win.style.top = `${Math.round(H * 0.5)}px`;
+        win.style.width = `${Math.round(W * 0.5)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'quad-br':
+        win.style.left = `${Math.round(W * 0.5)}px`;
+        win.style.top = `${Math.round(H * 0.5)}px`;
+        win.style.width = `${Math.round(W * 0.5)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'grid-6-1': // Layout 6 riquadri contemporanei (3x2)
+        win.style.left = '0px';
+        win.style.top = '0px';
+        win.style.width = `${Math.round(W / 3)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'full':
+        toggleMaximize(win);
+        return;
+    }
+    win.dataset.placed = '1';
+    focusWindow(win);
+  }
+
+  // Inizializzazione strumenti di ogni finestra: Snap, Riduci, Ingrandisci, Chiudi, Drag e Resize
   windows.forEach((win) => {
     const key = win.dataset.window;
     const bar = win.querySelector('.orin-window-bar');
+    const tools = win.querySelector('.orin-window-tools');
 
     win.addEventListener('pointerdown', () => focusWindow(win));
 
-    win.querySelector('[data-window-action="close"]').addEventListener('click', () => closeWindow(key));
-    win.querySelector('[data-window-action="maximize"]').addEventListener('click', () => toggleMaximize(win));
-    bar.addEventListener('dblclick', (e) => {
-      if (!e.target.closest('button') && !narrowScreen.matches) toggleMaximize(win);
+    // Aggiungi pulsante Riduci a icona se non presente
+    if (tools && !tools.querySelector('[data-window-action="minimize"]')) {
+      const minBtn = document.createElement('button');
+      minBtn.type = 'button';
+      minBtn.className = 'orin-window-btn';
+      minBtn.dataset.windowAction = 'minimize';
+      minBtn.title = 'Riduci a icona';
+      minBtn.setAttribute('aria-label', 'Riduci a icona');
+      minBtn.innerHTML = '<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+      tools.insertBefore(minBtn, tools.firstChild);
+    }
+
+    // Aggiungi menu Snap Layout in stile Windows 11
+    if (tools && !tools.querySelector('.orin-snap-wrap')) {
+      const snapWrap = document.createElement('div');
+      snapWrap.className = 'orin-snap-wrap';
+      snapWrap.innerHTML = `
+        <button type="button" class="orin-window-btn" data-window-action="snap" title="Layout e suddivisione schermo" aria-label="Layout suddivisione">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+        </button>
+        <div class="orin-snap-menu" role="menu">
+          <div class="orin-snap-title">Layout Schermo (Snap)</div>
+          <div class="orin-snap-grid">
+            <button type="button" class="snap-option" data-snap="half-left" title="Metà Sinistra">
+              <div class="snap-box half-l"><span class="snap-fill active"></span><span class="snap-fill"></span></div>
+              <span>Metà SX</span>
+            </button>
+            <button type="button" class="snap-option" data-snap="half-right" title="Metà Destra">
+              <div class="snap-box half-r"><span class="snap-fill"></span><span class="snap-fill active"></span></div>
+              <span>Metà DX</span>
+            </button>
+            <button type="button" class="snap-option" data-snap="quad-tl" title="Griglia a 4 (Quadrante)">
+              <div class="snap-box grid-4"><span class="snap-fill active"></span><span class="snap-fill"></span><span class="snap-fill"></span><span class="snap-fill"></span></div>
+              <span>4 Riquadri</span>
+            </button>
+            <button type="button" class="snap-option" data-snap="grid-6-1" title="Griglia a 6 (Fino a 6 finestre)">
+              <div class="snap-box grid-6"><span class="snap-fill active"></span><span class="snap-fill"></span><span class="snap-fill"></span><span class="snap-fill"></span><span class="snap-fill"></span><span class="snap-fill"></span></div>
+              <span>6 Riquadri</span>
+            </button>
+            <button type="button" class="snap-option" data-snap="full" title="Tutto Schermo" style="grid-column: 1 / -1;">
+              <div class="snap-box full" style="width:100%;"><span class="snap-fill active"></span></div>
+              <span>A Tutto Schermo</span>
+            </button>
+          </div>
+        </div>
+      `;
+      const maxBtn = tools.querySelector('[data-window-action="maximize"]');
+      if (maxBtn) tools.insertBefore(snapWrap, maxBtn);
+      else tools.appendChild(snapWrap);
+
+      // Listener per le opzioni di snap
+      snapWrap.querySelectorAll('.snap-option').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const layout = opt.dataset.snap;
+          snapWindow(win, layout);
+        });
+      });
+    }
+
+    // Aggiungi 8 maniglie di ridimensionamento (Resize Handles) per bordi e angoli
+    const handles = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    handles.forEach(dir => {
+      if (!win.querySelector(`.handle-${dir}`)) {
+        const h = document.createElement('div');
+        h.className = `win-resize-handle handle-${dir}`;
+        h.dataset.handle = dir;
+        win.appendChild(h);
+
+        // Resize interattivo
+        h.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0 || win.classList.contains('is-max') || narrowScreen.matches) return;
+          e.preventDefault();
+          e.stopPropagation();
+          focusWindow(win);
+
+          const startX = e.clientX;
+          const startY = e.clientY;
+          const startW = win.offsetWidth;
+          const startH = win.offsetHeight;
+          const startL = win.offsetLeft;
+          const startT = win.offsetTop;
+
+          h.setPointerCapture(e.pointerId);
+
+          const onPointerMove = (ev) => {
+            const dx = ev.clientX - startX;
+            const dy = ev.clientY - startY;
+
+            let newW = startW;
+            let newH = startH;
+            let newL = startL;
+            let newT = startT;
+
+            if (dir.includes('e')) newW = Math.max(360, startW + dx);
+            if (dir.includes('s')) newH = Math.max(240, startH + dy);
+            if (dir.includes('w')) {
+              newW = Math.max(360, startW - dx);
+              newL = startL + (startW - newW);
+            }
+            if (dir.includes('n')) {
+              newH = Math.max(240, startH - dy);
+              newT = startT + (startH - newH);
+            }
+
+            win.style.width = `${newW}px`;
+            win.style.height = `${newH}px`;
+            win.style.left = `${newL}px`;
+            win.style.top = `${newT}px`;
+          };
+
+          const onPointerUp = (ev) => {
+            h.releasePointerCapture(ev.pointerId);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+          };
+
+          window.addEventListener('pointermove', onPointerMove);
+          window.addEventListener('pointerup', onPointerUp);
+        });
+      }
     });
 
-    let drag = null;
-    bar.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || e.target.closest('button') || win.classList.contains('is-max') || narrowScreen.matches) return;
-      drag = { x: e.clientX, y: e.clientY, left: win.offsetLeft, top: win.offsetTop };
-      bar.setPointerCapture(e.pointerId);
-    });
-    bar.addEventListener('pointermove', (e) => {
-      if (!drag) return;
-      const area = layer.getBoundingClientRect();
-      // La barra del titolo resta sempre raggiungibile
-      const left = Math.max(-win.offsetWidth + 120, Math.min(area.width - 120, drag.left + e.clientX - drag.x));
-      const top = Math.max(0, Math.min(area.height - 48, drag.top + e.clientY - drag.y));
-      win.style.left = `${left}px`;
-      win.style.top = `${top}px`;
-    });
-    const endDrag = () => { drag = null; };
-    bar.addEventListener('pointerup', endDrag);
-    bar.addEventListener('pointercancel', endDrag);
+    const closeBtn = win.querySelector('[data-window-action="close"]');
+    if (closeBtn) closeBtn.addEventListener('click', () => closeWindow(key));
+
+    const maxBtn = win.querySelector('[data-window-action="maximize"]');
+    if (maxBtn) maxBtn.addEventListener('click', () => toggleMaximize(win));
+
+    const minBtn = win.querySelector('[data-window-action="minimize"]');
+    if (minBtn) minBtn.addEventListener('click', () => minimizeWindow(key));
+
+    if (bar) {
+      bar.addEventListener('dblclick', (e) => {
+        if (!e.target.closest('button') && !narrowScreen.matches) toggleMaximize(win);
+      });
+
+      // Trascinamento finestra (Drag)
+      let drag = null;
+      bar.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || e.target.closest('button') || e.target.closest('.orin-snap-wrap') || win.classList.contains('is-max') || narrowScreen.matches) return;
+        drag = { x: e.clientX, y: e.clientY, left: win.offsetLeft, top: win.offsetTop };
+        bar.setPointerCapture(e.pointerId);
+      });
+      bar.addEventListener('pointermove', (e) => {
+        if (!drag) return;
+        const area = layer.getBoundingClientRect();
+        const left = Math.max(-win.offsetWidth + 120, Math.min(area.width - 120, drag.left + e.clientX - drag.x));
+        const top = Math.max(0, Math.min(area.height - 48, drag.top + e.clientY - drag.y));
+        win.style.left = `${left}px`;
+        win.style.top = `${top}px`;
+      });
+      const endDrag = () => { drag = null; };
+      bar.addEventListener('pointerup', endDrag);
+      bar.addEventListener('pointercancel', endDrag);
+    }
   });
+
+  // Collegamento pulsanti della barra Dock laterale
+  document.querySelectorAll('.dock-app-btn[data-app]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const app = btn.dataset.app;
+      if (app === 'lock') {
+        lockSession();
+        return;
+      }
+      const win = $(`win-${app}`);
+      if (!win) return;
+      if (win.hidden) {
+        openWindow(app);
+      } else if (win.classList.contains('is-minimized')) {
+        win.classList.remove('is-minimized');
+        focusWindow(win);
+      } else if (win.classList.contains('is-focused')) {
+        minimizeWindow(app);
+      } else {
+        focusWindow(win);
+      }
+      syncDockIndicators();
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 2B. SYSTEM DRAWER (Cassetto Laterale da Destra per Diagnostica Jetson)
+  // ────────────────────────────────────────────────────────────────────────────
+  function setSystemDrawerOpen(open) {
+    const drawer = $('systemDrawer');
+    const backdrop = $('systemDrawerBackdrop');
+    if (!drawer || !backdrop) return;
+    drawer.classList.toggle('is-open', open);
+    backdrop.classList.toggle('is-open', open);
+    if (open) {
+      pollDrawerTelemetry();
+    }
+  }
+
+  window.toggleSystemDrawer = function () {
+    const drawer = $('systemDrawer');
+    setSystemDrawerOpen(!(drawer && drawer.classList.contains('is-open')));
+  };
+  window.openSystemDrawer = function () { setSystemDrawerOpen(true); };
+  window.closeSystemDrawer = function () { setSystemDrawerOpen(false); };
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const drawer = $('systemDrawer');
+      if (drawer && drawer.classList.contains('is-open')) closeSystemDrawer();
+    }
+  });
+
+  async function pollDrawerTelemetry() {
+    try {
+      const res = await fetch('/api/status');
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Temperatura SoC Jetson
+      const tempNum = $('drawerTempNum');
+      const tempPill = $('drawerTempPill');
+      const tempBar = $('drawerTempBar');
+      const topbarTempText = $('topbarTempText');
+      const topbarChip = $('topbarTempChip');
+
+      if (data.temperature !== undefined) {
+        const t = data.temperature;
+        const tStr = `${t.toFixed(1)} °C`;
+        if (tempNum) tempNum.textContent = tStr;
+        if (topbarTempText) topbarTempText.textContent = tStr;
+
+        const isOpt = t < 65;
+        const isWarm = t >= 65 && t < 78;
+        const isHot = t >= 78;
+
+        const label = isOpt ? 'Ottimale' : (isWarm ? 'Nominale' : 'Attenzione');
+        if (tempPill) {
+          tempPill.textContent = label;
+          tempPill.className = `temp-status-pill ${isOpt ? 'is-optimal' : (isWarm ? 'is-warm' : 'is-hot')}`;
+        }
+        if (topbarChip) {
+          topbarChip.className = `topbar-temp-chip ${isOpt ? 'is-optimal' : (isWarm ? 'is-warm' : 'is-hot')}`;
+        }
+        if (tempBar) {
+          const pct = Math.min(100, Math.max(10, (t / 85) * 100));
+          tempBar.style.width = `${pct}%`;
+        }
+      }
+
+      // TensorRT Detector FPS
+      const trtFps = $('drawerTrtFps');
+      if (trtFps && data.detection_fps !== undefined) {
+        trtFps.textContent = `${data.detection_fps.toFixed(1)} FPS`;
+      }
+
+      // RAM
+      const ramVal = $('drawerRamVal');
+      const ramSub = $('drawerRamSub');
+      if (ramVal && data.ram_used_mb !== undefined && data.ram_total_mb !== undefined) {
+        ramVal.textContent = `${(data.ram_used_mb / 1024).toFixed(2)} GB / ${(data.ram_total_mb / 1024).toFixed(1)} GB`;
+        if (ramSub && data.ram_free_mb !== undefined) {
+          ramSub.textContent = `~${(data.ram_free_mb / 1024).toFixed(1)} GB liberi`;
+        }
+      }
+
+      // Swap
+      const swapVal = $('drawerSwapVal');
+      if (swapVal && data.swap_used_mb !== undefined && data.swap_total_mb !== undefined) {
+        swapVal.textContent = `${data.swap_used_mb} MB / ${(data.swap_total_mb / 1024).toFixed(1)} GB`;
+      }
+
+      // Potenza & Uptime
+      const pVal = $('drawerPowerVal');
+      if (pVal && data.power_watts !== undefined) pVal.textContent = `${data.power_watts.toFixed(1)} W`;
+      const upVal = $('drawerUptimeVal');
+      if (upVal && data.uptime) upVal.textContent = data.uptime;
+
+      // Aggiornamento Visibilità Ruolo (Admin vs Cliente)
+      const isClient = role() === 'client';
+      const restrictedBanner = $('drawerAdminRestricted');
+      const telemCard = $('drawerTelemetryCard');
+      const rolePill = $('drawerRolePill');
+      if (rolePill) {
+        rolePill.textContent = isClient ? 'Cliente' : 'Manutentore';
+        rolePill.className = `role-pill ${isClient ? 'client' : 'maintainer'}`;
+      }
+      if (restrictedBanner) restrictedBanner.style.display = isClient ? 'flex' : 'none';
+      if (telemCard) telemCard.style.display = isClient ? 'none' : 'flex';
+      if (topbarChip) topbarChip.style.display = isClient ? 'none' : 'inline-flex';
+
+    } catch (e) {
+      // Ignora errori di polling
+    }
+  }
+
+  // Polling periodico per temperatura ed stato
+  setInterval(pollDrawerTelemetry, 3500);
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // 2C. INTERFONO LIVE / REGISTRATORE PUSH-TO-TALK (win-ptt)
+  // ────────────────────────────────────────────────────────────────────────────
+  const pttBtn = $('btnPttMic');
+  const pttTimer = $('pttTimerDisplay');
+  const pttBeacon = $('pttStatusBeacon');
+  const pttLabel = $('pttMicLabel');
+  let pttInterval = null;
+  let pttSeconds = 0;
+  let isPttRecording = false;
+
+  function startPttRecording() {
+    if (isPttRecording) return;
+    isPttRecording = true;
+    pttSeconds = 0;
+    if (pttBtn) pttBtn.classList.add('is-active');
+    const dockPtt = $('dockBtnPtt');
+    if (dockPtt) dockPtt.classList.add('is-recording');
+
+    if (pttBeacon) {
+      pttBeacon.textContent = 'IN TRASMISSIONE DIRETTA';
+      pttBeacon.className = 'status-beacon is-alert';
+    }
+    if (pttLabel) pttLabel.textContent = 'PARLA ORA...';
+    if (pttTimer) {
+      pttTimer.style.display = 'block';
+      pttTimer.textContent = '00:00';
+    }
+
+    pttInterval = setInterval(() => {
+      pttSeconds++;
+      const m = String(Math.floor(pttSeconds / 60)).padStart(2, '0');
+      const s = String(pttSeconds % 60).padStart(2, '0');
+      if (pttTimer) pttTimer.textContent = `${m}:${s}`;
+    }, 1000);
+  }
+
+  function stopPttRecording() {
+    if (!isPttRecording) return;
+    isPttRecording = false;
+    if (pttInterval) {
+      clearInterval(pttInterval);
+      pttInterval = null;
+    }
+    if (pttBtn) pttBtn.classList.remove('is-active');
+    const dockPtt = $('dockBtnPtt');
+    if (dockPtt) dockPtt.classList.remove('is-recording');
+
+    if (pttBeacon) {
+      pttBeacon.textContent = 'Pronto alla trasmissione';
+      pttBeacon.className = 'status-beacon is-accent';
+    }
+    if (pttLabel) pttLabel.textContent = 'PREMI E PARLA';
+    if (pttTimer) pttTimer.style.display = 'none';
+
+    const target = $('selPttTarget') ? $('selPttTarget').value : 'fanvil';
+    say(`Messaggio vocale (${pttSeconds}s) trasmesso a ${target === 'fanvil' ? 'tutti i varchi' : target}.`);
+  }
+
+  if (pttBtn) {
+    pttBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startPttRecording();
+    });
+    pttBtn.addEventListener('pointerup', stopPttRecording);
+    pttBtn.addEventListener('pointercancel', stopPttRecording);
+    pttBtn.addEventListener('pointerleave', stopPttRecording);
+  }
+
+  // Supporto Spacebar per Push-to-Talk quando win-ptt è aperto
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !e.repeat) {
+      const pttWin = $('win-ptt');
+      if (pttWin && !pttWin.hidden && pttWin.classList.contains('is-focused') && !$('orinCommandInput')?.matches(':focus')) {
+        e.preventDefault();
+        startPttRecording();
+      }
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' && isPttRecording) {
+      e.preventDefault();
+      stopPttRecording();
+    }
+  });
+
 
   // ────────────────────────────────────────────────────────────────────────────
   // 3. AGGANCI AD APP.JS
@@ -185,11 +629,16 @@
     if (!ready) return;
     openWindow(viewName);
   };
+  window.openWindow = openWindow;
+  window.closeWindow = closeWindow;
+  window.minimizeWindow = minimizeWindow;
+  window.closeEverything = closeEverything;
 
   const originalApplyRole = window.applyRole;
   window.applyRole = function (newRole) {
     originalApplyRole(newRole);
     if (newRole !== 'maintainer') closeWindow('diagnostics');
+    pollDrawerTelemetry();
   };
 
   // ────────────────────────────────────────────────────────────────────────────
