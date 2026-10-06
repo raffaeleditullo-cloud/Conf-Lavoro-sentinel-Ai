@@ -788,15 +788,43 @@
     pttBtn.addEventListener('pointerleave', stopPttRecording);
   }
 
-  // Supporto microfono integrato nella barra di ricerca
+  // Supporto microfono integrato nella barra di ricerca (sia click che tieni premuto come WhatsApp)
   if (chatMicBtn) {
+    let micHoldTimeout = null;
+    let isHoldToTalk = false;
+
     chatMicBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      isHoldToTalk = false;
+
+      // Se stava già registrando da un click precedente, questo tocco invia subito
+      if (isPttRecording) {
+        stopPttRecording();
+        return;
+      }
+
       startPttRecording();
+
+      // Se tiene premuto per più di 350ms, si attiva la modalità "hold-to-talk"
+      micHoldTimeout = setTimeout(() => {
+        isHoldToTalk = true;
+      }, 350);
     });
-    chatMicBtn.addEventListener('pointerup', stopPttRecording);
-    chatMicBtn.addEventListener('pointercancel', stopPttRecording);
-    chatMicBtn.addEventListener('pointerleave', stopPttRecording);
+
+    chatMicBtn.addEventListener('pointerup', () => {
+      if (micHoldTimeout) clearTimeout(micHoldTimeout);
+      // Se era premuto in hold-to-talk, al rilascio invia la voce immediatamente
+      if (isHoldToTalk && isPttRecording) {
+        stopPttRecording();
+      }
+      // Se è stato un click rapido (< 350ms), rimane in registrazione per consentire di parlare comodamente:
+      // basterà un secondo click su microfono, oppure premere "Invia" / Invio!
+    });
+
+    chatMicBtn.addEventListener('pointercancel', () => {
+      if (micHoldTimeout) clearTimeout(micHoldTimeout);
+      if (isHoldToTalk && isPttRecording) stopPttRecording();
+    });
   }
 
   // Supporto Spacebar per Push-to-Talk quando win-ptt è aperto o si tiene premuto
@@ -942,6 +970,11 @@
   if (form) {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+      // Se si sta registrando un audio vocale, premere Invia o Invio conclude e trasmette la registrazione
+      if (isPttRecording) {
+        stopPttRecording();
+        return;
+      }
       const value = $('orinCommandInput').value;
       if (value.trim()) runCommand(value);
     });

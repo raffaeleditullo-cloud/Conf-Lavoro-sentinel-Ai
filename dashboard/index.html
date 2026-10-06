@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Roboto:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/styles.css?v=9.9">
-  <link rel="stylesheet" href="assets/orin.css?v=10">
+  <link rel="stylesheet" href="assets/orin.css?v=11">
 </head>
 <body class="orin">
 
@@ -100,17 +100,7 @@
         <div class="dock-badge">Questa è l'app cloud</div>
       </button>
 
-      <!-- 5. Registratore / Microfono Live Altoparlante (Push-to-Talk) -->
-      <button type="button" class="dock-app-btn is-ptt" id="dockBtnPtt" data-app="ptt" aria-label="Microfono Live">
-        <div class="dock-app-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </div>
-        <span class="dock-app-label">Voce</span>
-        <span class="dock-active-indicator"></span>
-        <div class="dock-badge">Parla dall'altoparlante (PTT)</div>
-      </button>
-
-      <!-- 6. App Impostazioni & Orari -->
+      <!-- 5. App Impostazioni & Orari -->
       <button type="button" class="dock-app-btn" id="dockBtnSettings" data-app="settings" aria-label="Impostazioni">
         <div class="dock-app-icon">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1209,7 +1199,13 @@
     <div class="orin-command-field">
       <input type="text" id="orinCommandInput" class="orin-command-input"
              placeholder="Scrivi cosa vuoi vedere o cosa dire al varco..." spellcheck="false">
-      <button type="submit" class="orin-command-send">Invia</button>
+      <div class="orin-command-actions">
+        <button type="submit" class="orin-command-send">Invia</button>
+        <button type="button" class="orin-command-mic" id="btnChatMic"
+                title="Tieni premuto o clicca per parlare dall'altoparlante (come WhatsApp)" aria-label="Microfono Live">
+          <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+      </div>
     </div>
     <div class="orin-suggestions" aria-label="Comandi rapidi">
       <button type="button" class="orin-chip" data-command="telecamere">Telecamere</button>
@@ -1464,6 +1460,6 @@
   <script src="assets/app.js?v=9.9"></script>
   <script src="assets/orin-eye.js?v=1"></script>
   <script src="assets/orin-commands.js?v=2"></script>
-  <script src="assets/orin-shell.js?v=6"></script>
+  <script src="assets/orin-shell.js?v=7"></script>
 </body>
 </html>
