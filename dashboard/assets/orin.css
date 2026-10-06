@@ -724,117 +724,75 @@ body.orin {
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  background: transparent;
   color: #ffffff;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), filter 0.22s ease;
   padding: 0;
   outline: none;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  box-shadow: none;
 }
 
 .dock-app-btn:hover {
-  transform: translateY(-3px) scale(1.08);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  transform: scale(1.18);
 }
 
 .dock-app-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
 }
 
-/* Colori e gradienti unici per ogni App (Stile iOS / iPadOS / macOS) */
-.dock-app-btn.app-wall {
-  background: linear-gradient(145deg, #1e88e5 0%, #1565c0 100%);
-  border-color: rgba(66, 165, 245, 0.45);
-}
-.dock-app-btn.app-wall:hover {
-  box-shadow: 0 8px 24px rgba(30, 136, 229, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.5);
-}
-
-.dock-app-btn.app-events {
-  background: linear-gradient(145deg, #7e57c2 0%, #4527a0 100%);
-  border-color: rgba(149, 117, 205, 0.45);
-}
-.dock-app-btn.app-events:hover {
-  box-shadow: 0 8px 24px rgba(126, 87, 194, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.5);
-}
-
-.dock-app-btn.app-plates {
-  background: linear-gradient(145deg, #00897b 0%, #004d40 100%);
-  border-color: rgba(38, 166, 154, 0.45);
-}
-.dock-app-btn.app-plates:hover {
-  box-shadow: 0 8px 24px rgba(0, 137, 123, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.5);
-}
-
-.dock-app-btn.app-connectors {
-  background: linear-gradient(145deg, #0288d1 0%, #01579b 100%);
-  border-color: rgba(41, 182, 246, 0.45);
-}
-.dock-app-btn.app-connectors:hover {
-  box-shadow: 0 8px 24px rgba(2, 136, 209, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.5);
-}
-
-.dock-app-btn.app-settings {
-  background: linear-gradient(145deg, #546e7a 0%, #263238 100%);
-  border-color: rgba(144, 164, 174, 0.45);
-}
-.dock-app-btn.app-settings:hover {
-  box-shadow: 0 8px 24px rgba(84, 110, 122, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.5);
-}
-
-.dock-app-btn.app-lock {
-  background: linear-gradient(145deg, #e53935 0%, #b71c1c 100%);
-  border-color: rgba(239, 83, 80, 0.45);
-}
-.dock-app-btn.app-lock:hover {
-  box-shadow: 0 8px 24px rgba(229, 57, 53, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.5);
-}
-
-.dock-app-tile {
-  width: 22px;
-  height: 22px;
+/* Icone Generate Senza Sfondo */
+.dock-app-icon {
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.dock-app-tile svg {
+
+.dock-app-asset {
   width: 100%;
   height: 100%;
-  stroke: #ffffff;
-  stroke-width: 2.2;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  transition: filter 0.22s ease, transform 0.22s ease;
 }
 
-.dock-app-label {
-  font-family: var(--font-sans);
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+/* Aura luminosa tematica unica al passaggio del mouse su ogni app */
+.dock-app-btn.app-wall:hover .dock-app-asset {
+  filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.85));
+}
+.dock-app-btn.app-events:hover .dock-app-asset {
+  filter: drop-shadow(0 0 12px rgba(157, 78, 221, 0.85));
+}
+.dock-app-btn.app-plates:hover .dock-app-asset {
+  filter: drop-shadow(0 0 12px rgba(0, 230, 118, 0.85));
+}
+.dock-app-btn.app-connectors:hover .dock-app-asset {
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.85));
+}
+.dock-app-btn.app-settings:hover .dock-app-asset {
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.85));
+}
+.dock-app-btn.app-lock:hover .dock-app-asset {
+  filter: drop-shadow(0 0 12px rgba(255, 82, 82, 0.85));
 }
 
-/* Indicatore finestra attiva */
+/* Indicatore finestra attiva sulla barra */
 .dock-app-btn.is-active .dock-active-indicator {
   position: absolute;
   left: -7px;
   top: 50%;
   transform: translateY(-50%);
   width: 4px;
-  height: 22px;
+  height: 24px;
   border-radius: 0 4px 4px 0;
-  background: #ffffff;
-  box-shadow: 0 0 10px #ffffff;
+  background: #00f0ff;
+  box-shadow: 0 0 12px #00f0ff;
   display: block;
 }
 
@@ -842,62 +800,51 @@ body.orin {
   display: none;
 }
 
-/* Tooltip Ricco Spiegativo (Scheda Fluttuante con Titolo e Descrizione) */
-.dock-tooltip {
+/* Badge Informativo al passaggio del mouse (Stile Pill Glass) */
+.dock-badge {
   position: absolute;
   left: calc(100% + 14px);
   top: 50%;
   transform: translateY(-50%) translateX(-6px);
-  background: rgba(14, 26, 56, 0.96);
+  background: rgba(10, 25, 58, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  color: #ffffff;
-  padding: 10px 14px;
-  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  border-radius: 999px;
+  padding: 7px 16px;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 168, 255, 0.25);
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.18s;
   z-index: 1000;
-  width: max-content;
-  max-width: 250px;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
 }
 
-/* Freccetta a sinistra del tooltip */
-.dock-tooltip::before {
+/* Freccetta indicatrice del badge */
+.dock-badge::before {
   content: '';
   position: absolute;
   right: 100%;
   top: 50%;
   transform: translateY(-50%);
   border: 6px solid transparent;
-  border-right-color: rgba(14, 26, 56, 0.96);
+  border-right-color: rgba(10, 25, 58, 0.95);
 }
 
-.dock-app-btn:hover .dock-tooltip {
+.dock-app-btn:hover .dock-badge,
+.dock-app-btn:focus-visible .dock-badge {
   opacity: 1;
   visibility: visible;
-  transform: translateY(-50%) translateX(2px);
+  transform: translateY(-50%) translateX(0);
 }
-
-.tooltip-title {
-  font-family: var(--font-brand);
-  font-size: 13px;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: 0.02em;
-}
-
-.tooltip-desc {
-  font-family: var(--font-sans);
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.75);
   line-height: 1.35;
 }
 
@@ -1317,21 +1264,33 @@ body.orin {
   transition: all 0.25s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
-/* Snap Layout Wrap & Menu stile Windows 11 */
+/* Snap Layout Wrap & Menu stile Windows 11 (con ponte anti-chiusura involontaria) */
 .orin-snap-wrap {
   position: relative;
   display: inline-block;
 }
 
+/* Ponte trasparente per evitare che il cursore perda il focus quando scende verso il menu */
+.orin-snap-wrap::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: -12px;
+  right: -12px;
+  height: 14px;
+  z-index: 119;
+}
+
 .orin-snap-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 4px);
   right: 0;
-  background: rgba(18, 30, 60, 0.96);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(10, 25, 58, 0.96);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55), 0 0 16px rgba(0, 168, 255, 0.2);
   padding: 12px;
   width: 230px;
   z-index: 120;
@@ -1340,6 +1299,7 @@ body.orin {
   gap: 10px;
   user-select: none;
 }
+
 .orin-snap-wrap:hover .orin-snap-menu,
 .orin-snap-wrap.is-open .orin-snap-menu {
   display: flex;
@@ -1348,7 +1308,7 @@ body.orin {
 .orin-snap-title {
   font-size: 11px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0 4px;
@@ -1366,19 +1326,20 @@ body.orin {
   align-items: center;
   gap: 6px;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   padding: 8px 6px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 10.5px;
   font-weight: 600;
   transition: all 0.15s ease;
 }
 .snap-option:hover {
-  background: rgba(26, 115, 232, 0.35);
-  border-color: #4285f4;
+  background: rgba(0, 168, 255, 0.35);
+  border-color: #00a8ff;
   color: #fff;
+  box-shadow: 0 0 10px rgba(0, 168, 255, 0.4);
 }
 
 .snap-box {
@@ -1397,8 +1358,8 @@ body.orin {
   transition: background 0.15s ease;
 }
 .snap-option:hover .snap-fill.active {
-  background: #4285f4;
-  box-shadow: 0 0 6px #4285f4;
+  background: #00a8ff;
+  box-shadow: 0 0 6px #00a8ff;
 }
 
 .snap-box.half-l { grid-template-columns: 1fr 1fr; }
@@ -1406,6 +1367,160 @@ body.orin {
 .snap-box.grid-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
 .snap-box.grid-6 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
 .snap-box.full { grid-template-columns: 1fr; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   BARRA SNAP ASSIST IN ALTO (Stile Windows 11 trascinando la finestra in alto)
+   ────────────────────────────────────────────────────────────────────────── */
+.orin-snap-bar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-115%);
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+  user-select: none;
+}
+
+.orin-snap-bar.is-visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.snap-bar-card {
+  background: rgba(10, 25, 58, 0.94);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(0, 168, 255, 0.25);
+  padding: 10px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.snap-bar-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.snap-bar-title svg {
+  color: #00f0ff;
+}
+
+.snap-bar-presets {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.snap-preset-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.snap-col-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.snap-box-wrap {
+  width: 72px;
+  height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px;
+  display: grid;
+  gap: 3px;
+  box-sizing: border-box;
+}
+
+.snap-box-wrap.split-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.snap-box-wrap.split-4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.snap-box-wrap.split-6 {
+  width: 96px;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.snap-box-wrap.split-1 {
+  width: 54px;
+  grid-template-columns: 1fr;
+}
+
+.snap-slot {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.snap-slot span {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
+.snap-slot:hover,
+.snap-slot.is-hovered {
+  background: #00a8ff !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(0, 168, 255, 0.8) !important;
+}
+
+.snap-slot:hover span,
+.snap-slot.is-hovered span {
+  color: #ffffff !important;
+}
+
+/* Ghost Blueprint (Anteprima Semi-trasparente) */
+.orin-snap-ghost {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(0, 168, 255, 0.18);
+  border: 2px solid #00f0ff;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 0 30px rgba(0, 168, 255, 0.4), inset 0 0 20px rgba(0, 168, 255, 0.2);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 990;
+}
+
+.orin-snap-ghost.is-active {
+  opacity: 1;
+  visibility: visible;
+}
 
 /* Maniglie di Ridimensionamento (Resize Handles) */
 .win-resize-handle {

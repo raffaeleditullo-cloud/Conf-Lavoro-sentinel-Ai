@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="lock-red" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ff6b6b"/>
+      <stop offset="50%" stop-color="#ee5253"/>
+      <stop offset="100%" stop-color="#b71c1c"/>
+    </linearGradient>
+    <filter id="lock-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#ff5252" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <!-- Icona Esc / Blocco Sessione Senza Sfondo -->
+  <g filter="url(#lock-glow)">
+    <!-- Arco del lucchetto -->
+    <path d="M15 20V13a9 9 0 0 1 18 0v7" stroke="url(#lock-red)" stroke-width="2.6" stroke-linecap="round"/>
+    <!-- Corpo del lucchetto di sicurezza -->
+    <rect x="10" y="20" width="28" height="22" rx="6" stroke="url(#lock-red)" stroke-width="2.5" fill="none"/>
+    <!-- Foro chiave biometrico -->
+    <circle cx="24" cy="29" r="2.8" fill="#ffffff"/>
+    <path d="M24 31.8V36" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+    <!-- Freccia di disconnessione rapida (Esc) -->
+    <path d="M4 24h6m-3-3l3 3-3 3" stroke="#ff6b6b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

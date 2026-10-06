@@ -215,18 +215,121 @@
         win.style.width = `${Math.round(W * 0.5)}px`;
         win.style.height = `${Math.round(H * 0.5)}px`;
         break;
-      case 'grid-6-1': // Layout 6 riquadri contemporanei (3x2)
+      case 'grid-6-1': // Layout 6 finestre (3x2): colonna 1, riga 1
         win.style.left = '0px';
         win.style.top = '0px';
         win.style.width = `${Math.round(W / 3)}px`;
         win.style.height = `${Math.round(H * 0.5)}px`;
         break;
+      case 'grid-6-2': // colonna 2, riga 1
+        win.style.left = `${Math.round(W / 3)}px`;
+        win.style.top = '0px';
+        win.style.width = `${Math.round(W / 3)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'grid-6-3': // colonna 3, riga 1
+        win.style.left = `${Math.round((W / 3) * 2)}px`;
+        win.style.top = '0px';
+        win.style.width = `${Math.round(W - (W / 3) * 2)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'grid-6-4': // colonna 1, riga 2
+        win.style.left = '0px';
+        win.style.top = `${Math.round(H * 0.5)}px`;
+        win.style.width = `${Math.round(W / 3)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'grid-6-5': // colonna 2, riga 2
+        win.style.left = `${Math.round(W / 3)}px`;
+        win.style.top = `${Math.round(H * 0.5)}px`;
+        win.style.width = `${Math.round(W / 3)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
+      case 'grid-6-6': // colonna 3, riga 2
+        win.style.left = `${Math.round((W / 3) * 2)}px`;
+        win.style.top = `${Math.round(H * 0.5)}px`;
+        win.style.width = `${Math.round(W - (W / 3) * 2)}px`;
+        win.style.height = `${Math.round(H * 0.5)}px`;
+        break;
       case 'full':
-        toggleMaximize(win);
+        if (!win.classList.contains('is-max')) toggleMaximize(win);
         return;
     }
     win.dataset.placed = '1';
     focusWindow(win);
+  }
+
+  function getLayoutRect(layout) {
+    const area = layer.getBoundingClientRect();
+    const W = area.width;
+    const H = area.height;
+    switch (layout) {
+      case 'half-left': return { left: 0, top: 0, width: Math.round(W * 0.5), height: H };
+      case 'half-right': return { left: Math.round(W * 0.5), top: 0, width: Math.round(W * 0.5), height: H };
+      case 'quad-tl': return { left: 0, top: 0, width: Math.round(W * 0.5), height: Math.round(H * 0.5) };
+      case 'quad-tr': return { left: Math.round(W * 0.5), top: 0, width: Math.round(W * 0.5), height: Math.round(H * 0.5) };
+      case 'quad-bl': return { left: 0, top: Math.round(H * 0.5), width: Math.round(W * 0.5), height: Math.round(H * 0.5) };
+      case 'quad-br': return { left: Math.round(W * 0.5), top: Math.round(H * 0.5), width: Math.round(W * 0.5), height: Math.round(H * 0.5) };
+      case 'grid-6-1': return { left: 0, top: 0, width: Math.round(W / 3), height: Math.round(H * 0.5) };
+      case 'grid-6-2': return { left: Math.round(W / 3), top: 0, width: Math.round(W / 3), height: Math.round(H * 0.5) };
+      case 'grid-6-3': return { left: Math.round((W / 3) * 2), top: 0, width: Math.round(W - (W / 3) * 2), height: Math.round(H * 0.5) };
+      case 'grid-6-4': return { left: 0, top: Math.round(H * 0.5), width: Math.round(W / 3), height: Math.round(H * 0.5) };
+      case 'grid-6-5': return { left: Math.round(W / 3), top: Math.round(H * 0.5), width: Math.round(W / 3), height: Math.round(H * 0.5) };
+      case 'grid-6-6': return { left: Math.round((W / 3) * 2), top: Math.round(H * 0.5), width: Math.round(W - (W / 3) * 2), height: Math.round(H * 0.5) };
+      case 'full': return { left: 0, top: 0, width: W, height: H };
+      default: return null;
+    }
+  }
+
+  const snapBar = $('orinSnapBar');
+  const snapGhost = $('orinSnapGhost');
+  let activeSnapTarget = null;
+
+  function showGhost(layout) {
+    if (!snapGhost) return;
+    const rect = getLayoutRect(layout);
+    if (!rect) {
+      hideGhost();
+      return;
+    }
+    snapGhost.style.left = `${rect.left}px`;
+    snapGhost.style.top = `${rect.top}px`;
+    snapGhost.style.width = `${rect.width}px`;
+    snapGhost.style.height = `${rect.height}px`;
+    snapGhost.classList.add('is-active');
+  }
+
+  function hideGhost() {
+    if (!snapGhost) return;
+    snapGhost.classList.remove('is-active');
+  }
+
+  function openSnapBar() {
+    if (snapBar && !snapBar.classList.contains('is-visible')) {
+      snapBar.classList.add('is-visible');
+    }
+  }
+
+  function closeSnapBar() {
+    if (snapBar) {
+      snapBar.classList.remove('is-visible');
+      snapBar.querySelectorAll('.snap-slot').forEach(s => s.classList.remove('is-hovered'));
+    }
+    hideGhost();
+    activeSnapTarget = null;
+  }
+
+  if (snapBar) {
+    snapBar.querySelectorAll('.snap-slot').forEach(slot => {
+      slot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const topWin = topWindow();
+        if (topWin && slot.dataset.snapTarget) {
+          snapWindow(topWin, slot.dataset.snapTarget);
+          closeSnapBar();
+        }
+      });
+    });
   }
 
   // Inizializzazione strumenti di ogni finestra: Snap, Riduci, Ingrandisci, Chiudi, Drag e Resize
@@ -287,10 +390,24 @@
       if (maxBtn) tools.insertBefore(snapWrap, maxBtn);
       else tools.appendChild(snapWrap);
 
+      const snapBtn = snapWrap.querySelector('[data-window-action="snap"]');
+      if (snapBtn) {
+        snapBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          snapWrap.classList.toggle('is-open');
+        });
+      }
+      document.addEventListener('pointerdown', (e) => {
+        if (!snapWrap.contains(e.target)) {
+          snapWrap.classList.remove('is-open');
+        }
+      });
+
       // Listener per le opzioni di snap
       snapWrap.querySelectorAll('.snap-option').forEach(opt => {
         opt.addEventListener('click', (e) => {
           e.stopPropagation();
+          snapWrap.classList.remove('is-open');
           const layout = opt.dataset.snap;
           snapWindow(win, layout);
         });
@@ -374,13 +491,19 @@
         if (!e.target.closest('button') && !narrowScreen.matches) toggleMaximize(win);
       });
 
-      // Trascinamento finestra (Drag)
+      // Trascinamento finestra (Drag con Snap Assist stile Windows 11)
       let drag = null;
       bar.addEventListener('pointerdown', (e) => {
-        if (e.button !== 0 || e.target.closest('button') || e.target.closest('.orin-snap-wrap') || win.classList.contains('is-max') || narrowScreen.matches) return;
+        if (e.button !== 0 || e.target.closest('button') || e.target.closest('.orin-snap-wrap') || narrowScreen.matches) return;
+        if (win.classList.contains('is-max')) {
+          toggleMaximize(win);
+          win.style.left = `${Math.max(0, e.clientX - win.offsetWidth / 2)}px`;
+          win.style.top = '12px';
+        }
         drag = { x: e.clientX, y: e.clientY, left: win.offsetLeft, top: win.offsetTop };
         bar.setPointerCapture(e.pointerId);
       });
+
       bar.addEventListener('pointermove', (e) => {
         if (!drag) return;
         const area = layer.getBoundingClientRect();
@@ -388,8 +511,56 @@
         const top = Math.max(0, Math.min(area.height - 48, drag.top + e.clientY - drag.y));
         win.style.left = `${left}px`;
         win.style.top = `${top}px`;
+
+        // Rilevamento trascinamento verso l'alto (Snap Assist stile Windows 11)
+        if (e.clientY < 75 || top < 25) {
+          openSnapBar();
+        } else if (e.clientY > 160 && activeSnapTarget === null) {
+          closeSnapBar();
+        }
+
+        // Rileva se il cursore sta sopra uno slot della barra snap in alto
+        let hitTarget = null;
+        if (snapBar && snapBar.classList.contains('is-visible')) {
+          const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+          const slot = elUnder ? elUnder.closest('.snap-slot') : null;
+          snapBar.querySelectorAll('.snap-slot').forEach(s => s.classList.toggle('is-hovered', s === slot));
+          if (slot && slot.dataset.snapTarget) {
+            hitTarget = slot.dataset.snapTarget;
+          }
+        }
+
+        // Edge Snapping (se non siamo sopra uno slot della barra)
+        if (!hitTarget) {
+          if (e.clientX < 24) {
+            hitTarget = 'half-left';
+          } else if (e.clientX > window.innerWidth - 24) {
+            hitTarget = 'half-right';
+          } else if (e.clientY < 8) {
+            hitTarget = 'full';
+          }
+        }
+
+        if (hitTarget) {
+          activeSnapTarget = hitTarget;
+          showGhost(hitTarget);
+        } else {
+          const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+          if (!snapBar || !snapBar.contains(elUnder)) {
+            activeSnapTarget = null;
+            hideGhost();
+          }
+        }
       });
-      const endDrag = () => { drag = null; };
+
+      const endDrag = () => {
+        if (!drag) return;
+        drag = null;
+        if (activeSnapTarget) {
+          snapWindow(win, activeSnapTarget);
+        }
+        closeSnapBar();
+      };
       bar.addEventListener('pointerup', endDrag);
       bar.addEventListener('pointercancel', endDrag);
     }

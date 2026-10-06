@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="cam-cyan" x1="4" y1="6" x2="44" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="50%" stop-color="#00a8ff"/>
+      <stop offset="100%" stop-color="#0066ff"/>
+    </linearGradient>
+    <radialGradient id="cam-lens-glow" cx="24" cy="24" r="10" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.8"/>
+      <stop offset="60%" stop-color="#0066ff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#001844" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="cam-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00d4ff" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <!-- Corpo Telecamera di Sicurezza 4K Sentinel -->
+  <g filter="url(#cam-glow)">
+    <!-- Chassis principale ottica -->
+    <rect x="5" y="10" width="26" height="28" rx="8" stroke="url(#cam-cyan)" stroke-width="2.5" fill="none"/>
+    <path d="M12 10V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4" stroke="url(#cam-cyan)" stroke-width="2.2" stroke-linecap="round"/>
+    <!-- Lente / Obiettivo con iride concentrica -->
+    <circle cx="18" cy="24" r="8" fill="url(#cam-lens-glow)"/>
+    <circle cx="18" cy="24" r="8" stroke="url(#cam-cyan)" stroke-width="2.2"/>
+    <circle cx="18" cy="24" r="4" stroke="#ffffff" stroke-width="1.8" opacity="0.9"/>
+    <circle cx="18" cy="24" r="1.5" fill="#00f0ff"/>
+    <!-- Fascio ottico / Obiettivo verso il varco -->
+    <path d="M31 18l12-7v26l-12-7V18z" stroke="url(#cam-cyan)" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+    <!-- Spia REC attiva in alto a destra -->
+    <circle cx="10" cy="15" r="1.8" fill="#ff1744"/>
+    <!-- Dettagli tech ottica -->
+    <line x1="39" y1="20" x2="39" y2="28" stroke="#00f0ff" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
+  </g>
+</svg>

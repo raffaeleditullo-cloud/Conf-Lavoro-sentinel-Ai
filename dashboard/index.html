@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Roboto:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/styles.css?v=9.9">
-  <link rel="stylesheet" href="assets/orin.css?v=4">
+  <link rel="stylesheet" href="assets/orin.css?v=5">
 </head>
 <body class="orin">
 
@@ -58,103 +58,61 @@
       </div>
     </div>
 
-    <!-- Gruppo Applicazioni Principali (Icone Applicazione stile iOS / iPadOS) -->
+    <!-- Gruppo Applicazioni Principali (Icone Generate Senza Sfondo & Badge Informativo) -->
     <div class="dock-apps">
       <!-- 1. App Telecamere Live -->
-      <button type="button" class="dock-app-btn app-wall" id="dockBtnWall" data-app="wall"
-              data-tooltip-title="Telecamere Live 4K"
-              data-tooltip-desc="Muro video dei varchi in tempo reale: Piazzale, Magazzino e Corridoio"
-              aria-label="Telecamere Live">
-        <div class="dock-app-tile">
-          <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="3" ry="3"/></svg>
+      <button type="button" class="dock-app-btn app-wall" id="dockBtnWall" data-app="wall" aria-label="App Telecamere">
+        <div class="dock-app-icon">
+          <img class="dock-app-asset" src="assets/img/app-telecamere.svg" alt="Telecamere" width="40" height="40" loading="eager">
         </div>
-        <span class="dock-app-label">Cam</span>
         <span class="dock-active-indicator"></span>
-        <div class="dock-tooltip">
-          <strong class="tooltip-title">Telecamere Live 4K</strong>
-          <span class="tooltip-desc">Muro video dei varchi in tempo reale: Piazzale, Magazzino e Corridoio.</span>
-        </div>
+        <div class="dock-badge">Questa è l'app telecamere</div>
       </button>
 
       <!-- 2. App Registro Eventi & Video NAS -->
-      <button type="button" class="dock-app-btn app-events" id="dockBtnEvents" data-app="events"
-              data-tooltip-title="Registro Eventi &amp; NAS"
-              data-tooltip-desc="Archivio registrazioni video MP4 e snapshot biometrici salvati su NAS Ugreen"
-              aria-label="Registro Eventi">
-        <div class="dock-app-tile">
-          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <button type="button" class="dock-app-btn app-events" id="dockBtnEvents" data-app="events" aria-label="App Eventi">
+        <div class="dock-app-icon">
+          <img class="dock-app-asset" src="assets/img/app-eventi.svg" alt="Eventi" width="40" height="40" loading="eager">
         </div>
-        <span class="dock-app-label">Eventi</span>
         <span class="dock-active-indicator"></span>
-        <div class="dock-tooltip">
-          <strong class="tooltip-title">Registro Eventi &amp; NAS</strong>
-          <span class="tooltip-desc">Archivio registrazioni video MP4 e snapshot salvati su storage NAS Ugreen.</span>
-        </div>
+        <div class="dock-badge">Questa è l'app eventi</div>
       </button>
 
       <!-- 3. App Whitelist Targhe Autorizzate -->
-      <button type="button" class="dock-app-btn app-plates" id="dockBtnPlates" data-app="plates"
-              data-tooltip-title="Whitelist Targhe LPR"
-              data-tooltip-desc="Elenco veicoli autorizzati con apertura automatica del cancello carrabile"
-              aria-label="Whitelist Targhe">
-        <div class="dock-app-tile">
-          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="7.5" cy="12" r="1.5"/><circle cx="16.5" cy="12" r="1.5"/><path d="M10.5 10h3v4h-3z"/></svg>
+      <button type="button" class="dock-app-btn app-plates" id="dockBtnPlates" data-app="plates" aria-label="App Whitelist Targhe">
+        <div class="dock-app-icon">
+          <img class="dock-app-asset" src="assets/img/app-targhe.svg" alt="Targhe" width="40" height="40" loading="eager">
         </div>
-        <span class="dock-app-label">Targhe</span>
         <span class="dock-active-indicator"></span>
-        <div class="dock-tooltip">
-          <strong class="tooltip-title">Whitelist Targhe LPR</strong>
-          <span class="tooltip-desc">Elenco veicoli autorizzati con apertura automatica del cancello carrabile.</span>
-        </div>
+        <div class="dock-badge">Questa è l'app targhe</div>
       </button>
 
       <!-- 4. App Connettori Cloud & Integrazioni -->
-      <button type="button" class="dock-app-btn app-connectors" id="dockBtnConnectors" data-app="connectors"
-              data-tooltip-title="Connettori Cloud &amp; Rete"
-              data-tooltip-desc="Stato sincronizzazione Google Drive, NAS SMB, bus MQTT e relè Modbus"
-              aria-label="Connettori Cloud">
-        <div class="dock-app-tile">
-          <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+      <button type="button" class="dock-app-btn app-connectors" id="dockBtnConnectors" data-app="connectors" aria-label="App Cloud">
+        <div class="dock-app-icon">
+          <img class="dock-app-asset" src="assets/img/app-cloud.svg" alt="Cloud" width="40" height="40" loading="eager">
         </div>
-        <span class="dock-app-label">Cloud</span>
         <span class="dock-active-indicator"></span>
-        <div class="dock-tooltip">
-          <strong class="tooltip-title">Connettori Cloud &amp; Rete</strong>
-          <span class="tooltip-desc">Stato di sincronizzazione Google Drive, storage NAS, MQTT e relè Modbus.</span>
-        </div>
+        <div class="dock-badge">Questa è l'app cloud</div>
       </button>
 
       <!-- 5. App Impostazioni & Orari -->
-      <button type="button" class="dock-app-btn app-settings" id="dockBtnSettings" data-app="settings"
-              data-tooltip-title="Impostazioni &amp; Sorveglianza"
-              data-tooltip-desc="Pacchetti vocali, volume diffusore Fanvil, orari di lavoro e codici PIN"
-              aria-label="Impostazioni">
-        <div class="dock-app-tile">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <button type="button" class="dock-app-btn app-settings" id="dockBtnSettings" data-app="settings" aria-label="App Impostazioni">
+        <div class="dock-app-icon">
+          <img class="dock-app-asset" src="assets/img/app-impostazioni.svg" alt="Impostazioni" width="40" height="40" loading="eager">
         </div>
-        <span class="dock-app-label">Config</span>
         <span class="dock-active-indicator"></span>
-        <div class="dock-tooltip">
-          <strong class="tooltip-title">Impostazioni &amp; Sorveglianza</strong>
-          <span class="tooltip-desc">Regolazione volume diffusore Fanvil, orari lavorativi e gestione PIN.</span>
-        </div>
+        <div class="dock-badge">Questa è l'app impostazioni</div>
       </button>
     </div>
 
     <!-- Tasto Esc / Uscita in basso -->
     <div class="dock-footer">
-      <button type="button" class="dock-app-btn is-exit app-lock" id="dockBtnLock" data-app="lock"
-              data-tooltip-title="Blocca Sessione (Esc)"
-              data-tooltip-desc="Chiudi tutte le finestre aperte e torna al tastierino di sicurezza PIN"
-              aria-label="Blocca Sessione">
-        <div class="dock-app-tile">
-          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <button type="button" class="dock-app-btn is-exit app-lock" id="dockBtnLock" data-app="lock" aria-label="App Esc">
+        <div class="dock-app-icon">
+          <img class="dock-app-asset" src="assets/img/app-esc.svg" alt="Esc" width="40" height="40" loading="eager">
         </div>
-        <span class="dock-app-label">Esc</span>
-        <div class="dock-tooltip">
-          <strong class="tooltip-title">Blocca Sessione (Esc)</strong>
-          <span class="tooltip-desc">Chiudi tutte le finestre e torna al tastierino di sicurezza PIN.</span>
-        </div>
+        <div class="dock-badge">Questa è l'app Esc</div>
       </button>
     </div>
   </nav>
@@ -215,6 +173,58 @@
 
   <!-- Finestre: si aprono su comando, si trascinano dalla barra del titolo -->
   <div class="orin-windows" id="orinWindows">
+    <!-- Windows 11 Snap Assist Bar: si attiva trascinando la finestra verso l'alto -->
+    <div id="orinSnapBar" class="orin-snap-bar" aria-hidden="true">
+      <div class="snap-bar-card">
+        <div class="snap-bar-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+          <span>Trascina verso l'alto per posizionare la finestra (Stile Windows)</span>
+        </div>
+        <div class="snap-bar-presets">
+          <!-- Preset 1: 50 / 50 Affiancate -->
+          <div class="snap-preset-col" title="Affianca 50 / 50">
+            <span class="snap-col-tag">50 / 50</span>
+            <div class="snap-box-wrap split-2">
+              <div class="snap-slot" data-snap-target="half-left"><span>SX</span></div>
+              <div class="snap-slot" data-snap-target="half-right"><span>DX</span></div>
+            </div>
+          </div>
+          <!-- Preset 2: 4 Quadranti -->
+          <div class="snap-preset-col" title="Griglia a 4 Finestre">
+            <span class="snap-col-tag">4 Riquadri</span>
+            <div class="snap-box-wrap split-4">
+              <div class="snap-slot" data-snap-target="quad-tl"><span>TL</span></div>
+              <div class="snap-slot" data-snap-target="quad-tr"><span>TR</span></div>
+              <div class="snap-slot" data-snap-target="quad-bl"><span>BL</span></div>
+              <div class="snap-slot" data-snap-target="quad-br"><span>BR</span></div>
+            </div>
+          </div>
+          <!-- Preset 3: 6 Finestre -->
+          <div class="snap-preset-col" title="Griglia a 6 Finestre contemporanee">
+            <span class="snap-col-tag">6 Finestre</span>
+            <div class="snap-box-wrap split-6">
+              <div class="snap-slot" data-snap-target="grid-6-1"><span>1</span></div>
+              <div class="snap-slot" data-snap-target="grid-6-2"><span>2</span></div>
+              <div class="snap-slot" data-snap-target="grid-6-3"><span>3</span></div>
+              <div class="snap-slot" data-snap-target="grid-6-4"><span>4</span></div>
+              <div class="snap-slot" data-snap-target="grid-6-5"><span>5</span></div>
+              <div class="snap-slot" data-snap-target="grid-6-6"><span>6</span></div>
+            </div>
+          </div>
+          <!-- Preset 4: Tutto Schermo -->
+          <div class="snap-preset-col is-single" title="A Tutto Schermo">
+            <span class="snap-col-tag">Intero</span>
+            <div class="snap-box-wrap split-1">
+              <div class="snap-slot full" data-snap-target="full"><span>Max</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ghost Blueprint (anteprima trasparente di dove andrà la finestra) -->
+    <div id="orinSnapGhost" class="orin-snap-ghost" aria-hidden="true"></div>
+
     <section class="orin-window" id="win-wall" data-window="wall" role="dialog" aria-labelledby="win-wall-title" hidden>
       <header class="orin-window-bar">
         <h2 class="orin-window-title" id="win-wall-title">Telecamere</h2>
@@ -1444,6 +1454,6 @@
   <script src="assets/app.js?v=9.9"></script>
   <script src="assets/orin-eye.js?v=1"></script>
   <script src="assets/orin-commands.js?v=2"></script>
-  <script src="assets/orin-shell.js?v=4"></script>
+  <script src="assets/orin-shell.js?v=5"></script>
 </body>
 </html>

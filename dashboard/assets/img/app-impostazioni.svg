@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="gear-gold" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </linearGradient>
+    <filter id="gear-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#fbbf24" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <!-- Icona Impostazioni & Configurazione Senza Sfondo -->
+  <g filter="url(#gear-glow)">
+    <!-- Ingranaggio di precisione primario -->
+    <path d="M24 16a8 8 0 1 0 0 16 8 8 0 0 0 0-16z" stroke="#ffffff" stroke-width="2.5" fill="none"/>
+    <path d="M24 8v3m0 26v3M8 24h3m26 0h3M12.7 12.7l2.1 2.1m18.4 18.4l2.1 2.1M12.7 35.3l2.1-2.1m18.4-18.4l2.1-2.1"
+          stroke="url(#gear-gold)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="24" cy="24" r="3.5" fill="url(#gear-gold)"/>
+    <!-- Cursore slider di regolazione volume/parametri -->
+    <path d="M6 38h14m-7-3v6" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  </g>
+</svg>
