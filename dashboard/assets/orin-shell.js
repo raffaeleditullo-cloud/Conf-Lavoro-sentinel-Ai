@@ -986,7 +986,15 @@
         }
       } catch (err) {
         console.warn('[Sentinel PTT] Accesso microfono negato o non disponibile:', err);
-        say('Permesso microfono non concesso dal browser. Assicurati di aver consentito l\'accesso.', { alert: true });
+        if (!window.isSecureContext) {
+          say('I browser bloccano il microfono su connessioni HTTP locali. Per sbloccarlo su Chrome/Edge: apri chrome://flags/#unsafely-treat-insecure-origin-as-secure, inserisci l\'URL della dashboard e attiva.', { alert: true });
+        } else {
+          say('Permesso microfono non concesso dal browser. Clicca sull\'icona delle impostazioni sito a sinistra dell\'URL per consentirlo.', { alert: true });
+        }
+      }
+    } else {
+      if (!window.isSecureContext) {
+        say('Il browser non espone il microfono su HTTP locale (richiede HTTPS o flag origine sicura). Puoi comunque digitare qualsiasi frase per farla pronunciare al Fanvil!', { alert: true });
       }
     }
 
@@ -1108,7 +1116,11 @@
           say(`Errore trasmissione: ${e.message}`, { alert: true });
         }
       } else {
-        say('Microfono non attivo o permesso negato. Controlla i permessi audio del browser.', { alert: true });
+        if (!window.isSecureContext) {
+          say('Il microfono è bloccato dai browser su connessioni HTTP locali. Per sbloccarlo: apri chrome://flags/#unsafely-treat-insecure-origin-as-secure su Chrome/Edge e aggiungi l\'URL della dashboard.', { alert: true });
+        } else {
+          say('Microfono non attivo o permesso negato. Controlla i permessi audio del browser cliccando sull\'icona del sito.', { alert: true });
+        }
       }
     }
   }
