@@ -61,22 +61,26 @@ Per azzerare la latenza percepita (in precedenza 4-6 secondi), il sistema adotta
 
 ---
 
-## 4. Roadmap Prossima Fase: Interazione Bidirezionale (Chat & Push-to-Talk)
+## 4. Nuova Architettura Grafica & Window Manager (Commit 9a4350a)
 
-### Fase A — Chat Testuale Operatore con l'Occhio Cibernetico ORIN:
-- Direttamente dall'interfaccia Dashboard Web (accanto al feed telecamere):
-- L'utente scrive un comando in linguaggio naturale (es. *"ORIN, chiedi al corriere per chi è il pacco"* oppure *"Avvisa di attendere due minuti"*).
-- Gemini Flash riceve il comando + l'ultimo fotogramma della telecamera attiva, sintetizza la risposta appropriata ed ElevenLabs la pronuncia dal varco.
-- Tempo di reazione stimato: **1.5 - 2.0 secondi**.
-
-### Fase B — Push-to-Talk (Microfono da Smartphone/Browser):
-- Pulsante microfono nell'interfaccia web.
-- L'operatore tiene premuto, parla nel telefono e l'audio PCM/µ-law viene inviato direttamente in streaming al Fanvil A233.
-- Tempo di reazione stimato: **< 200 millisecondi** (voce diretta in tempo reale).
-
-### Fase C — Microfoni Reolink e Privacy:
-- Le telecamere Reolink RLC-811A montano un microfono integrato sul flusso RTSP/FLV.
-- Per conformità GDPR / Statuto Lavoratori, l'ascolto non è mai continuo (vietata intercettazione ambientale), ma si apre solo per 5-10 secondi a seguito di una domanda dell'AI.
+1. **ORIN Slim App Dock (Barra Laterale Fissa a Sinistra):**
+   - Larghezza fissa 72px (`--dock-w`), glassmorphism scuro `rgba(10, 25, 58, 0.92)` con sfocatura 28px.
+   - Non collassa e non si allarga su desktop.
+   - Icone app squircle (stile smartphone): Telecamere Live, Registro Eventi, Whitelist Targhe, Connettori Cloud & Google, Registratore/Interfono PTT, Impostazioni.
+   - In basso: tasto Esc (blocco sessione e ritorno rapido).
+   - Su mobile (< 768px): si trasforma automaticamente in barra inferiore da 62px.
+2. **Window Manager Stile Windows (Desktop Snap & Multi-finestra):**
+   - Finestre indipendenti e liberamente trascinabili (header drag).
+   - 8 maniglie di ridimensionamento interattive (`.handle-n`, `.handle-s`, `.handle-e`, `.handle-w`, angoli) con vincoli minimi (360x240px).
+   - Menu Snap Layout stile Windows 11 integrato in ogni barra: Metà SX, Metà DX, 4 Quadranti (2x2), Griglia a 6 (3x2), Tutto Schermo.
+   - Riduci a icona (`_`) con indicatore luminoso sull'icona del dock per il ripristino immediato.
+   - Su mobile (< 768px): finestre convertite in schede native a pieno schermo con chiusura pulita.
+3. **System Drawer Laterale & Pulizia Header:**
+   - Header superiore pulito: rimosso l'affollamento di badge, aggiunto chip temperatura compatto (`topbarTempChip`) e pulsante diagnostica a rotazione (`btnSystemDrawer`).
+   - Cassetto a scorrimento da destra (`#systemDrawer`) con telemetria live Jetson Orin Nano (SoC Temp con gauge a 3 colori, TensorRT FPS/latenza, RAM, Swap NVMe, Potenza assorbita, Uptime).
+   - Separazione dei ruoli: modalità Cliente con banner protetto, modalità Manutentore con cruscotto tecnico completo.
+4. **Interfono Push-to-Talk (win-ptt):**
+   - Pulsante grande radiale per trasmissione microfonica immediata con anello d'onda audio e timer. Supporta anche barra spaziatrice da tastiera.
 
 ---
 
