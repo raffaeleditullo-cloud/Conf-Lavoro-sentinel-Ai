@@ -672,27 +672,39 @@ body.orin {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  width: 48px;
+  height: 48px;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.dock-logo-text {
-  font-family: var(--font-brand);
-  font-weight: 900;
-  font-size: 16px;
-  letter-spacing: 0.08em;
-  color: #ffffff;
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+.dock-logo-box:hover {
+  transform: scale(1.12);
+}
+
+.dock-logo-img {
+  width: 44px;
+  height: 44px;
+  display: block;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.45));
+  transition: filter 0.22s ease;
+}
+
+.dock-logo-box:hover .dock-logo-img {
+  filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.85));
 }
 
 .dock-status-pip {
   position: absolute;
-  top: -2px;
-  right: -8px;
-  width: 7px;
-  height: 7px;
+  top: 2px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #00e676;
-  box-shadow: 0 0 8px #00e676;
+  border: 1.5px solid #0a193a;
+  box-shadow: 0 0 10px #00e676;
   animation: dockPipGlow 2.5s infinite;
+  z-index: 2;
 }
 
 @keyframes dockPipGlow {
