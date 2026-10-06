@@ -739,62 +739,69 @@ body.orin {
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   cursor: pointer;
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), filter 0.22s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   padding: 0;
   outline: none;
-  box-shadow: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .dock-app-btn:hover {
-  transform: translateY(-2px) scale(1.08);
+  transform: translateY(-2px) scale(1.06);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .dock-app-btn:active {
   transform: scale(0.95);
 }
 
-/* Icone Generate Professionali con Sfondo SVG Integrato */
+.dock-app-btn.is-ptt:hover {
+  border-color: rgba(255, 87, 34, 0.6);
+  box-shadow: 0 0 16px rgba(255, 87, 34, 0.4);
+}
+
+.dock-app-btn.is-ptt.is-active {
+  background: #ff1744 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(255, 23, 68, 0.85) !important;
+  animation: micPulseRing 1.2s infinite;
+}
+
 .dock-app-icon {
-  width: 48px;
-  height: 48px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.dock-app-asset {
+.dock-app-icon svg {
   width: 100%;
   height: 100%;
-  display: block;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
-  transition: filter 0.22s ease, transform 0.22s ease;
+  stroke: #ffffff;
+  stroke-width: 2.2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-/* Aura luminosa tematica elegante al passaggio del mouse */
-.dock-app-btn.app-wall:hover .dock-app-asset {
-  filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.75));
-}
-.dock-app-btn.app-events:hover .dock-app-asset {
-  filter: drop-shadow(0 0 14px rgba(192, 132, 252, 0.75));
-}
-.dock-app-btn.app-plates:hover .dock-app-asset {
-  filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.75));
-}
-.dock-app-btn.app-connectors:hover .dock-app-asset {
-  filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.75));
-}
-.dock-app-btn.app-settings:hover .dock-app-asset {
-  filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.75));
-}
-.dock-app-btn.app-lock:hover .dock-app-asset {
-  filter: drop-shadow(0 0 14px rgba(248, 113, 113, 0.75));
+.dock-app-label {
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 /* Indicatore finestra attiva sulla barra */
