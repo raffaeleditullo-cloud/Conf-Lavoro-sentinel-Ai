@@ -1,51 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" fill="none">
   <defs>
-    <!-- Gradiente primario Cybernetic ORIN (Ciano Elettrico / Deep Azure) -->
-    <linearGradient id="orin-cyan-grad" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#00f0ff"/>
-      <stop offset="50%" stop-color="#0088ff"/>
-      <stop offset="100%" stop-color="#0044cc"/>
-    </linearGradient>
-
-    <!-- Gradiente Iride ORIN -->
-    <radialGradient id="orin-iris-core" cx="24" cy="24" r="14" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#001438"/>
-      <stop offset="45%" stop-color="#003888"/>
-      <stop offset="75%" stop-color="#0099ff"/>
-      <stop offset="100%" stop-color="#00f0ff"/>
+    <!-- Sfumatura Sclera (bianco bulbo oculare con profondità) -->
+    <radialGradient id="orin-eye-sclera" cx="42%" cy="36%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="62%" stop-color="#f4f8ff"/>
+      <stop offset="100%" stop-color="#c9d9f2"/>
     </radialGradient>
 
-    <!-- Bagliore laser Cybernetic -->
-    <filter id="orin-logo-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#00d4ff" flood-opacity="0.6"/>
+    <!-- Sfumatura Iride Blu Pixar identica all'occhio centrale -->
+    <radialGradient id="orin-eye-iris" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c6e6ff"/>
+      <stop offset="30%" stop-color="#5eb0ff"/>
+      <stop offset="68%" stop-color="#1f6fe0"/>
+      <stop offset="100%" stop-color="#0b347e"/>
+    </radialGradient>
+
+    <!-- Sfumatura ombra superiore della cornea -->
+    <linearGradient id="orin-eye-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#123a7a" stop-opacity="0.25"/>
+      <stop offset="40%" stop-color="#123a7a" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Ombra morbida per staccare dal fondo -->
+    <filter id="orin-eye-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#06245e" flood-opacity="0.45"/>
     </filter>
+
+    <clipPath id="orin-eye-clip">
+      <circle cx="26" cy="26" r="20.5"/>
+    </clipPath>
   </defs>
 
-  <g filter="url(#orin-logo-glow)">
-    <!-- Anello esterno segmentato "O" di ORIN -->
-    <path d="M24 4 A20 20 0 0 1 44 24" stroke="url(#orin-cyan-grad)" stroke-width="2.6" stroke-linecap="round"/>
-    <path d="M44 24 A20 20 0 0 1 24 44" stroke="url(#orin-cyan-grad)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="26 6"/>
-    <path d="M24 44 A20 20 0 0 1 4 24" stroke="url(#orin-cyan-grad)" stroke-width="2.6" stroke-linecap="round"/>
-    <path d="M4 24 A20 20 0 0 1 24 4" stroke="url(#orin-cyan-grad)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="26 6"/>
+  <!-- Bulbo con Ombra Esterna -->
+  <g filter="url(#orin-eye-shadow)">
+    <!-- Ritaglio del bulbo -->
+    <g clip-path="url(#orin-eye-clip)">
+      <!-- Bianco dell'occhio -->
+      <circle cx="26" cy="26" r="21" fill="url(#orin-eye-sclera)"/>
 
-    <!-- Tacche di telemetria orbitale ai 4 assi -->
-    <line x1="24" y1="1" x2="24" y2="3.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-    <line x1="47" y1="24" x2="44.5" y2="24" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-    <line x1="24" y1="47" x2="24" y2="44.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-    <line x1="1" y1="24" x2="3.5" y2="24" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+      <!-- Gruppo Iride & Pupilla (orientato come l'occhio centrale) -->
+      <g id="orin-eye-iris-group">
+        <!-- Iride blu -->
+        <circle cx="23.5" cy="22.5" r="10.8" fill="url(#orin-eye-iris)"/>
+        <!-- Bordo iride scuro -->
+        <circle cx="23.5" cy="22.5" r="10.8" fill="none" stroke="#0a2c6b" stroke-width="0.8"/>
+        
+        <!-- Fibre sottili dell'iride -->
+        <g stroke="#ffffff" stroke-opacity="0.22" stroke-width="0.5" stroke-linecap="round">
+          <line x1="23.5" y1="14" x2="23.5" y2="17"/>
+          <line x1="23.5" y1="28" x2="23.5" y2="31"/>
+          <line x1="15" y1="22.5" x2="18" y2="22.5"/>
+          <line x1="29" y1="22.5" x2="32" y2="22.5"/>
+          <line x1="17.5" y1="16.5" x2="19.5" y2="18.5"/>
+          <line x1="27.5" y1="26.5" x2="29.5" y2="28.5"/>
+          <line x1="17.5" y1="28.5" x2="19.5" y2="26.5"/>
+          <line x1="27.5" y1="18.5" x2="29.5" y2="16.5"/>
+        </g>
 
-    <!-- L'Occhio Sentinella di ORIN (Nucleo sintetico) -->
-    <circle cx="24" cy="24" r="13" fill="url(#orin-iris-core)" stroke="#00f0ff" stroke-width="1.6"/>
-    
-    <!-- Pupilla e riflesso speculare -->
-    <circle cx="24" cy="24" r="6" fill="#040914"/>
-    <circle cx="21.5" cy="21.5" r="2.2" fill="#ffffff" opacity="0.95"/>
-    <circle cx="26" cy="26" r="1" fill="#00f0ff" opacity="0.8"/>
+        <!-- Pupilla scura profonda -->
+        <circle cx="23.5" cy="22.5" r="4.9" fill="#06173a"/>
 
-    <!-- Raggi neurali dell'iride -->
-    <line x1="24" y1="13" x2="24" y2="16" stroke="#00f0ff" stroke-width="1.2" opacity="0.75"/>
-    <line x1="24" y1="32" x2="24" y2="35" stroke="#00f0ff" stroke-width="1.2" opacity="0.75"/>
-    <line x1="13" y1="24" x2="16" y2="24" stroke="#00f0ff" stroke-width="1.2" opacity="0.75"/>
-    <line x1="32" y1="24" x2="35" y2="24" stroke="#00f0ff" stroke-width="1.2" opacity="0.75"/>
+        <!-- Riflesso principale grande bianco vivo (taglio Pixar) -->
+        <ellipse cx="19.8" cy="18.2" rx="3.1" ry="2.2" fill="#ffffff" opacity="0.96" transform="rotate(-32 19.8 18.2)"/>
+        <!-- Secondo riflesso circolare in basso a destra -->
+        <circle cx="27" cy="26" r="1.1" fill="#ffffff" opacity="0.88"/>
+      </g>
+
+      <!-- Ombreggiatura cornea superiore -->
+      <rect x="5" y="5" width="42" height="42" fill="url(#orin-eye-shade)"/>
+
+      <!-- Bagliore riflesso lucido della cornea in alto a sinistra -->
+      <ellipse cx="16.5" cy="14" rx="5.2" ry="2.8" fill="#ffffff" opacity="0.5" transform="rotate(-35 16.5 14)"/>
+    </g>
+
+    <!-- Contorno scuro cartoon netto (identico al contorno dell'occhio centrale) -->
+    <circle cx="26" cy="26" r="20.5" fill="none" stroke="#0f3270" stroke-width="2.6"/>
   </g>
 </svg>
