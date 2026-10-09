@@ -340,7 +340,7 @@ class OrinBrain:
             "sami": "Ap2b3ZnSIW7h0QbBbxCq"       # Alessandra (Elegante, perentoria)
         }
         voice_id = voices.get(voice_pack.lower(), voices["carmelo"])
-        tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?output_format=ulaw_8000"
+        tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?output_format=ulaw_8000&optimize_streaming_latency=3"
 
         try:
             t0 = time.time()
