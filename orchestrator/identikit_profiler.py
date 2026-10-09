@@ -224,6 +224,14 @@ class IdentikitProfiler:
             logger.debug("ORIN: Nessun fotogramma disponibile per l'evento %s", event_id)
             return
 
+        # Inoltro in tempo reale alla sessione Gemini Live se attiva
+        try:
+            from gemini_live_engine import gemini_live_engine
+            if gemini_live_engine.is_active():
+                gemini_live_engine.feed_frame(img_data, camera=camera)
+        except Exception as ge:
+            logger.debug("Inoltro frame a Gemini Live: %s", ge)
+
         # Analisi Visiva ORIN con stato armamento reale
         orin_res = orin_brain.analyze_frame(img_data, camera=camera, is_armed=is_armed)
         if not orin_res or orin_res.get("fallback"):

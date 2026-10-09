@@ -978,9 +978,20 @@ def main():
             backoff = min(backoff * 2, 30)
 
     try:
+        from gemini_live_engine import gemini_live_engine
+        gemini_live_engine.start()
+    except Exception as ge:
+        logger.info("Gemini Live non attivo o differito: %s", ge)
+
+    try:
         client.loop_forever(retry_first_connection=True)
     except (KeyboardInterrupt, SystemExit):
         logger.info("Arresto orchestratore...")
+        try:
+            from gemini_live_engine import gemini_live_engine
+            gemini_live_engine.stop()
+        except Exception:
+            pass
         client.disconnect()
         logger.info("Orchestratore arrestato.")
 
