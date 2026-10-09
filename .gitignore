@@ -19,6 +19,7 @@ config/model_cache/*
 
 # File temporanei di sistema
 *.log
+*.pdf
 .DS_Store
 Thumbs.db
 __pycache__/
