@@ -66,6 +66,11 @@ const CASI = [
   ['aiuto', { tipo: 'aiuto' }],
   ['cosa sai fare?', { tipo: 'aiuto' }],
   ['sei armato?', { tipo: 'stato' }],
+  ['modalità notte', { tipo: 'imposta-modalita', modalita: 'notte' }],
+  ['modalità assente', { tipo: 'imposta-modalita', modalita: 'assente' }],
+  ['siamo in casa', { tipo: 'imposta-modalita', modalita: 'casa' }],
+  ['disarma', { tipo: 'imposta-modalita', modalita: 'casa' }],
+  ['metti in manutenzione', { tipo: 'imposta-modalita', modalita: 'manutenzione', durata: 30 }],
   ['ciao orin', { tipo: 'saluto' }],
   ['', { tipo: 'vuoto' }],
 

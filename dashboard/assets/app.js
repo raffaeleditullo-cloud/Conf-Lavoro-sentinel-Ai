@@ -1456,29 +1456,51 @@ async function pollOrinStatus() {
   } catch (_) {}
 }
 
-async function handleSecurityModeChange(mode) {
-  currentSettings.security_mode = mode;
-  const descEl = document.getElementById('securityModeDesc');
-  if (descEl) {
-    if (mode === 'armed') {
-      descEl.textContent = 'Attivo 24 ore su 24: ogni intrusione attiva immediatamente i fari LED Reolink e la voce Fanvil.';
-    } else if (mode === 'disarmed') {
-      descEl.textContent = 'Monitoraggio silenzioso: le telecamere registrano e analizzano, ma fari e audio sono disattivati.';
-    } else {
-      descEl.textContent = 'Orario di lavoro: sorveglianza silenziosa senza fari/voce. Fuori orario e weekend: deterrenza attiva istantanea.';
-    }
+function toggleSecurityModeFlyout() {
+  const flyout = document.getElementById('securityModeFlyout');
+  if (!flyout) return;
+  flyout.style.display = (flyout.style.display === 'none' || !flyout.style.display) ? 'block' : 'none';
+}
+
+async function selectSecurityMode(mode, durationMin) {
+  const flyout = document.getElementById('securityModeFlyout');
+  if (flyout) flyout.style.display = 'none';
+
+  const payload = { mode: mode };
+  if (mode === 'manutenzione') {
+    payload.duration_minutes = durationMin || 30;
   }
 
   try {
     await fetch('/api/security/mode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: mode })
+      body: JSON.stringify(payload)
     });
-    pollSecurityState();
+    await pollSecurityState();
   } catch (err) {
-    console.warn("Errore aggiornamento rapido modalità sicurezza:", err);
+    console.warn("Errore selezione modalità sicurezza:", err);
   }
+}
+
+function promptMaintenance(defaultMin = 30) {
+  selectSecurityMode('manutenzione', defaultMin);
+}
+
+async function cancelMaintenance() {
+  try {
+    await fetch('/api/security/maintenance/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    await pollSecurityState();
+  } catch (err) {
+    console.warn("Errore annullamento manutenzione:", err);
+  }
+}
+
+async function handleSecurityModeChange(mode) {
+  await selectSecurityMode(mode);
 }
 
 async function saveSettings() {
@@ -1611,50 +1633,122 @@ async function pollSecurityState() {
     if (!res.ok) return;
     const data = await res.json();
 
-    const liveText = document.getElementById('securityLiveStateText');
-    const liveReason = document.getElementById('securityLiveReasonText');
-    const schedBadge = document.getElementById('securityScheduleBadge');
-    const selSec = document.getElementById('selSecurityMode');
+    const mode = (data.mode || 'assente').toLowerCase();
 
-    if (selSec && document.activeElement !== selSec) {
-      selSec.value = data.mode || 'auto';
-    }
-
-    if (liveText) {
-      if (data.is_armed) {
-        liveText.textContent = `ARMATO (${data.badge === 'armed_247' ? '24/7' : 'Fascia Notturna'})`;
-        liveText.style.color = '#81c784';
-      } else {
-        liveText.textContent = data.badge === 'disarmed' ? 'DISARMATO (Silenzioso)' : 'PAUSA LAVORO (Monitoraggio)';
-        liveText.style.color = '#4fc3f7';
-      }
-    }
-
-    if (liveReason) {
-      liveReason.textContent = data.status_text || '';
-    }
-
-    if (schedBadge) {
-      schedBadge.textContent = data.is_armed ? 'Deterrenza Attiva' : 'Monitoraggio Silenzioso';
-      schedBadge.className = data.is_armed ? 'status-beacon is-accent' : 'status-beacon';
-    }
-
-    // Aggiornamento Box Stato di Protezione Top Bar (se il detector non è in freeze)
+    // 1. Aggiornamento Topbar (#securityStatus)
     const box = document.getElementById('securityStatus');
     const label = document.getElementById('securityStatusLabel');
     if (box && label && !box.classList.contains('is-alert')) {
-      if (data.is_armed) {
-        label.textContent = data.mode === 'armed' ? 'Armato 24/7' : 'Protetto (Notturna)';
-        box.title = `Sistema armato: fari e voce attivi. ${data.status_text}`;
+      if (mode === 'assente' || mode === 'armed') {
+        label.textContent = 'Assente · Armato 24/7';
+        box.title = 'Modalità Assente: Fari e deterrenza vocale attivi su tutte le aree';
+      } else if (mode === 'notte') {
+        label.textContent = 'Notte · Perimetro Armato';
+        box.title = 'Modalità Notte: Deterrenza attiva su piazzale esterno. Aree interne silenziose';
+      } else if (mode === 'casa' || mode === 'disarmed') {
+        label.textContent = 'Casa · Presidio Diurno';
+        box.title = 'Modalità Casa: Presidio presente, monitoraggio discreto senza allarmi vocali';
+      } else if (mode === 'manutenzione') {
+        const remSec = data.maintenance ? data.maintenance.remaining_seconds : 0;
+        const mm = Math.floor(remSec / 60);
+        const ss = remSec % 60;
+        label.textContent = `Manutenzione · ${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+        box.title = `Manutenzione a tempo attiva: ripristino automatico tra ${mm}m ${ss}s`;
       } else {
-        label.textContent = data.mode === 'disarmed' ? 'Disarmato' : 'Pausa Lavoro';
-        box.title = `Monitoraggio silenzioso attivo: ${data.status_text}`;
+        label.textContent = data.is_armed ? 'Protetto (Auto)' : 'Pausa Lavoro (Auto)';
+        box.title = data.status_text || '';
       }
+    }
+
+    // 2. Banner Manutenzione
+    const maintBanner = document.getElementById('maintenanceBanner');
+    const maintCountdown = document.getElementById('maintCountdown');
+    if (maintBanner && maintCountdown) {
+      if (data.maintenance && data.maintenance.active) {
+        maintBanner.style.display = 'block';
+        const remSec = data.maintenance.remaining_seconds;
+        const mm = Math.floor(remSec / 60);
+        const ss = remSec % 60;
+        maintCountdown.textContent = `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+      } else {
+        maintBanner.style.display = 'none';
+      }
+    }
+
+    // 3. Highlight Card nei Settings & Badge Orari
+    const cardAssente = document.getElementById('modeCardAssente');
+    const cardNotte = document.getElementById('modeCardNotte');
+    const cardCasa = document.getElementById('modeCardCasa');
+    const cardMaint = document.getElementById('modeCardMaint');
+    const schedBadge = document.getElementById('securityScheduleBadge');
+
+    if (cardAssente) cardAssente.classList.toggle('is-active', mode === 'assente' || mode === 'armed');
+    if (cardNotte) cardNotte.classList.toggle('is-active', mode === 'notte');
+    if (cardCasa) cardCasa.classList.toggle('is-active', mode === 'casa' || mode === 'disarmed');
+    if (cardMaint) cardMaint.classList.toggle('is-active', mode === 'manutenzione');
+
+    if (schedBadge) {
+      if (mode === 'assente') schedBadge.textContent = 'Modalità Assente (24/7)';
+      else if (mode === 'notte') schedBadge.textContent = 'Modalità Notte (Perimetro)';
+      else if (mode === 'casa') schedBadge.textContent = 'Modalità Casa (Diurno)';
+      else if (mode === 'manutenzione') schedBadge.textContent = 'Modalità Manutenzione';
+      else schedBadge.textContent = data.is_armed ? 'Automatica (Armato)' : 'Automatica (Pausa Lavoro)';
+      schedBadge.className = data.is_armed ? 'status-beacon is-accent' : 'status-beacon';
+    }
+
+    // 4. Quadro Sinottico: Aree Protette, Telecamere, Varchi, Guasti
+    if (data.protected_areas) {
+      const synPiazzale = document.getElementById('synAreaPiazzale');
+      const synMagazzino = document.getElementById('synAreaMagazzino');
+      const synCorridoio = document.getElementById('synAreaCorridoio');
+
+      if (synPiazzale) {
+        const isProt = data.protected_areas.piazzale && data.protected_areas.piazzale.armed;
+        synPiazzale.textContent = isProt ? 'PROTETTO' : 'SILENZIOSO';
+        synPiazzale.className = isProt ? 'sec-badge ok' : 'sec-badge neutral';
+      }
+      if (synMagazzino) {
+        const isProt = data.protected_areas.magazzino && data.protected_areas.magazzino.armed;
+        synMagazzino.textContent = isProt ? 'PROTETTO' : 'SILENZIOSO';
+        synMagazzino.className = isProt ? 'sec-badge ok' : 'sec-badge neutral';
+      }
+      if (synCorridoio) {
+        const isProt = data.protected_areas.corridoio && data.protected_areas.corridoio.armed;
+        synCorridoio.textContent = isProt ? 'PROTETTO' : 'SILENZIOSO';
+        synCorridoio.className = isProt ? 'sec-badge ok' : 'sec-badge neutral';
+      }
+    }
+
+    // 5. Telemetria Decider
+    const liveText = document.getElementById('securityLiveStateText');
+    const liveReason = document.getElementById('securityLiveReasonText');
+    if (liveText) {
+      if (data.is_armed) {
+        liveText.textContent = `ARMATO (${mode.toUpperCase()})`;
+        liveText.style.color = '#81c784';
+      } else {
+        liveText.textContent = `MONITORAGGIO SILENZIOSO (${mode.toUpperCase()})`;
+        liveText.style.color = '#4fc3f7';
+      }
+    }
+    if (liveReason) {
+      liveReason.textContent = data.status_text || '';
     }
   } catch (e) {
     // silently ignore
   }
 }
+
+// Chiusura flyout cliccando all'esterno
+document.addEventListener('click', function(e) {
+  const flyout = document.getElementById('securityModeFlyout');
+  const secStatus = document.getElementById('securityStatus');
+  if (flyout && flyout.style.display === 'block') {
+    if (!flyout.contains(e.target) && !secStatus.contains(e.target)) {
+      flyout.style.display = 'none';
+    }
+  }
+});
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 7. SISTEMA DI AUTENTICAZIONE DOPPIO PIN (CLIENTE VS MANUTENTORE)

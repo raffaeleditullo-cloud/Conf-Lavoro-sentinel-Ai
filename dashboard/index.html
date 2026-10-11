@@ -133,13 +133,51 @@
     </div>
 
     <!-- Stato di protezione: aggiornato da app.js (pollSecurityState) -->
-    <div class="hud-security-zone">
-      <div id="securityStatus" class="security-status" title="Stato di protezione del sistema">
+    <div class="hud-security-zone" style="position:relative;">
+      <div id="securityStatus" class="security-status" title="Clicca per cambiare modalità di sicurezza (Assente, Notte, Casa, Manutenzione)" onclick="toggleSecurityModeFlyout()" style="cursor:pointer;">
         <svg class="security-status-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
         <span class="security-status-text">
           <span id="securityStatusLabel">Protetto</span>
           <span class="security-status-dot"></span>
         </span>
+      </div>
+
+      <!-- Flyout Rapido Selezione Profilo -->
+      <div id="securityModeFlyout" class="security-mode-flyout" style="display:none;" role="dialog" aria-label="Seleziona Profilo di Sicurezza">
+        <div class="flyout-header">
+          <span>Profili Operativi ORIN</span>
+          <button type="button" class="flyout-close-btn" onclick="toggleSecurityModeFlyout()" aria-label="Chiudi">&times;</button>
+        </div>
+        <div class="flyout-modes-grid">
+          <button type="button" class="flyout-mode-btn" id="flyBtnAssente" onclick="selectSecurityMode('assente')">
+            <span class="mode-icon">🛡️</span>
+            <div class="mode-info">
+              <strong>Assente</strong>
+              <small>Massima Protezione 24/7 (Perimetro + Interno)</small>
+            </div>
+          </button>
+          <button type="button" class="flyout-mode-btn" id="flyBtnNotte" onclick="selectSecurityMode('notte')">
+            <span class="mode-icon">🌙</span>
+            <div class="mode-info">
+              <strong>Notte</strong>
+              <small>Perimetro Armato (Piazzale). Interno silenzioso</small>
+            </div>
+          </button>
+          <button type="button" class="flyout-mode-btn" id="flyBtnCasa" onclick="selectSecurityMode('casa')">
+            <span class="mode-icon">🏠</span>
+            <div class="mode-info">
+              <strong>Casa / Diurno</strong>
+              <small>Presidio presente (Monitoraggio silenzioso)</small>
+            </div>
+          </button>
+          <button type="button" class="flyout-mode-btn" id="flyBtnMaint" onclick="promptMaintenance(30)">
+            <span class="mode-icon">⏱️</span>
+            <div class="mode-info">
+              <strong>Manutenzione (30m)</strong>
+              <small>Sospensione a tempo con auto-ripristino</small>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -166,6 +204,18 @@
       </div>
     </div>
   </header>
+
+  <!-- Banner Manutenzione ad Alta Visibilità (visibile quando attiva) -->
+  <div id="maintenanceBanner" class="orin-maintenance-banner" style="display:none;" role="alert">
+    <div class="maint-banner-inner">
+      <span class="maint-banner-icon">⚠️</span>
+      <div class="maint-banner-text">
+        <strong>MODALITÀ MANUTENZIONE ATTIVA</strong> — Dissuasione e fari temporaneamente sospesi.
+        Ripristino automatico tra <span id="maintCountdown" class="maint-timer-pill">--:--</span>
+      </div>
+      <button type="button" class="maint-banner-btn" onclick="cancelMaintenance()">Ripristina Protezione Ora</button>
+    </div>
+  </div>
 
   <!-- La stanza dell'occhio -->
   <main class="orin-room">
@@ -803,29 +853,155 @@
 
                   </div>
 
-                  <!-- Riquadro 2.5: Pianificazione Oraria & Modalità di Sorveglianza -->
+                  <!-- Riquadro 2.5: Profili di Sicurezza & Quadro Sinottico Impianto (Passo 2) -->
                   <div class="glass-panel" style="grid-column: 1 / -1; margin-top: 18px;">
                     <div class="panel-header-minimal">
                       <div class="ev-head-text">
-                        <h3>Pianificazione Oraria &amp; Modalità di Sorveglianza</h3>
-                        <p class="ev-head-sub">Regola gli orari di lavoro aziendali e il comportamento di allarmi, fari LED Reolink e diffusore Fanvil</p>
+                        <h3>Profili di Sicurezza &amp; Stato Impianto</h3>
+                        <p class="ev-head-sub">I 4 profili operativi (Assente, Notte, Casa, Manutenzione a tempo) e quadro sinottico delle aree effettivamente protette</p>
                       </div>
-                      <span id="securityScheduleBadge" class="status-beacon is-accent">Modalità Automatica</span>
+                      <span id="securityScheduleBadge" class="status-beacon is-accent">Modalità Assente</span>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
-                      <!-- Selettore Modalità -->
-                      <div class="setting-box">
-                        <label class="setting-section-label">MODALITÀ DI SORVEGLIANZA ATTIVA</label>
-                        <select id="selSecurityMode" class="ultra-input" style="font-weight:600; margin-bottom:8px;" onchange="handleSecurityModeChange(this.value)">
-                          <option value="auto">Automatica // Orario Lavoro + Fascia Notturna</option>
-                          <option value="armed">Armato 24/7 // Sempre Attivo (Fari LED &amp; Voce)</option>
-                          <option value="disarmed">Disarmato // Monitoraggio Silenzioso</option>
-                        </select>
-                        <span id="securityModeDesc" class="setting-hint" style="color:#aaa;">Orario di lavoro: sorveglianza silenziosa senza fari/voce. Fuori orario e weekend: deterrenza attiva istantanea.</span>
+                    <!-- 4 Card Interattive Profili Operativi -->
+                    <div class="sec-modes-grid">
+                      <!-- Profilo 1: Assente -->
+                      <div class="sec-mode-card" id="modeCardAssente" onclick="selectSecurityMode('assente')">
+                        <div class="mode-card-head">
+                          <span class="mode-card-icon">🛡️</span>
+                          <span class="mode-card-title">ASSENTE</span>
+                        </div>
+                        <p class="mode-card-desc">Massima protezione 24/7. Fari LED Reolink e deterrenza vocale immediata attivi su Piazzale, Magazzino e Corridoio.</p>
+                        <div class="mode-card-footer">
+                          <span class="sec-badge ok">TUTTE LE AREE ATTIVE</span>
+                        </div>
                       </div>
 
-                      <!-- Fascia Oraria Lavorativa -->
+                      <!-- Profilo 2: Notte -->
+                      <div class="sec-mode-card" id="modeCardNotte" onclick="selectSecurityMode('notte')">
+                        <div class="mode-card-head">
+                          <span class="mode-card-icon">🌙</span>
+                          <span class="mode-card-title">NOTTE</span>
+                        </div>
+                        <p class="mode-card-desc">Protezione perimetrale. Deterrenza vocale e fari attivi solo su Piazzale e varchi esterni. Aree interne silenziose.</p>
+                        <div class="mode-card-footer">
+                          <span class="sec-badge warn">PERIMETRO ARMATO</span>
+                        </div>
+                      </div>
+
+                      <!-- Profilo 3: Casa / Diurno -->
+                      <div class="sec-mode-card" id="modeCardCasa" onclick="selectSecurityMode('casa')">
+                        <div class="mode-card-head">
+                          <span class="mode-card-icon">🏠</span>
+                          <span class="mode-card-title">CASA / DIURNO</span>
+                        </div>
+                        <p class="mode-card-desc">Presidio e transito. Registrazione video e tracciamento continui ma nessun allarme vocale o faro molesto.</p>
+                        <div class="mode-card-footer">
+                          <span class="sec-badge neutral">MONITORAGGIO DISCRETO</span>
+                        </div>
+                      </div>
+
+                      <!-- Profilo 4: Manutenzione a Tempo -->
+                      <div class="sec-mode-card" id="modeCardMaint">
+                        <div class="mode-card-head">
+                          <span class="mode-card-icon">⏱️</span>
+                          <span class="mode-card-title">MANUTENZIONE</span>
+                        </div>
+                        <p class="mode-card-desc">Sospensione temporanea programmata (carico/scarico, interventi tecnici). Auto-ripristino alla scadenza.</p>
+                        <div class="maint-durations-row">
+                          <button type="button" class="maint-min-btn" onclick="selectSecurityMode('manutenzione', 15)">15m</button>
+                          <button type="button" class="maint-min-btn active" onclick="selectSecurityMode('manutenzione', 30)">30m</button>
+                          <button type="button" class="maint-min-btn" onclick="selectSecurityMode('manutenzione', 60)">60m</button>
+                          <button type="button" class="maint-min-btn" onclick="selectSecurityMode('manutenzione', 120)">120m</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Quadro Sinottico: Aree Protette, Telecamere, Varchi, Guasti -->
+                    <div class="sec-synoptic-grid">
+                      <!-- Colonna 1: Aree Effettivamente Protette -->
+                      <div class="synoptic-box">
+                        <div class="synoptic-box-title">
+                          <span>Aree Effettivamente Protette</span>
+                          <span>🛡️</span>
+                        </div>
+                        <div class="synoptic-list">
+                          <div class="synoptic-item">
+                            <span>Piazzale Esterno (Perimetro)</span>
+                            <span id="synAreaPiazzale" class="sec-badge ok">PROTETTO</span>
+                          </div>
+                          <div class="synoptic-item">
+                            <span>Magazzino Interno (Volumetrico)</span>
+                            <span id="synAreaMagazzino" class="sec-badge ok">PROTETTO</span>
+                          </div>
+                          <div class="synoptic-item">
+                            <span>Corridoio Uffici (Transito)</span>
+                            <span id="synAreaCorridoio" class="sec-badge ok">PROTETTO</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Colonna 2: Telecamere Operative -->
+                      <div class="synoptic-box">
+                        <div class="synoptic-box-title">
+                          <span>Telecamere Operative</span>
+                          <span>📹</span>
+                        </div>
+                        <div class="synoptic-list">
+                          <div class="synoptic-item">
+                            <span>Cam 1 · Piazzale</span>
+                            <span id="synCam1" class="sec-badge ok">🟢 ONLINE</span>
+                          </div>
+                          <div class="synoptic-item">
+                            <span>Cam 2 · Magazzino</span>
+                            <span id="synCam2" class="sec-badge ok">🟢 ONLINE</span>
+                          </div>
+                          <div class="synoptic-item">
+                            <span>Cam 3 · Corridoio</span>
+                            <span id="synCam3" class="sec-badge ok">🟢 ONLINE</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Colonna 3: Stato Varchi -->
+                      <div class="synoptic-box">
+                        <div class="synoptic-box-title">
+                          <span>Stato dei Varchi</span>
+                          <span>🚪</span>
+                        </div>
+                        <div class="synoptic-list">
+                          <div class="synoptic-item">
+                            <span>Cancello Carrabile (Relè)</span>
+                            <span id="synGateCancello" class="sec-badge neutral">🔒 PRONTO / CHIUSO</span>
+                          </div>
+                          <div class="synoptic-item">
+                            <span>Varco Pedonale</span>
+                            <span id="synGatePedonale" class="sec-badge neutral">👁️ MONITORATO</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Colonna 4: Guasti e Allarmi Aperti -->
+                      <div class="synoptic-box">
+                        <div class="synoptic-box-title">
+                          <span>Guasti &amp; Allarmi Aperti</span>
+                          <span>🩺</span>
+                        </div>
+                        <div class="synoptic-list">
+                          <div class="synoptic-item">
+                            <span>Rilevatore TensorRT</span>
+                            <span id="synHealthDetector" class="sec-badge ok">🟢 OPERATIVO</span>
+                          </div>
+                          <div class="synoptic-item">
+                            <span>Allarmi Aperti</span>
+                            <span id="synHealthAlerts" class="sec-badge ok">0 APERTI</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Fascia Oraria Lavorativa (Pianificazione Automatica) -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
                       <div class="setting-box">
                         <label class="setting-section-label">FASCIA ORARIA LAVORATIVA (LUNEDÌ — VENERDÌ)</label>
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
@@ -839,11 +1015,12 @@
                             <input type="time" id="inputWorkEnd" value="18:30" class="ultra-input" style="font-family:var(--font-mono); font-weight:700; text-align:center;">
                           </div>
                         </div>
-                        <span class="setting-hint">Durante queste ore gli operai e i mezzi transitano senza innescare sirene vocali o fari.</span>
-                        <div style="margin-top:12px; display:flex; justify-content:flex-end; align-items:center; gap:10px;">
-                          <span id="scheduleSaveStatus" class="save-status" style="display:none;">Orari aggiornati</span>
+                        <span class="setting-hint">Se impostato su modalità Automatica, disarma nelle ore diurne lavorative e riarma di notte e nei weekend.</span>
+                        <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                          <button type="button" class="btn-clean-ghost" onclick="selectSecurityMode('auto')" style="font-size:11px;">Attiva Modalità Automatica</button>
                           <button type="button" class="ultra-primary-btn" onclick="saveSettings()" style="padding:8px 18px; font-size:12px;">Salva Orari</button>
                         </div>
+                        <span id="scheduleSaveStatus" class="save-status" style="display:none; margin-top:6px;">Orari aggiornati</span>
                       </div>
 
                       <!-- Telemetria Sorveglianza Decider (Solo Manutentore) -->

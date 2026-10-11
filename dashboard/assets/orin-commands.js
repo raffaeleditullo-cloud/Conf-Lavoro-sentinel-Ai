@@ -49,7 +49,7 @@
       faro: ['faro', 'fari', 'luce', 'luci', 'faretto', 'faretti', 'illumina'],
       voce: [
         'dissuasione', 'dissuadi', 'avviso', 'avvisa', 'sirena', 'annuncio', 'annuncia',
-        'altoparlante', 'cassa', 'audio', 'riproduci', 'riprodurre', 'riproduzione',
+        'altoparlante', 'diffusore', 'audio', 'riproduci', 'riprodurre', 'riproduzione',
         'trasmetti', 'trasmettere', 'trasmissione', 'diffondi', 'diffondere', 'suona', 'suonare',
         'parla', 'parlare', 'comunica', 'comunicare'
       ],
@@ -62,6 +62,12 @@
     chiudi: ['chiudi', 'nascondi', 'togli', 'rimuovi', 'basta'],
     tutto: ['tutto', 'tutte', 'tutti', 'finestre'],
     conferma: ['si', 'confermo', 'conferma', 'ok', 'procedi', 'vai'],
+    modalita: {
+      assente: ['assente', 'totale'],
+      notte: ['notte', 'notturno', 'notturna', 'perimetrale'],
+      casa: ['casa', 'disarma', 'disarmare', 'disarmo', 'presidio'],
+      manutenzione: ['manutenzione']
+    },
     // Parole che non cambiano il significato del comando
     vuote: [
       'il', 'lo', 'la', 'l', 'i', 'gli', 'le', 'un', 'una', 'uno', 'di', 'del', 'dello', 'della', 'dei', 'degli', 'delle',
@@ -71,7 +77,7 @@
       'inquadra', 'dammi', 'metti', 'su', 'e', 'a', 'in', 'con', 'ora', 'adesso', 'subito', 'orin',
       'ehi', 'ciao', 'grazie', 'accendi', 'attiva', 'lancia', 'manda', 'fai', 'partire', 'quella',
       'quello', 'questa', 'questo', 'che', 'cosa', 'come', 'va', 'sei', 'tutto', 'ok',
-      'solo', 'soltanto', 'solamente', 'varco', 'varchi'
+      'solo', 'soltanto', 'solamente', 'varco', 'varchi', 'modalita', 'profilo', 'siamo', 'sono'
     ]
   };
 
@@ -294,6 +300,18 @@
     }
     if (contiene(token.length ? token : grezzi, VOCABOLARIO.stato)) {
       return { tipo: 'stato', risposta: '' };
+    }
+    if (contiene(token, VOCABOLARIO.modalita.assente)) {
+      return { tipo: 'imposta-modalita', modalita: 'assente', risposta: 'Imposto la modalità Assente: massima protezione perimetro e interno attiva 24/7.' };
+    }
+    if (contiene(token, VOCABOLARIO.modalita.notte)) {
+      return { tipo: 'imposta-modalita', modalita: 'notte', risposta: 'Imposto la modalità Notte: perimetro del piazzale armato, aree interne silenziose.' };
+    }
+    if (contiene(token, VOCABOLARIO.modalita.casa)) {
+      return { tipo: 'imposta-modalita', modalita: 'casa', risposta: 'Imposto la modalità Casa: presidio attivo con monitoraggio silenzioso.' };
+    }
+    if (contiene(token, VOCABOLARIO.modalita.manutenzione)) {
+      return { tipo: 'imposta-modalita', modalita: 'manutenzione', durata: 30, risposta: 'Attivo la modalità Manutenzione per 30 minuti con ripristino automatico.' };
     }
     if (contiene(grezzi, VOCABOLARIO.saluto)) {
       return { tipo: 'saluto', risposta: 'Ciao. Dimmi cosa vuoi vedere.' };

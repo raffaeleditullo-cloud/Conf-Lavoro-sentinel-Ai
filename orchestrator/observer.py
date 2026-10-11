@@ -300,10 +300,15 @@ identikit_profiler.init_context(
     get_audio_path=get_audio_path
 )
 
-def is_system_armed() -> tuple:
+def is_system_armed(camera: str = None) -> tuple:
     """
     Verifica se il sistema è in stato ARMATO (fari e voce attivi)
-    oppure in MONITORAGGIO SILENZIOSO (orario di lavoro o disarmo manuale).
+    oppure in MONITORAGGIO SILENZIOSO in base ai 4 profili operativi:
+    - ASSENTE: Massima protezione 24/7 (Perimetro + Interno armati).
+    - NOTTE: Protezione Perimetrale armata (Piazzale). Interno silenzioso.
+    - CASA: Presidio diurno. Monitoraggio discreto senza allarmi vocali/fari.
+    - MANUTENZIONE: Disarmo temporaneo programmato con countdown e auto-ripristino.
+    - AUTO: Pianificazione oraria lavorativa / notturna.
     Ritorna: (is_armed: bool, ragione: str)
     """
     # Override prioritario per collaudo e test sul campo (evita silenziamenti diurni indesiderati)
@@ -311,14 +316,47 @@ def is_system_armed() -> tuple:
         return True, "Armato forzato da variabile FORCE_ARMED=true (.env)"
 
     cfg = _get_cached_settings()
-    mode = str(os.environ.get("SENTINEL_SECURITY_MODE") or cfg.get("security_mode", "auto")).lower()
+    mode = str(os.environ.get("SENTINEL_SECURITY_MODE") or cfg.get("security_mode", "assente")).lower()
 
-    if mode == "armed":
-        return True, "Armato 24/7 (Manuale)"
-    if mode == "disarmed":
-        return False, "Disarmato manuale (Monitoraggio silenzioso)"
+    # Gestione Manutenzione con timer di scadenza
+    if mode == "manutenzione":
+        maint_expires = float(cfg.get("maintenance_expires_at", 0))
+        now_epoch = time.time()
+        if maint_expires > 0 and now_epoch < maint_expires:
+            rem_min = max(1, int((maint_expires - now_epoch) // 60))
+            return False, f"Modalità Manutenzione attiva (disarmo temporaneo, scade tra {rem_min} min)"
+        elif maint_expires > 0 and now_epoch >= maint_expires:
+            # Manutenzione scaduta: auto-ripristino alla modalità precedente
+            prev_mode = cfg.get("previous_mode", "assente")
+            if prev_mode == "manutenzione":
+                prev_mode = "assente"
+            logger.info("[SICUREZZA] Modalità manutenzione scaduta: auto-ripristino a '%s'", prev_mode)
+            settings_file = os.environ.get("SETTINGS_FILE", "/config/system_settings.json")
+            if not os.path.exists(settings_file):
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                alt = os.path.abspath(os.path.join(base_dir, "..", "config", "system_settings.json"))
+                if os.path.exists(alt):
+                    settings_file = alt
+            try:
+                cfg["security_mode"] = prev_mode
+                cfg["maintenance_expires_at"] = 0
+                with open(settings_file, "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, indent=2)
+            except Exception as e:
+                logger.error("Errore salvataggio ripristino manutenzione in observer: %s", e)
+            mode = prev_mode
 
-    # Modalità "auto" (pianificazione oraria)
+    if mode in ("assente", "armed"):
+        return True, "Modalità Assente (Protezione Massima 24/7)"
+    if mode in ("casa", "disarmed"):
+        return False, "Modalità Casa / Presidio (Monitoraggio Silenzioso)"
+    if mode == "notte":
+        # Perimetro piazzale armato con deterrenza; aree interne esenti da allarmi vocali
+        if camera and any(interna in str(camera).lower() for interna in ("magazzino", "corridoio", "interno")):
+            return False, f"Modalità Notte: area interna ({camera}) esente da allarmi sonori"
+        return True, "Modalità Notte (Perimetro Piazzale armato)"
+
+    # Modalità "auto" (pianificazione oraria diurna / notturna)
     now = datetime.now()
     weekday = now.isoweekday() # 1=Lunedì, ..., 7=Domenica
     work_days = cfg.get("work_days", [1, 2, 3, 4, 5])
@@ -476,8 +514,8 @@ def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: fl
         except Exception:
             pass
 
-    # 0. Verifica stato di Armamento (Orario di lavoro / Fascia notturna / Disarmo manuale)
-    is_armed, arm_reason = is_system_armed()
+    # 0. Verifica stato di Armamento (Assente / Notte / Casa / Manutenzione / Auto)
+    is_armed, arm_reason = is_system_armed(camera=camera)
     if not is_armed:
         logger.info(
             ">>> [MONITORAGGIO SILENZIOSO] Rilevamento su '%s' [loc: %s] soppresso: %s",
@@ -583,7 +621,7 @@ def handle_frigate_event(event_data: dict, topic: str):
 
             # Generazione automatica Scheda Identikit Forense
             try:
-                is_armed_now, _ = is_system_armed()
+                is_armed_now, _ = is_system_armed(camera=camera)
                 status_eval = "MINACCIA CONFERMATA — AZIONE DISSUASIONE ESEGUITA" if deterrence_fired else "TRANSITO IN MONITORAGGIO SILENZIOSO (Pausa Lavoro / Disarmato)"
                 profile = identikit_profiler.generate_profile(
                     event_id=event_id,

@@ -1289,6 +1289,12 @@
         closeEverything();
         say(r.risposta);
         return;
+      case 'imposta-modalita':
+        if (typeof selectSecurityMode === 'function') {
+          selectSecurityMode(r.modalita, r.durata);
+        }
+        say(r.risposta);
+        return;
       case 'scelta-varco':
         say(r.risposta, { actions: r.azioni });
         return;

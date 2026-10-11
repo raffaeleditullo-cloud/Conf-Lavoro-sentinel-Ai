@@ -92,7 +92,10 @@ DEFAULT_SETTINGS = {
     "admin_pin": "9999",
     "preset": "preset1",
     "custom_message": "Attenzione: Area sotto videosorveglianza con tracciamento biometrico. Allontanarsi immediatamente.",
-    "security_mode": "auto",
+    "security_mode": "assente",
+    "previous_mode": "assente",
+    "maintenance_expires_at": 0,
+    "maintenance_duration_min": 30,
     "work_start": "08:00",
     "work_end": "18:30",
     "work_days": [1, 2, 3, 4, 5]
@@ -689,7 +692,7 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 return
 
-        # API Stato di Sicurezza & Orari (Armato / Disarmato / Auto)
+        # API Stato di Sicurezza & Orari (Assente / Notte / Casa / Manutenzione / Auto)
         elif parsed.path == "/api/security/state":
             settings = dict(DEFAULT_SETTINGS)
             if os.path.exists(SETTINGS_FILE):
@@ -698,7 +701,25 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                         settings.update(json.load(f))
                 except Exception:
                     pass
-            mode = settings.get("security_mode", "auto").lower()
+            mode = settings.get("security_mode", "assente").lower()
+            now_epoch = time.time()
+            maint_expires = float(settings.get("maintenance_expires_at", 0))
+
+            # Auto-ripristino se la modalità manutenzione a tempo è scaduta
+            if mode == "manutenzione" and maint_expires > 0 and now_epoch >= maint_expires:
+                prev_mode = settings.get("previous_mode", "assente")
+                if prev_mode == "manutenzione":
+                    prev_mode = "assente"
+                logger.info("[SICUREZZA] Modalità manutenzione scaduta: auto-ripristino a '%s'", prev_mode)
+                mode = prev_mode
+                settings["security_mode"] = prev_mode
+                settings["maintenance_expires_at"] = 0
+                try:
+                    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+                        json.dump(settings, f, indent=2)
+                except Exception as e:
+                    logger.error("Errore salvataggio ripristino manutenzione: %s", e)
+
             now = datetime.now()
             weekday = now.isoweekday()
             work_days = settings.get("work_days", [1, 2, 3, 4, 5])
@@ -706,27 +727,85 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
             end_str = settings.get("work_end", "18:30")
             cur_time = now.strftime("%H:%M")
 
-            if mode == "armed":
+            maint_remaining = max(0, int(maint_expires - now_epoch)) if (mode == "manutenzione" and maint_expires > 0) else 0
+
+            # Valutazione stato e aree protette secondo i 4 profili
+            if mode in ("assente", "armed"):
                 is_armed = True
-                status_text = "Armato (24/7)"
-                badge = "armed"
-            elif mode == "disarmed":
+                status_text = "Modalità Assente (Protezione Massima 24/7)"
+                badge = "assente"
+                protected_areas = {
+                    "piazzale": {"name": "Piazzale Esterno (Perimetro)", "armed": True},
+                    "magazzino": {"name": "Magazzino Interno (Volumetrico)", "armed": True},
+                    "corridoio": {"name": "Corridoio Uffici (Transito)", "armed": True}
+                }
+            elif mode == "notte":
+                is_armed = True
+                status_text = "Modalità Notte (Perimetro Piazzale Armato)"
+                badge = "notte"
+                protected_areas = {
+                    "piazzale": {"name": "Piazzale Esterno (Perimetro)", "armed": True},
+                    "magazzino": {"name": "Magazzino Interno (Volumetrico)", "armed": False},
+                    "corridoio": {"name": "Corridoio Uffici (Transito)", "armed": False}
+                }
+            elif mode in ("casa", "disarmed"):
                 is_armed = False
-                status_text = "Disarmato (Pausa Lavoro)"
-                badge = "disarmed"
-            else:
+                status_text = "Modalità Casa / Diurno (Monitoraggio Silenzioso)"
+                badge = "casa"
+                protected_areas = {
+                    "piazzale": {"name": "Piazzale Esterno (Perimetro)", "armed": False},
+                    "magazzino": {"name": "Magazzino Interno (Volumetrico)", "armed": False},
+                    "corridoio": {"name": "Corridoio Uffici (Transito)", "armed": False}
+                }
+            elif mode == "manutenzione":
+                is_armed = False
+                rem_min = max(1, maint_remaining // 60)
+                status_text = f"Modalità Manutenzione ({rem_min} min rimanenti)"
+                badge = "manutenzione"
+                protected_areas = {
+                    "piazzale": {"name": "Piazzale Esterno (Perimetro)", "armed": False},
+                    "magazzino": {"name": "Magazzino Interno (Volumetrico)", "armed": False},
+                    "corridoio": {"name": "Corridoio Uffici (Transito)", "armed": False}
+                }
+            else:  # Modalità auto (pianificazione oraria)
                 if weekday not in work_days:
                     is_armed = True
-                    status_text = f"Armato Auto (Fine Settimana)"
+                    status_text = "Armato Auto (Fine Settimana)"
                     badge = "auto_armed"
+                    protected_areas = {
+                        "piazzale": {"name": "Piazzale Esterno (Perimetro)", "armed": True},
+                        "magazzino": {"name": "Magazzino Interno (Volumetrico)", "armed": True},
+                        "corridoio": {"name": "Corridoio Uffici (Transito)", "armed": True}
+                    }
                 elif start_str <= cur_time < end_str:
                     is_armed = False
                     status_text = f"Pausa Lavoro ({start_str} - {end_str})"
                     badge = "auto_disarmed"
+                    protected_areas = {
+                        "piazzale": {"name": "Piazzale Esterno (Perimetro)", "armed": False},
+                        "magazzino": {"name": "Magazzino Interno (Volumetrico)", "armed": False},
+                        "corridoio": {"name": "Corridoio Uffici (Transito)", "armed": False}
+                    }
                 else:
                     is_armed = True
                     status_text = f"Armato Auto (Fascia Notturna {end_str} - {start_str})"
                     badge = "auto_armed"
+                    protected_areas = {
+                        "piazzale": {"name": "Piazzale Esterno (Perimetro)", "armed": True},
+                        "magazzino": {"name": "Magazzino Interno (Volumetrico)", "armed": True},
+                        "corridoio": {"name": "Corridoio Uffici (Transito)", "armed": True}
+                    }
+
+            # Controllo vitalità detector
+            det_status = "operativo"
+            if os.path.exists(DETECTOR_STATUS_FILE):
+                try:
+                    with open(DETECTOR_STATUS_FILE, "r", encoding="utf-8") as df:
+                        dinfo = json.load(df)
+                        if dinfo.get("status") == "frozen":
+                            det_status = "anomalia_bloccato"
+                except Exception:
+                    pass
 
             self._send_json({
                 "mode": mode,
@@ -736,7 +815,28 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 "work_start": start_str,
                 "work_end": end_str,
                 "work_days": work_days,
-                "current_time": cur_time
+                "current_time": cur_time,
+                "maintenance": {
+                    "active": (mode == "manutenzione" and maint_remaining > 0),
+                    "remaining_seconds": maint_remaining,
+                    "expires_at": maint_expires,
+                    "duration_min": int(settings.get("maintenance_duration_min", 30))
+                },
+                "protected_areas": protected_areas,
+                "cameras": [
+                    {"id": 1, "name": "Piazzale Esterno", "key": "piazzale", "status": "online"},
+                    {"id": 2, "name": "Magazzino Interno", "key": "magazzino", "status": "online"},
+                    {"id": 3, "name": "Corridoio Uffici", "key": "corridoio", "status": "online"}
+                ],
+                "gates": [
+                    {"name": "Cancello Carrabile", "status": "chiuso", "actuator": "cancello"},
+                    {"name": "Varco Pedonale", "status": "monitorato", "actuator": None}
+                ],
+                "issues": {
+                    "count": 0 if det_status == "operativo" else 1,
+                    "detector": det_status,
+                    "alerts_open": 0
+                }
             })
             return
 
@@ -1109,9 +1209,10 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         elif parsed.path == "/api/security/mode":
             try:
                 data = json.loads(body.decode("utf-8")) if body else {}
-                new_mode = str(data.get("mode", "auto")).lower()
-                if new_mode not in ("auto", "armed", "disarmed"):
-                    new_mode = "auto"
+                new_mode = str(data.get("mode", "assente")).lower()
+                valid_modes = ("assente", "notte", "casa", "manutenzione", "auto", "armed", "disarmed")
+                if new_mode not in valid_modes:
+                    new_mode = "assente"
                 current = dict(DEFAULT_SETTINGS)
                 if os.path.exists(SETTINGS_FILE):
                     try:
@@ -1119,11 +1220,47 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                             current.update(json.load(f))
                     except Exception:
                         pass
-                current["security_mode"] = new_mode
+
+                if new_mode == "manutenzione":
+                    duration = int(data.get("duration_minutes", 30))
+                    prev = current.get("security_mode", "assente")
+                    if prev == "manutenzione":
+                        prev = "assente"
+                    current["previous_mode"] = prev
+                    current["security_mode"] = "manutenzione"
+                    current["maintenance_expires_at"] = time.time() + (duration * 60)
+                    current["maintenance_duration_min"] = duration
+                    logger.info("Modalità sicurezza impostata su MANUTENZIONE (%d min)", duration)
+                else:
+                    current["security_mode"] = new_mode
+                    current["maintenance_expires_at"] = 0
+                    logger.info("Modalità sicurezza aggiornata a: %s", new_mode)
+
                 with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
                     json.dump(current, f, indent=2)
-                logger.info("Modalità sicurezza aggiornata a: %s", new_mode)
                 self._send_json({"success": True, "mode": new_mode})
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=400)
+            return
+
+        elif parsed.path == "/api/security/maintenance/cancel":
+            try:
+                current = dict(DEFAULT_SETTINGS)
+                if os.path.exists(SETTINGS_FILE):
+                    try:
+                        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                            current.update(json.load(f))
+                    except Exception:
+                        pass
+                prev = current.get("previous_mode", "assente")
+                if prev == "manutenzione":
+                    prev = "assente"
+                current["security_mode"] = prev
+                current["maintenance_expires_at"] = 0
+                with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(current, f, indent=2)
+                logger.info("Manutenzione annullata manualmente: ripristinata modalità '%s'", prev)
+                self._send_json({"success": True, "mode": prev})
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=400)
             return
