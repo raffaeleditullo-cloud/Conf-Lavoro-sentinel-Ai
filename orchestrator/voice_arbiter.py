@@ -153,3 +153,22 @@ class VoiceArbiter:
         self._thought_global = now
         self._thought_local[camera] = now
         self._last_thought_camera = camera
+
+    def would_grant_thought(self, camera: str) -> bool:
+        """
+        Sola lettura: True se claim_thought(camera) verrebbe concesso adesso.
+        Non consuma il turno e non modifica alcuno stato. Serve a evitare di pagare
+        un'analisi cloud la cui frase verrebbe poi scartata dai cooldown.
+        """
+        now = time.monotonic()
+        with self._lock:
+            pending = self._pending.get(camera)
+            if pending and now - pending[0] <= self.thought_window:
+                return True
+            is_diff_camera = (self._last_thought_camera is not None and self._last_thought_camera != camera)
+            effective_global_cd = self.inter_camera_cooldown if is_diff_camera else self.global_cooldown
+            if now - self._thought_global < effective_global_cd:
+                return False
+            if now - self._thought_local.get(camera, 0.0) < self.local_cooldown:
+                return False
+            return True

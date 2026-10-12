@@ -180,6 +180,17 @@ class IdentikitProfiler:
             logger.info("ORIN Brain: analisi cloud soppressa (transito recente tra stanze adiacenti avvenuto %.1fs fa).", now_mono - self._last_global_analysis)
             return
 
+        # 3. Se armato, chiede PRIMA all'arbitro della voce se la frase potrebbe essere pronunciata:
+        #    evita di pagare un'analisi Gemini la cui frase verrebbe poi scartata dai cooldown.
+        #    L'evento non viene marcato: un aggiornamento successivo di Frigate ritenta appena possibile.
+        if is_armed and self.voice_arbiter is not None and hasattr(self.voice_arbiter, "would_grant_thought"):
+            try:
+                if not self.voice_arbiter.would_grant_thought(camera):
+                    logger.info("ORIN Brain: analisi cloud su '%s' rimandata (turno vocale non disponibile, nessuna chiamata sprecata).", camera)
+                    return
+            except Exception as e:
+                logger.debug("Verifica preventiva arbitro voce non riuscita: %s", e)
+
         self._analyzed_events.add(event_id)
         if len(self._analyzed_events) > 2000:
             self._analyzed_events.clear()

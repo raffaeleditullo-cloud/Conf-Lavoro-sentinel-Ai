@@ -350,12 +350,17 @@ class OrinBrain:
         # 2. Cache locale permanente SHA256 (0 ms di latenza per frasi frequenti)
         audio_ulaw = self._read_voice_cache(voice_pack, spoken_text)
 
-        # 3. Sintesi neurale nativa Google Gemini se la frase non e' in cache
+        # 3. Sintesi ElevenLabs (voce ufficiale) se la frase non e' in cache.
+        #    Solo l'audio ElevenLabs va in cache: il ripiego Gemini TTS viene riprodotto
+        #    ma non memorizzato, per non sostituire per sempre la voce ufficiale.
         if not audio_ulaw:
-            audio_ulaw = self._synthesize_ulaw(spoken_text, voice_pack, volume_percent)
-            if not audio_ulaw:
-                return False
-            self._write_voice_cache(voice_pack, spoken_text, audio_ulaw)
+            audio_ulaw = self._synthesize_elevenlabs(spoken_text, voice_pack)
+            if audio_ulaw:
+                self._write_voice_cache(voice_pack, spoken_text, audio_ulaw)
+            else:
+                audio_ulaw = self._synthesize_gemini_tts(spoken_text, voice_pack, volume_percent)
+                if not audio_ulaw:
+                    return False
 
         # 4. Diffusione tramite AudioBus (unico proprietario dell'altoparlante)
         from rtp_audio_bus import Priority, get_audio_bus
@@ -369,7 +374,16 @@ class OrinBrain:
 
     @staticmethod
     def _voice_cache_key(voice_pack: str, spoken_text: str) -> str:
-        return hashlib.sha256(f"{voice_pack}::{spoken_text}".encode("utf-8")).hexdigest()[:20]
+        # La chiave include l'ID voce ElevenLabs effettivo: cambiando voce (o dopo le prove
+        # del 12/10 con Adam e Gemini TTS) le vecchie frasi in cache non vengono riutilizzate.
+        pack = (voice_pack or "carmelo").strip().lower()
+        if pack in ("sami", "kore"):
+            vid = os.environ.get("ELEVENLABS_VOICE_SAMI", "Ap2b3ZnSIW7h0QbBbxCq")
+        elif len(pack) >= 20 and " " not in pack:
+            vid = voice_pack.strip()
+        else:
+            vid = os.environ.get("ELEVENLABS_VOICE_CARMELO", "HuK8QKF35exsCh2e7fLT")
+        return hashlib.sha256(f"el:{vid}::{spoken_text}".encode("utf-8")).hexdigest()[:20]
 
     def _read_voice_cache(self, voice_pack: str, spoken_text: str) -> Optional[bytes]:
         """Legge la frase dalla cache mu-law; converte una sola volta le vecchie voci MP3."""
@@ -420,21 +434,25 @@ class OrinBrain:
 
     @staticmethod
     def _synthesize_elevenlabs(spoken_text: str, voice_pack: str) -> Optional[bytes]:
-        """Sintesi ultra-rapida con ElevenLabs Turbo v2.5 nativa in mu-law 8000 Hz per Fanvil A233."""
+        """
+        Sintesi ElevenLabs Turbo v2.5 in mu-law 8 kHz grezzo (formato nativo del Fanvil A233).
+        Configurazione collaudata in campo (commit 65949f2): voci italiane native,
+        stabilita' 0.70, endpoint /stream con optimize_streaming_latency=3.
+        """
+        from ulaw_audio import ensure_ulaw
+
         api_key = load_elevenlabs_api_key()
         if not api_key:
             return None
 
-        # Voci ElevenLabs ufficiali Sentinel AI
-        # Adam (Dominant, Firm): voce maschile severa e dissuasiva per la sorveglianza
-        # Matilda (Professional): voce femminile cordiale per accoglienza
-        # HEXAD Sovereign: voce di comando per il protocollo HEXAD
+        # Voci italiane native collaudate (NON usare voci inglesi: storpiano l'italiano)
+        carmelo_id = os.environ.get("ELEVENLABS_VOICE_CARMELO", "HuK8QKF35exsCh2e7fLT")  # Carmelo La Rosa
+        sami_id = os.environ.get("ELEVENLABS_VOICE_SAMI", "Ap2b3ZnSIW7h0QbBbxCq")        # Alessandra
         voices = {
-            "carmelo": os.environ.get("ELEVENLABS_VOICE_CARMELO", "pNInz6obpgDQGcFmaJgB"),
-            "sami": os.environ.get("ELEVENLABS_VOICE_SAMI", "XrExE9yKIg1WjnnlVkGX"),
-            "hexad": os.environ.get("ELEVENLABS_VOICE_HEXAD", "RXZAxL4vq9TFajHv7zbR"),
-            "charon": os.environ.get("ELEVENLABS_VOICE_CARMELO", "pNInz6obpgDQGcFmaJgB"),
-            "kore": os.environ.get("ELEVENLABS_VOICE_SAMI", "XrExE9yKIg1WjnnlVkGX"),
+            "carmelo": carmelo_id,
+            "sami": sami_id,
+            "charon": carmelo_id,
+            "kore": sami_id,
         }
 
         # Supporto ad ID ElevenLabs passati direttamente (lunghezza >= 20)
@@ -445,16 +463,14 @@ class OrinBrain:
             voice_id = voices.get(cleaned_voice.lower(), voices["carmelo"])
 
         model_id = os.environ.get("ELEVENLABS_MODEL", DEFAULT_ELEVEN_MODEL)
-        url = f"{ELEVENLABS_API_BASE}/{voice_id}?output_format=ulaw_8000"
+        url = f"{ELEVENLABS_API_BASE}/{voice_id}/stream?output_format=ulaw_8000&optimize_streaming_latency=3"
 
         payload = {
             "text": spoken_text,
             "model_id": model_id,
             "voice_settings": {
-                "stability": 0.45,
-                "similarity_boost": 0.85,
-                "style": 0.0,
-                "use_speaker_boost": True
+                "stability": 0.70,
+                "similarity_boost": 0.85
             }
         }
 
@@ -467,19 +483,19 @@ class OrinBrain:
                 headers={
                     "xi-api-key": api_key,
                     "Content-Type": "application/json",
-                    "Accept": "audio/basic"
                 }
             )
             with urllib.request.urlopen(req, timeout=5.0) as resp:
-                if resp.status == 200:
-                    data = resp.read()
-                    if data and len(data) > 100:
-                        dt = (time.time() - t0) * 1000.0
-                        logger.info(
-                            ">>> [ORIN VOICE - ELEVENLABS TURBO] Sintesi completata in %.0f ms (%.1f s audio mu-law)",
-                            dt, len(data) / 8000.0
-                        )
-                        return data
+                raw = resp.read()
+            audio_ulaw = ensure_ulaw(raw, declared="ulaw", source="ElevenLabs")
+            if not audio_ulaw or len(audio_ulaw) <= 100:
+                logger.warning(">>> [ORIN VOICE] Nessun dato audio valido da ElevenLabs, passaggio a Gemini TTS...")
+                return None
+            logger.info(
+                ">>> [ORIN VOICE - ELEVENLABS TURBO] Sintesi completata in %.0f ms (%.1f s audio mu-law)",
+                (time.time() - t0) * 1000.0, len(audio_ulaw) / 8000.0
+            )
+            return audio_ulaw
         except Exception as e:
             logger.warning(">>> [ORIN VOICE] ElevenLabs Turbo non disponibile (%s), passaggio a Gemini TTS...", e)
             return None
