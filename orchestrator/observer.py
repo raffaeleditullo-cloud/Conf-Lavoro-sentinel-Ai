@@ -196,7 +196,19 @@ cooldown_tracker = {}
 # Tracciamento deduplicazione archiviazione NAS per event_id
 archived_snapshots = set()
 archived_clips = set()
+deterred_events = set()
 MAX_TRACKED_EVENTS = 2000
+
+def mark_deterrence_triggered(event_id: str) -> bool:
+    """Restituisce True solo la prima volta che viene scatenata la deterrenza per un dato event_id."""
+    if not event_id:
+        return True
+    if event_id in deterred_events:
+        return False
+    if len(deterred_events) > MAX_TRACKED_EVENTS:
+        deterred_events.clear()
+    deterred_events.add(event_id)
+    return True
 
 def is_in_cooldown(key: str, cooldown_seconds: float) -> bool:
     now = time.time()
@@ -616,8 +628,12 @@ def handle_frigate_event(event_data: dict, topic: str):
                 return
 
             event_time = after.get("start_time") or after.get("frame_time")
-            # Attivazione deterrenza (faro Reolink + voce) in base a orario e stato armato
-            deterrence_fired = trigger_person_deterrence(camera, zone=active_zone, event_timestamp=event_time)
+            # Attivazione deterrenza (faro Reolink + voce) in base a orario e stato armato:
+            # Una sola attivazione di dissuasione per ogni singolo ID evento di Frigate (evita annunci a raffica)
+            if mark_deterrence_triggered(event_id):
+                deterrence_fired = trigger_person_deterrence(camera, zone=active_zone, event_timestamp=event_time)
+            else:
+                deterrence_fired = False
 
             # Generazione automatica Scheda Identikit Forense
             try:
@@ -645,8 +661,9 @@ def handle_frigate_event(event_data: dict, topic: str):
                 nas.archive_snapshot(event_id=event_id, camera=camera, label=label)
 
         elif event_type == "end":
-            # Pulizia tracciamento movimento dinamico per questo evento
+            # Pulizia tracciamento movimento dinamico e deterrenza per questo evento
             is_dynamic_movement(event_id, [], "end")
+            deterred_events.discard(event_id)
 
             # 4. Archiviazione Clip Video sul NAS solo a conclusione dell'evento (attesa 6s per flush MP4 da Frigate)
             if has_clip and mark_clip_archived(event_id):

@@ -61,9 +61,9 @@ class VoiceArbiter:
         self.global_cooldown = float(
             global_cooldown if global_cooldown is not None else os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20")
         )
-        # Cooldown minimo di sicurezza tra telecamere DIVERSE (evita solo che due file audio si sovrappongano)
+        # Cooldown di sicurezza tra telecamere DIVERSE (evita annunci a raffica durante il transito)
         self.inter_camera_cooldown = float(
-            os.environ.get("SPEAKER_INTER_CAMERA_COOLDOWN_SECONDS", "2.0")
+            os.environ.get("SPEAKER_INTER_CAMERA_COOLDOWN_SECONDS", "12.0")
         )
         self.thought_window = float(
             thought_window if thought_window is not None else os.environ.get("REFLEX_THOUGHT_WINDOW_SECONDS", "30")
@@ -85,14 +85,24 @@ class VoiceArbiter:
         """
         Chiede la parola per il riflesso immediato.
 
-        - Se la telecamera è DIVERSA da quella precedente, bypassa il cooldown globale di 20s
-          applicando solo un breve buffer di 2s (nessun silenzio di 16s tra corridoio e magazzino).
-        - Se la telecamera è la STESSA, applica il cooldown locale (15-20s) per non ripetere.
+        - Non sovrappone MAI un nuovo annuncio se l'altoparlante sta gia' parlando.
+        - Se la telecamera e' DIVERSA da quella precedente, applica un cooldown inter-camera (12s)
+          evitando sia il silenzio prolungato che il fuoco a raffica ping-pong.
+        - Se la telecamera e' la STESSA (anche cambiando zona), applica il cooldown locale (15-20s).
         """
         loc_key = loc_key or camera
         now = time.monotonic()
         with self._lock:
-            is_diff_camera = (self._last_reflex_camera is not None and self._last_reflex_camera != loc_key)
+            # 1. Non sovrapporre MAI la voce se l'altoparlante sta gia' trasmettendo un audio
+            try:
+                from rtp_audio_bus import get_audio_bus
+                if get_audio_bus().is_playing():
+                    logger.info("Voce: riflesso su '%s' soppresso: altoparlante gia' in riproduzione audio.", camera)
+                    return False
+            except Exception:
+                pass
+
+            is_diff_camera = (self._last_reflex_camera is not None and self._last_reflex_camera != camera)
             effective_global_cd = self.inter_camera_cooldown if is_diff_camera else self.global_cooldown
 
             if now - self._reflex_global < effective_global_cd:
@@ -111,7 +121,7 @@ class VoiceArbiter:
 
             self._reflex_global = now
             self._reflex_local[loc_key] = now
-            self._last_reflex_camera = loc_key
+            self._last_reflex_camera = camera
             self._pending[camera] = (now, voiced)
             return True
 

@@ -1282,7 +1282,7 @@ let currentSettings = {
   siren_enabled: true,
   faro_sec: 30,
   gate_sec: 3,
-  security_mode: 'auto',
+  security_mode: 'assente',
   work_start: '08:00',
   work_end: '18:30',
   work_days: [1, 2, 3, 4, 5]
@@ -1466,6 +1466,8 @@ async function selectSecurityMode(mode, durationMin) {
   const flyout = document.getElementById('securityModeFlyout');
   if (flyout) flyout.style.display = 'none';
 
+  currentSettings.security_mode = mode;
+
   const payload = { mode: mode };
   if (mode === 'manutenzione') {
     payload.duration_minutes = durationMin || 30;
@@ -1512,6 +1514,15 @@ async function saveSettings() {
   const inpWorkStart = document.getElementById('inputWorkStart');
   const inpWorkEnd = document.getElementById('inputWorkEnd');
 
+  let activeSecMode = currentSettings.security_mode || 'assente';
+  const activeCard = document.querySelector('.sec-mode-card.is-active');
+  if (activeCard && activeCard.id) {
+    if (activeCard.id === 'modeCardAssente') activeSecMode = 'assente';
+    else if (activeCard.id === 'modeCardNotte') activeSecMode = 'notte';
+    else if (activeCard.id === 'modeCardCasa') activeSecMode = 'casa';
+    else if (activeCard.id === 'modeCardMaint') activeSecMode = 'manutenzione';
+  }
+
   const payload = {
     voice_pack: currentSettings.voice_pack || 'carmelo',
     voice_gender: currentSettings.voice_pack || 'carmelo',
@@ -1519,7 +1530,7 @@ async function saveSettings() {
     voice_volume: rngVol ? parseInt(rngVol.value, 10) : (currentSettings.voice_volume || 70),
     faro_sec: numFaro ? parseInt(numFaro.value, 10) : (currentSettings.faro_sec || 30),
     gate_sec: numGate ? parseInt(numGate.value, 10) : (currentSettings.gate_sec || 3),
-    security_mode: selSecMode ? selSecMode.value : (currentSettings.security_mode || 'auto'),
+    security_mode: selSecMode ? selSecMode.value : activeSecMode,
     work_start: inpWorkStart ? inpWorkStart.value : (currentSettings.work_start || '08:00'),
     work_end: inpWorkEnd ? inpWorkEnd.value : (currentSettings.work_end || '18:30'),
     work_days: currentSettings.work_days || [1, 2, 3, 4, 5]
@@ -1634,6 +1645,7 @@ async function pollSecurityState() {
     const data = await res.json();
 
     const mode = (data.mode || 'assente').toLowerCase();
+    currentSettings.security_mode = mode;
 
     // 1. Aggiornamento Topbar (#securityStatus)
     const box = document.getElementById('securityStatus');
