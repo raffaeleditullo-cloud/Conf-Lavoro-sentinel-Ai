@@ -88,6 +88,21 @@ def apply_volume(audio: bytes, volume_percent: float) -> bytes:
     return audio.translate(volume_table(percent))
 
 
+def pcm24k_to_ulaw8k(pcm_data: bytes) -> bytes:
+    """Converte campioni PCM 24 kHz 16-bit signed LE in G.711 mu-law 8 kHz per il Fanvil A233."""
+    num_samples = len(pcm_data) // 2
+    if num_samples < 3:
+        return b""
+    samples = struct.unpack(f"<{num_samples}h", pcm_data[:num_samples * 2])
+    out = bytearray(num_samples // 3)
+    idx = 0
+    for i in range(0, (num_samples // 3) * 3, 3):
+        avg = (samples[i] + samples[i + 1] + samples[i + 2]) // 3
+        out[idx] = linear_to_ulaw(avg)
+        idx += 1
+    return bytes(out)
+
+
 def silence(duration_ms: int) -> bytes:
     """Buffer mu-law di silenzio della durata indicata."""
     return bytes([ULAW_SILENCE]) * (SAMPLE_RATE * max(0, int(duration_ms)) // 1000)

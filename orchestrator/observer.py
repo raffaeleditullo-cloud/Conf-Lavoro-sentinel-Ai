@@ -65,9 +65,8 @@ USE_EXTERNAL_RELAY_LIGHT = os.environ.get("USE_EXTERNAL_RELAY_LIGHT", "false").l
 AUDIO_COOLDOWN = float(os.environ.get("AUDIO_COOLDOWN_SECONDS", "15.0"))
 SPEAKER_GLOBAL_COOLDOWN = float(os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20.0"))
 
-# Livello 0 — Riflesso immediato: frase breve gia' in RAM diffusa al primo rilevamento,
-# seguita senza pause dalla frase contestuale di ORIN (vedi reflex_engine.py).
-REFLEX_ENABLED = os.environ.get("REFLEX_ENABLED", "true").lower() in ("true", "1", "yes")
+# Livello 0 — Riflesso immediato (disattivato di default per politica 100% Google Gemini dal vivo)
+REFLEX_ENABLED = os.environ.get("REFLEX_ENABLED", "false").lower() in ("true", "1", "yes")
 
 # Pezzettino 1: Filtro di Buonsenso per le Sagome (stile Jev / Calibrated Decision)
 # Disabilitato di default (false) per non scartare persone reali a mezzo busto o a distanza ravvicinata nei test
@@ -309,6 +308,7 @@ identikit_profiler.init_context(
     relay=relay,
     voice_arbiter=voice_arbiter,
     get_volume=get_voice_volume,
+    get_voice_pack=get_voice_pack,
     get_audio_path=get_audio_path
 )
 
@@ -535,32 +535,23 @@ def trigger_person_deterrence(camera: str, zone: str = None, event_timestamp: fl
         )
         return False
 
-    # 1. Voce immediata. Il turno concesso qui apre anche la finestra in cui la frase
-    #    contestuale di ORIN avra' sempre la parola (vedi voice_arbiter.py).
+    # 1. Voce immediata: se REFLEX_ENABLED è attivo diffonde il riflesso, altrimenti
+    #    riserva il canale vocale direttamente ed esclusivamente a Google Gemini.
     try:
         from orin_brain import orin_brain
         orin_active = orin_brain.is_active()
     except Exception:
         orin_active = False
 
-    voiced_now = REFLEX_ENABLED or not orin_active
-    if voice_arbiter.claim_reflex(camera, loc_key, voiced=voiced_now):
-        if REFLEX_ENABLED:
-            logger.info(">>> AZIONE IMMEDIATA: riflesso vocale per '%s' [loc: %s]%s", camera, loc_key, latency_str)
-            reflex.fire(camera, persons=persons)
-        elif not orin_active:
-            audio_file = get_audio_path("03_avviso_dissuasione")
-            volume = get_voice_volume()
-            logger.info(
-                ">>> AZIONE IMMEDIATA AUDIO (FALLBACK LOCALE): Riproduzione avviso vocale '%s' per '%s' [loc: %s]%s (multicast RTP %s:%d, volume %.0f%%)",
-                os.path.basename(audio_file), camera, loc_key, latency_str, FANVIL_MULTICAST_IP, FANVIL_MULTICAST_PORT, volume
-            )
-            speaker.play_audio_file(audio_file, volume_percent=volume, priority=Priority.REFLEX)
-        else:
-            logger.info(
-                ">>> [ORIN ACTIVE] Rilevamento su '%s' [loc: %s]%s: riflesso disattivato, la voce sara' quella contestuale di ORIN",
-                camera, loc_key, latency_str
-            )
+    voiced_now = REFLEX_ENABLED
+    if voiced_now and voice_arbiter.claim_reflex(camera, loc_key, voiced=True):
+        logger.info(">>> AZIONE IMMEDIATA: riflesso vocale per '%s' [loc: %s]%s", camera, loc_key, latency_str)
+        reflex.fire(camera, persons=persons)
+    else:
+        logger.info(
+            ">>> [ORIN ACTIVE] Rilevamento su '%s' [loc: %s]%s: la voce sara' generata in diretta da Google Gemini (nessun audio preregistrato)",
+            camera, loc_key, latency_str
+        )
 
     # 2. Accensione Fari LED integrati Reolink (Spotlight) + opzionale Relè
     if not is_in_cooldown(f"{loc_key}_faro", cooldown_seconds=5.0):
@@ -661,9 +652,8 @@ def handle_frigate_event(event_data: dict, topic: str):
                 nas.archive_snapshot(event_id=event_id, camera=camera, label=label)
 
         elif event_type == "end":
-            # Pulizia tracciamento movimento dinamico e deterrenza per questo evento
+            # Pulizia tracciamento movimento dinamico per questo evento (l'ID resta tracciato contro rimbalzi)
             is_dynamic_movement(event_id, [], "end")
-            deterred_events.discard(event_id)
 
             # 4. Archiviazione Clip Video sul NAS solo a conclusione dell'evento (attesa 6s per flush MP4 da Frigate)
             if has_clip and mark_clip_archived(event_id):

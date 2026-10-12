@@ -30,6 +30,7 @@ class IdentikitProfiler:
         self.mqtt_client = None
         self.voice_arbiter = None
         self.get_volume = None
+        self.get_voice_pack = None
         self.get_audio_path = None
         self._analyzed_events = set()
         self._last_analysis_camera: Dict[str, float] = {}
@@ -42,6 +43,7 @@ class IdentikitProfiler:
         mqtt_client=None,
         voice_arbiter=None,
         get_volume=None,
+        get_voice_pack=None,
         get_audio_path=None
     ):
         """Inietta i riferimenti ai controller attivi senza duplicare i moduli in runtime."""
@@ -50,6 +52,7 @@ class IdentikitProfiler:
         self.mqtt_client = mqtt_client
         self.voice_arbiter = voice_arbiter
         self.get_volume = get_volume
+        self.get_voice_pack = get_voice_pack
         self.get_audio_path = get_audio_path
 
     def _claim_thought(self, camera: str):
@@ -60,14 +63,8 @@ class IdentikitProfiler:
         return self.voice_arbiter.claim_thought(camera)
 
     def _play_recorded_warning(self, camera: str):
-        """Ripiego: diffonde l'avviso registrato di dissuasione con la priorita' del pensiero."""
-        if not self.speaker:
-            return
-        from rtp_audio_bus import Priority
-        audio_file = self.get_audio_path("03_avviso_dissuasione") if self.get_audio_path else "/app/audio/carmelo/03_avviso_dissuasione.mp3"
-        vol = self.get_volume() if self.get_volume else 100.0
-        logger.info(">>> [ORIN FALLBACK] Avviso vocale registrato '%s' per '%s'", os.path.basename(audio_file), camera)
-        self.speaker.play_audio_file(audio_file, volume_percent=vol, priority=Priority.THOUGHT, queue=True)
+        """Disabilitato: nessuna traccia preregistrata sovrascrive o interferisce con Gemini."""
+        logger.info(">>> [ORIN AUDIO] Fallback preregistrato disabilitato (politica audio 100%% Google Gemini).")
 
     def generate_profile(
         self,
@@ -256,15 +253,8 @@ class IdentikitProfiler:
         # Analisi Visiva ORIN con stato armamento reale
         orin_res = orin_brain.analyze_frame(img_data, camera=camera, is_armed=is_armed)
         if not orin_res or orin_res.get("fallback"):
-            # Fallback di sicurezza: analisi cloud fallita a sistema armato. L'avviso registrato
-            # serve solo se il riflesso non ha gia' parlato per questo rilevamento.
-            if is_armed:
-                try:
-                    grant = self._claim_thought(camera)
-                    if grant and not grant.reflex_voiced:
-                        self._play_recorded_warning(camera)
-                except Exception as e:
-                    logger.warning("Errore fallback audio: %s", e)
+            # Analisi cloud non riuscita o in fallback: log diagnostico, nessun disturbo o audio spurio
+            logger.info(">>> [ORIN BRAIN] Analisi per '%s' non disponibile o in fallback (%s). Nessun audio spurio emesso.", camera, orin_res.get("fallback_reason") if orin_res else "None")
             return
 
         # Aggiornamento scheda profilo
@@ -307,7 +297,7 @@ class IdentikitProfiler:
             else:
                 logger.info(">>> [DEMON ACTION GATE: BLOCCATO] %s", reason)
 
-        # Azione B: Sintesi vocale dinamica con ElevenLabs (Voce Carmelo)
+        # Azione B: Sintesi vocale dinamica con Google Gemini (Voci Charon o Kore)
         spoken_msg = orin_res.get("spoken_message")
         if spoken_msg:
             # Verifica deterministica PEIRA sulla sicurezza e brevità del testo.
@@ -333,12 +323,10 @@ class IdentikitProfiler:
                     grant = self._claim_thought(camera)
                     if grant:
                         vol = self.get_volume() if self.get_volume else 100.0
-                        v_pack = "carmelo"
+                        v_pack = self.get_voice_pack() if self.get_voice_pack else "carmelo"
                         ok = is_valid and orin_brain.speak(sanitized_msg, voice_pack=v_pack, volume_percent=vol)
-                        if not ok and is_armed and not grant.reflex_voiced:
-                            # Frase scartata da PEIRA o sintesi fallita, e nessun riflesso pronunciato:
-                            # avviso registrato
-                            self._play_recorded_warning(camera)
+                        if not ok:
+                            logger.info(">>> [ORIN VOICE] Sintesi vocale Google Gemini non eseguita o scartata.")
                     else:
                         logger.info(">>> [ORIN VOICE] Annuncio vocale per '%s' soppresso: turno vocale gia' concesso.", camera)
                 except Exception as e:

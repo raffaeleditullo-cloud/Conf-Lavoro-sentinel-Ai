@@ -5,7 +5,7 @@ Architettura di Visione Multimodale, Riconoscimento Relazionale e Dialogo Predit
 
 Proprietà intellettuale: Conf-Lavoro Sentinel AI
 Regolazione cognitiva: HEXAD Cybernetic Protocol (OCULUS, CORIS, ANIMA, MNEME, DEMON, PEIRA)
-Modello Vision: google/gemini-2.5-flash via OpenRouter (Zero storage persistente cloud)
+Modello Vision & Voice: Google Gemini 2.5 (Nativo Google Generative Language REST API)
 """
 
 import os
@@ -32,9 +32,9 @@ except ImportError:
     except ImportError:
         def verbalize_for_speech(t, max_chars=3500): return t
 
-# Configurazione API OpenRouter
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = os.environ.get("ORIN_VISION_MODEL", "google/gemini-2.5-flash")
+# Configurazione API Google Gemini (Cervello Visivo e Vocale Nativo)
+GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 TIMEOUT_SECONDS = float(os.environ.get("ORIN_TIMEOUT_SECONDS", "3.5"))
 
 # Cartella immagini di riferimento dei volti noti (es. Presidente Roberto)
@@ -43,6 +43,29 @@ FACES_DIR = os.path.join(BASE_DIR, "config", "reference_faces")
 PRESIDENT_REF_PATH = os.path.join(FACES_DIR, "roberto_capobianco.jpg")
 AUDIO_CACHE_DIR = os.path.join(os.path.dirname(__file__), "audio_cache")
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
+
+
+def load_gemini_api_key() -> str:
+    """Carica la chiave API Google Gemini da variabile d'ambiente o dal file protetto su disco."""
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if key:
+        return key
+    possible_paths = [
+        os.path.expanduser("~/.secrets/Gemini Live API - ORIN/gemini live api.txt"),
+        os.path.expanduser("~/.secrets/gemini_api_key.txt"),
+        os.path.expanduser("~/.secrets/gemini live api.txt"),
+        "/root/.secrets/gemini live api.txt",
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    k = f.read().strip()
+                    if k:
+                        return k
+            except Exception:
+                pass
+    return ""
 
 
 def optimize_image_for_vlm(image_bytes: bytes, max_dim: int = 512, quality: int = 75) -> str:
@@ -61,22 +84,20 @@ def optimize_image_for_vlm(image_bytes: bytes, max_dim: int = 512, quality: int 
 
 class OrinBrain:
     """
-    Cervello visivo e interattivo di Sentinel AI (ORIN).
+    Cervello visivo e interattivo di Sentinel AI (ORIN) basato direttamente su Google Gemini.
     Analizza i fotogrammi dei varchi, comprende le azioni, riconosce il Presidente
-    e genera frasi di benvenuto o deterrenza con intelligenza viva.
+    e genera frasi e audio con intelligenza neurale nativa Google.
     """
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
+        self.api_key = api_key or load_gemini_api_key()
         self.model = DEFAULT_MODEL
         self._president_ref_b64 = None
         self._load_president_reference()
 
     def is_active(self) -> bool:
-        """Verifica se sia OpenRouter (VLM) che ElevenLabs (TTS) sono configurati e pronti."""
-        has_vlm = bool(self.api_key or os.environ.get("OPENROUTER_API_KEY"))
-        has_tts = bool(os.environ.get("ELEVENLABS_API_KEY") or os.path.exists(os.path.expanduser("~/.secrets/ElevenLabs Api.txt")))
-        return has_vlm and has_tts
+        """Verifica se l'API Google Gemini è configurata e pronta."""
+        return bool(self.api_key or load_gemini_api_key())
 
     def _load_president_reference(self):
         """Carica in cache l'immagine di riferimento del Presidente Roberto Capobianco se disponibile."""
@@ -95,21 +116,22 @@ class OrinBrain:
                 "STATO OPERATIVO: SISTEMA ARMATO (MODALITÀ NOTTE / ASSENTE).\n"
                 "• L'accesso a quest'area ('{camera}') NON È CONSENTITO a quest'ora (eccetto il Presidente Roberto Capobianco).\n"
                 "• TONO DELLA VOCE: PERENTORIO, SEVERO, FERMO E DISSUASIVO.\n"
-                "• NON USARE MAI frasi accoglienti, saluti cordiali o 'benvenuto'.\n"
-                "• Intima l'alt e l'abbandono immediato dell'area (es. 'Alt! Area aziendale sorvegliata. Allontanarsi immediatamente!', oppure 'Attenzione: rilevamento biometrico attivo, identificazione inviata alla sicurezza').\n"
+                "• NON USARE MAI frasi preconfezionate, saluti di cortesia o 'benvenuto'.\n"
+                "• RAGIONAMENTO VISIVO: Osserva con precisione cosa sta facendo la persona (postura, movimento, posizione, oggetti) e intimale direttamente a voce di fermarsi e andarsene (es. 'Alt! Ti vedo vicino alla porta. Allontanati immediatamente dall\\'area!').\n"
                 "• Imposta 'threat_level': 'high' (o 'medium').\n"
             ).format(camera=camera)
         else:
             status_section = (
                 "STATO OPERATIVO: MONITORAGGIO SILENZIOSO (MODALITÀ CASA / DIURNO).\n"
                 "• Presidio aziendale attivo o transito ordinario di dipendenti e corrieri.\n"
-                "• TONO DELLA VOCE: Cordiale, educato e discreto se è un lavoratore (es. 'Buongiorno, benvenuto in Conf-Lavoro.').\n"
+                "• TONO DELLA VOCE: Cordiale, educato e discreto se è un lavoratore o visitatore (es. 'Buongiorno, benvenuto in Conf-Lavoro.').\n"
                 "• Imposta 'threat_level': 'low' o 'none'.\n"
             )
 
         return (
-            "Tu sei ORIN, il copilota e custode cibernetico di Conf-Lavoro Sentinel AI.\n"
-            "Sei intelligente, sveglio, educato con le persone autorizzate, ma inflessibile e autorevole contro intrusi.\n\n"
+            "Tu sei ORIN, la sentinella e custode cibernetico intelligente di Conf-Lavoro Sentinel AI.\n"
+            "Possiedi gli occhi delle telecamere e ragioni in tempo reale su ogni fotogramma per proteggere la sede aziendale.\n"
+            "Non usi frasi preconfezionate o stereotipate: osservi la scena e formuli spontaneamente il pensiero vocale più calzante.\n\n"
             f"{status_section}\n"
             "LINEE GUIDA RIGOROSE (HEXAD PROTOCOL):\n"
             "1. ONESTÀ PERCETTIVA & PRESENZA UMANA REALE: Verifica prima di tutto se nell'inquadratura è fisicamente presente un essere umano reale in carne ed ossa (visibile testa, busto o gambe). "
@@ -119,10 +141,10 @@ class OrinBrain:
             "Se la persona inquadrata nella telecamera corrisponde ai tratti somatici, barba/viso o portamento di Roberto, "
             "identificalo IMMEDIATAMENTE come 'Roberto Capobianco'.\n"
             "3. ACCOGLIENZA PRESIDENTE: Se è Roberto, formula SEMPRE un saluto caloroso, cordiale e deferente in italiano "
-            "(es. 'Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura. Buona giornata di lavoro.'), "
+            "(es. 'Buongiorno Presidente Roberto! Benvenuto in sede, apro subito il cancello.'), "
             "e imposta 'open_gate': true indipendentemente dallo stato armato.\n"
             "4. RICONOSCIMENTO AZIONI: Se è presente una persona reale, osserva cosa fa con precisione oggettiva.\n"
-            "5. BREVITÀ: La frase parlata ('spoken_message') deve essere di MASSIMO 16-18 parole, perentoria e perfetta per la voce umana di Carmelo. Se is_person_present è false, spoken_message deve essere una stringa vuota \"\".\n\n"
+            "5. CARATTERE E BREVITÀ: La frase parlata ('spoken_message') deve essere di MASSIMO 10-14 parole, secca, incisiva e naturale per la voce neurale italiana. Deve riflettere l'azione reale osservata nell'inquadratura. Se is_person_present è false, spoken_message deve essere una stringa vuota \"\".\n\n"
             "Rispondi ESCLUSIVAMENTE in formato JSON valido con questa struttura:\n"
             "{\n"
             '  "is_person_present": boolean,\n'
@@ -142,68 +164,68 @@ class OrinBrain:
         is_armed: bool = True
     ) -> Dict[str, Any]:
         """
-        Analizza un fotogramma JPEG della telecamera via OpenRouter (Gemini 2.5 Flash).
+        Analizza un fotogramma JPEG della telecamera via Google Gemini 2.5 Flash nativo.
         Restituisce il verdetto analitico e il messaggio vocale generato da ORIN.
         """
         t0 = time.time()
-        api_key = self.api_key or os.environ.get("OPENROUTER_API_KEY")
+        api_key = self.api_key or load_gemini_api_key()
 
         if not api_key:
-            logger.debug("ORIN: OPENROUTER_API_KEY non configurata, fallback nominale.")
-            return self._fallback_response(is_armed, "Chiave API assente")
+            logger.debug("ORIN: GEMINI_API_KEY non configurata, fallback nominale.")
+            return self._fallback_response(is_armed, "Chiave API Gemini assente")
 
         try:
             target_b64 = optimize_image_for_vlm(image_bytes, max_dim=512, quality=75)
 
-            # Costruzione dei contenuti per il modello multimodale
-            content_list = []
+            # Costruzione dei contenuti per il modello multimodale Google Gemini
+            parts = []
             
             # Se abbiamo la foto di riferimento del Presidente, la alleghiamo come confronto
             if self._president_ref_b64:
-                content_list.append({
-                    "type": "text",
+                parts.append({
                     "text": "IMMAGINE 1: Foto di riferimento ufficiale del Presidente Roberto Capobianco."
                 })
-                content_list.append({
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{self._president_ref_b64}"}
+                parts.append({
+                    "inline_data": {
+                        "mime_type": "image/jpeg",
+                        "data": self._president_ref_b64
+                    }
                 })
 
             state_label = "ARMATO (NOTTE / ASSENTE)" if is_armed else "DISARMATO (CASA / DIURNO)"
-            content_list.append({
-                "type": "text",
+            parts.append({
                 "text": f"IMMAGINE TARGET: Telecamera '{camera}' [Stato Impianto: {state_label}]. Analizza il soggetto inquadrato ora:"
             })
-            content_list.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{target_b64}"}
+            parts.append({
+                "inline_data": {
+                    "mime_type": "image/jpeg",
+                    "data": target_b64
+                }
             })
 
             payload = {
-                "model": self.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": self._build_system_prompt(is_armed, camera)
-                    },
+                "system_instruction": {
+                    "parts": [{"text": self._build_system_prompt(is_armed, camera)}]
+                },
+                "contents": [
                     {
                         "role": "user",
-                        "content": content_list
+                        "parts": parts
                     }
                 ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.0,
-                "max_tokens": 250
+                "generationConfig": {
+                    "response_mime_type": "application/json",
+                    "temperature": 0.0,
+                    "max_output_tokens": 300
+                }
             }
 
+            url = f"{GEMINI_API_BASE}/{self.model}:generateContent?key={api_key}"
             req = urllib.request.Request(
-                OPENROUTER_URL,
+                url,
                 data=json.dumps(payload).encode("utf-8"),
                 headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://conflavoro.it",
-                    "X-Title": "Conf-Lavoro Sentinel AI"
+                    "Content-Type": "application/json"
                 }
             )
 
@@ -211,22 +233,32 @@ class OrinBrain:
                 res_data = json.loads(response.read().decode("utf-8"))
                 latency_ms = round((time.time() - t0) * 1000, 1)
 
-                raw_content = res_data["choices"][0]["message"]["content"]
+                candidates = res_data.get("candidates", [])
+                if not candidates:
+                    logger.warning("ORIN: Nessun candidato restituito da Gemini.")
+                    return self._fallback_response(is_armed, "Risposta vuota da Gemini")
+
+                content_parts = candidates[0].get("content", {}).get("parts", [])
+                raw_content = ""
+                for p in content_parts:
+                    if "text" in p:
+                        raw_content += p["text"]
+
                 result = json.loads(raw_content)
                 result["latency_ms"] = latency_ms
-                result["engine"] = self.model
+                result["engine"] = f"google/{self.model}"
 
                 logger.info(
-                    ">>> [ORIN BRAIN] Elaborazione completata in %.0fms: Pres=%s | Minaccia=%s | Msg: '%s'",
+                    ">>> [ORIN BRAIN - GOOGLE GEMINI] Elaborazione completata in %.0fms: Pres=%s | Minaccia=%s | Msg: '%s'",
                     latency_ms, result.get("is_president"), result.get("threat_level"), result.get("spoken_message")
                 )
                 return result
 
         except urllib.error.HTTPError as http_err:
-            logger.warning("ORIN API HTTP Error (%d): %s", http_err.code, http_err.reason)
+            logger.warning("ORIN Gemini API HTTP Error (%d): %s", http_err.code, http_err.reason)
             return self._fallback_response(is_armed, f"HTTP Error {http_err.code}")
         except Exception as e:
-            logger.warning("ORIN Vision Timeout / Errore (%.0fms): %s", (time.time() - t0) * 1000, e)
+            logger.warning("ORIN Gemini Vision Timeout / Errore (%.0fms): %s", (time.time() - t0) * 1000, e)
             return self._fallback_response(is_armed, str(e))
 
     def _fallback_response(self, is_armed: bool, reason: str) -> Dict[str, Any]:
@@ -258,11 +290,11 @@ class OrinBrain:
         volume_percent: float = 70.0,
     ) -> bool:
         """
-        Sintetizza il testo con ElevenLabs (voce di Carmelo o SAMI) direttamente in
-        G.711 mu-law 8 kHz (output_format=ulaw_8000) e lo consegna all'AudioBus,
+        Sintetizza il testo con Google Gemini (voce Charon o Kore) direttamente in
+        G.711 mu-law 8 kHz e lo consegna all'AudioBus,
         che lo diffonde sul Fanvil A233 senza processi ffmpeg ne' file temporanei.
 
-        La frase ha priorita' THOUGHT ed e' accodata: se il Riflesso (Livello 0)
+        La frase ha priorita' THOUGHT ed e' accodata: se un annuncio precedente
         e' ancora in onda, ORIN parla subito dopo, senza pause.
         Restituisce True se l'annuncio e' stato accettato dall'AudioBus.
         """
@@ -274,10 +306,10 @@ class OrinBrain:
         if not spoken_text or not spoken_text.strip():
             spoken_text = text
 
-        # 2. Cache locale permanente SHA256 (0 ms di sintesi, 0 crediti ElevenLabs)
+        # 2. Cache locale permanente SHA256 (0 ms di latenza per frasi frequenti)
         audio_ulaw = self._read_voice_cache(voice_pack, spoken_text)
 
-        # 3. Sintesi ElevenLabs se la frase non e' in cache
+        # 3. Sintesi neurale nativa Google Gemini se la frase non e' in cache
         if not audio_ulaw:
             audio_ulaw = self._synthesize_ulaw(spoken_text, voice_pack, volume_percent)
             if not audio_ulaw:
@@ -308,7 +340,7 @@ class OrinBrain:
             if os.path.exists(ulaw_file) and os.path.getsize(ulaw_file) > 100:
                 with open(ulaw_file, "rb") as cf:
                     audio = cf.read()
-                logger.info(">>> [ORIN VOICE CACHE] Frase pronta da cache locale (0 crediti): '%s'", key)
+                logger.info(">>> [ORIN VOICE CACHE] Frase pronta da cache locale in RAM (0 ms): '%s'", key)
                 return audio
             if os.path.exists(legacy_mp3) and os.path.getsize(legacy_mp3) > 100:
                 with open(legacy_mp3, "rb") as cf:
@@ -332,64 +364,91 @@ class OrinBrain:
 
     @staticmethod
     def _synthesize_ulaw(spoken_text: str, voice_pack: str, volume_percent: float) -> Optional[bytes]:
-        """Sintesi ElevenLabs in mu-law 8 kHz grezzo (il formato nativo del Fanvil)."""
-        from ulaw_audio import ensure_ulaw
+        """Sintesi vocale ufficiale Google Gemini con voce neurale nativa in mu-law 8 kHz per il Fanvil A233."""
+        from ulaw_audio import pcm24k_to_ulaw8k
 
-        eleven_key = os.environ.get("ELEVENLABS_API_KEY")
-        if not eleven_key:
-            secret_path = os.path.expanduser("~/.secrets/ElevenLabs Api.txt")
-            if os.path.exists(secret_path):
-                try:
-                    with open(secret_path, "r", encoding="utf-8") as sf:
-                        eleven_key = sf.read().strip()
-                except Exception:
-                    pass
-        if not eleven_key:
-            logger.info(">>> [ORIN VOICE] ELEVENLABS_API_KEY non trovata: riproduzione traccia offline di fallback.")
+        api_key = load_gemini_api_key()
+        if not api_key:
+            logger.info(">>> [ORIN VOICE] GEMINI_API_KEY non trovata: riproduzione traccia offline di fallback.")
             return None
 
-        # Mappatura voci ufficiali Conflavoro
+        # Mappatura voci native Google Gemini per Conflavoro
+        # Charon: maschile profonda, autorevole, dissuasiva (ex Carmelo)
+        # Kore: femminile chiara, empatica, accoglienza (ex Sami)
         voices = {
-            "carmelo": "HuK8QKF35exsCh2e7fLT",  # Carmelo La Rosa (Autorevole, calda)
-            "sami": "Ap2b3ZnSIW7h0QbBbxCq"       # Alessandra (Elegante, perentoria)
+            "carmelo": "Charon",
+            "sami": "Kore",
+            "charon": "Charon",
+            "kore": "Kore",
+            "puck": "Puck",
+            "fenrir": "Fenrir",
+            "aoede": "Aoede"
         }
-        voice_id = voices.get(voice_pack.lower(), voices["carmelo"])
-        tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?output_format=ulaw_8000&optimize_streaming_latency=3"
+        voice_name = voices.get(voice_pack.lower(), "Charon")
+        url = f"{GEMINI_API_BASE}/gemini-2.0-flash:generateContent?key={api_key}"
 
         try:
             t0 = time.time()
-            logger.info(">>> [ORIN VOICE] Avvio sintesi ElevenLabs (%s) -> '%s' (vol: %.0f%%)", voice_pack, spoken_text, volume_percent)
+            logger.info(">>> [ORIN VOICE - GOOGLE] Avvio sintesi neurale (%s -> %s) -> '%s' (vol: %.0f%%)", voice_pack, voice_name, spoken_text, volume_percent)
+
             payload = {
-                "text": spoken_text,
-                "model_id": "eleven_turbo_v2_5",
-                "voice_settings": {
-                    "stability": 0.70,
-                    "similarity_boost": 0.85
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [
+                            {"text": f"Leggi con voce naturale e tono appropriato in lingua italiana: {spoken_text}"}
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "response_modalities": ["AUDIO"],
+                    "speech_config": {
+                        "voice_config": {
+                            "prebuilt_voice_config": {
+                                "voice_name": voice_name
+                            }
+                        }
+                    }
                 }
             }
+
             req = urllib.request.Request(
-                tts_url,
+                url,
                 data=json.dumps(payload).encode("utf-8"),
                 headers={
-                    "xi-api-key": eleven_key,
-                    "Content-Type": "application/json",
-                    "Accept": "*/*"
+                    "Content-Type": "application/json"
                 }
             )
-            with urllib.request.urlopen(req, timeout=8.0) as resp:
-                raw = resp.read()
 
-            audio_ulaw = ensure_ulaw(raw, declared="ulaw", source="ElevenLabs")
-            if not audio_ulaw:
-                logger.warning(">>> [ORIN VOICE] Nessun dato audio valido ricevuto da ElevenLabs.")
+            with urllib.request.urlopen(req, timeout=6.0) as resp:
+                res_data = json.loads(resp.read().decode("utf-8"))
+
+            candidates = res_data.get("candidates", [])
+            if not candidates:
+                logger.warning(">>> [ORIN VOICE] Nessun audio restituito da Google Gemini.")
                 return None
+
+            parts = candidates[0].get("content", {}).get("parts", [])
+            raw_pcm = None
+            for p in parts:
+                inline = p.get("inlineData", {})
+                if inline and inline.get("data"):
+                    raw_pcm = base64.b64decode(inline["data"])
+                    break
+
+            if not raw_pcm:
+                logger.warning(">>> [ORIN VOICE] Dati audio assenti nella risposta Google Gemini.")
+                return None
+
+            # Converte il flusso 24kHz 16-bit PCM in mu-law 8kHz nativo Fanvil A233
+            audio_ulaw = pcm24k_to_ulaw8k(raw_pcm)
             logger.info(
-                ">>> [ORIN VOICE] Sintesi completata in %.0f ms (%.1f s di audio mu-law)",
+                ">>> [ORIN VOICE - GOOGLE] Sintesi neurale completata in %.0f ms (%.1f s audio mu-law)",
                 (time.time() - t0) * 1000.0, len(audio_ulaw) / 8000.0
             )
             return audio_ulaw
         except Exception as e:
-            logger.warning(">>> [ORIN VOICE] Errore sintesi ElevenLabs: %s (uso fallback locale)", e)
+            logger.warning(">>> [ORIN VOICE] Errore sintesi Google Gemini: %s (uso fallback locale)", e)
             return None
 
 

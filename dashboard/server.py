@@ -908,14 +908,15 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
             try:
                 sys.path.insert(0, DRIVERS_DIR)
                 from orin_brain import orin_brain, PRESIDENT_REF_PATH
-                has_key = bool(orin_brain.api_key or os.environ.get("OPENROUTER_API_KEY"))
-                eleven_active = bool(os.environ.get("ELEVENLABS_API_KEY") or os.path.exists(os.path.expanduser("~/.secrets/ElevenLabs Api.txt")))
+                has_key = orin_brain.is_active()
                 self._send_json({
                     "name": "ORIN",
                     "status": "online" if has_key else "standby",
                     "model": orin_brain.model,
+                    "engine": "google-gemini",
                     "president_cached": bool(orin_brain._president_ref_b64 or os.path.exists(PRESIDENT_REF_PATH)),
-                    "elevenlabs_active": eleven_active
+                    "google_gemini_active": has_key,
+                    "elevenlabs_active": False
                 })
             except Exception as e:
                 self._send_json({"name": "ORIN", "status": "standby", "error": str(e)})
