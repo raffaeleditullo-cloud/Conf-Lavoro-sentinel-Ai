@@ -61,6 +61,10 @@ class VoiceArbiter:
         self.global_cooldown = float(
             global_cooldown if global_cooldown is not None else os.environ.get("SPEAKER_GLOBAL_COOLDOWN_SECONDS", "20")
         )
+        # Cooldown minimo di sicurezza tra telecamere DIVERSE (evita solo che due file audio si sovrappongano)
+        self.inter_camera_cooldown = float(
+            os.environ.get("SPEAKER_INTER_CAMERA_COOLDOWN_SECONDS", "2.0")
+        )
         self.thought_window = float(
             thought_window if thought_window is not None else os.environ.get("REFLEX_THOUGHT_WINDOW_SECONDS", "30")
         )
@@ -68,32 +72,46 @@ class VoiceArbiter:
         self._lock = threading.Lock()
         # Riflessi
         self._reflex_global = 0.0
+        self._last_reflex_camera: Optional[str] = None
         self._reflex_local: Dict[str, float] = {}
         # Turno aperto per telecamera: {camera: (istante_riflesso, riflesso_pronunciato)}
         self._pending: Dict[str, tuple] = {}
         # Pensieri senza riflesso associato
         self._thought_global = 0.0
+        self._last_thought_camera: Optional[str] = None
         self._thought_local: Dict[str, float] = {}
 
     def claim_reflex(self, camera: str, loc_key: str = None, voiced: bool = True) -> bool:
         """
         Chiede la parola per il riflesso immediato.
 
-        voiced: False quando il turno viene aperto ma nessun audio immediato sara'
-        diffuso (es. Riflesso disattivato e ORIN attivo): in quel caso il ripiego
-        registrato di ORIN e' necessario se l'analisi cloud fallisce.
+        - Se la telecamera è DIVERSA da quella precedente, bypassa il cooldown globale di 20s
+          applicando solo un breve buffer di 2s (nessun silenzio di 16s tra corridoio e magazzino).
+        - Se la telecamera è la STESSA, applica il cooldown locale (15-20s) per non ripetere.
         """
         loc_key = loc_key or camera
         now = time.monotonic()
         with self._lock:
-            if now - self._reflex_global < self.global_cooldown:
-                logger.info("Voce: riflesso su '%s' soppresso da cooldown globale (%.0fs).", loc_key, self.global_cooldown)
+            is_diff_camera = (self._last_reflex_camera is not None and self._last_reflex_camera != loc_key)
+            effective_global_cd = self.inter_camera_cooldown if is_diff_camera else self.global_cooldown
+
+            if now - self._reflex_global < effective_global_cd:
+                rem = effective_global_cd - (now - self._reflex_global)
+                logger.info(
+                    "Voce: riflesso su '%s' soppresso da cooldown %s (%.1fs rimanenti).",
+                    loc_key,
+                    "inter-camera" if is_diff_camera else "globale",
+                    rem
+                )
                 return False
+
             if now - self._reflex_local.get(loc_key, 0.0) < self.local_cooldown:
                 logger.info("Voce: riflesso su '%s' soppresso da cooldown locale (%.0fs).", loc_key, self.local_cooldown)
                 return False
+
             self._reflex_global = now
             self._reflex_local[loc_key] = now
+            self._last_reflex_camera = loc_key
             self._pending[camera] = (now, voiced)
             return True
 
@@ -109,8 +127,11 @@ class VoiceArbiter:
                 self._mark_thought(camera, now)
                 return ThoughtGrant(granted=True, reflex_voiced=pending[1])
 
-            if now - self._thought_global < self.global_cooldown:
-                logger.info("Voce: pensiero su '%s' soppresso da cooldown globale (%.0fs).", camera, self.global_cooldown)
+            is_diff_camera = (self._last_thought_camera is not None and self._last_thought_camera != camera)
+            effective_global_cd = self.inter_camera_cooldown if is_diff_camera else self.global_cooldown
+
+            if now - self._thought_global < effective_global_cd:
+                logger.info("Voce: pensiero su '%s' soppresso da cooldown (%.1fs).", camera, effective_global_cd)
                 return ThoughtGrant(granted=False)
             if now - self._thought_local.get(camera, 0.0) < self.local_cooldown:
                 logger.info("Voce: pensiero su '%s' soppresso da cooldown locale (%.0fs).", camera, self.local_cooldown)
@@ -121,3 +142,4 @@ class VoiceArbiter:
     def _mark_thought(self, camera: str, now: float):
         self._thought_global = now
         self._thought_local[camera] = now
+        self._last_thought_camera = camera

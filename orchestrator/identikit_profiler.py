@@ -32,6 +32,8 @@ class IdentikitProfiler:
         self.get_volume = None
         self.get_audio_path = None
         self._analyzed_events = set()
+        self._last_analysis_camera: Dict[str, float] = {}
+        self._last_global_analysis: float = 0.0
 
     def init_context(
         self,
@@ -160,14 +162,33 @@ class IdentikitProfiler:
         is_armed: bool = True
     ):
         """Avvia l'analisi visiva avanzata di ORIN in un thread separato senza bloccare il flusso principale."""
-        # Deduplicazione: analizza ogni event_id una sola volta, evitando chiamate cloud duplicate per update continui
+        # 1. Deduplicazione per event_id
         if not event_id:
             return
         if event_id in self._analyzed_events:
             return
+
+        # 2. Debounce temporale: evita chiamate cloud a raffica se Frigate assegna nuovi event_id
+        # durante il transito tra stanze adiacenti o micro-interruzioni di tracking.
+        now_mono = time.monotonic()
+        min_camera_gap = 25.0 if is_armed else 60.0
+        min_global_gap = 10.0 if is_armed else 30.0
+
+        if now_mono - self._last_analysis_camera.get(camera, 0.0) < min_camera_gap:
+            rem = min_camera_gap - (now_mono - self._last_analysis_camera.get(camera, 0.0))
+            logger.info("ORIN Brain: analisi cloud su '%s' soppressa (debounce camera attivo: %.1fs rimanenti).", camera, rem)
+            return
+
+        if now_mono - self._last_global_analysis < min_global_gap:
+            logger.info("ORIN Brain: analisi cloud soppressa (transito recente tra stanze adiacenti avvenuto %.1fs fa).", now_mono - self._last_global_analysis)
+            return
+
         self._analyzed_events.add(event_id)
         if len(self._analyzed_events) > 2000:
             self._analyzed_events.clear()
+
+        self._last_analysis_camera[camera] = now_mono
+        self._last_global_analysis = now_mono
 
         import threading
         t = threading.Thread(

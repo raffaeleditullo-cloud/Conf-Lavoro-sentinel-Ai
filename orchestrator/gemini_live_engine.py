@@ -48,7 +48,8 @@ class GeminiLiveEngine:
         self.api_key = self._load_api_key()
         self.model = os.environ.get("GEMINI_LIVE_MODEL", "models/gemini-3.8-live")
         self.voice = os.environ.get("GEMINI_LIVE_VOICE", "Charon")
-        self.enabled = os.environ.get("GEMINI_LIVE_ENABLED", "true").lower() in ("true", "1", "yes")
+        # Default False: evita costi per sessioni WebSocket persistenti 24/7 a vuoto. Attivabile on-demand.
+        self.enabled = os.environ.get("GEMINI_LIVE_ENABLED", "false").lower() in ("true", "1", "yes")
 
         self._ws = None
         self._loop = None

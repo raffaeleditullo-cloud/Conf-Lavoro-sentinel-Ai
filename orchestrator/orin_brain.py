@@ -89,11 +89,28 @@ class OrinBrain:
                 logger.warning("Impossibile caricare foto di riferimento Presidente: %s", e)
 
     def _build_system_prompt(self, is_armed: bool, camera: str) -> str:
-        """Costruisce il prompt HEXAD disciplinato e caloroso di ORIN."""
+        """Costruisce il prompt HEXAD disciplinato e differenziato per stato di armamento."""
+        if is_armed:
+            status_section = (
+                "STATO OPERATIVO: SISTEMA ARMATO (MODALITÀ NOTTE / ASSENTE).\n"
+                "• L'accesso a quest'area ('{camera}') NON È CONSENTITO a quest'ora (eccetto il Presidente Roberto Capobianco).\n"
+                "• TONO DELLA VOCE: PERENTORIO, SEVERO, FERMO E DISSUASIVO.\n"
+                "• NON USARE MAI frasi accoglienti, saluti cordiali o 'benvenuto'.\n"
+                "• Intima l'alt e l'abbandono immediato dell'area (es. 'Alt! Area aziendale sorvegliata. Allontanarsi immediatamente!', oppure 'Attenzione: rilevamento biometrico attivo, identificazione inviata alla sicurezza').\n"
+                "• Imposta 'threat_level': 'high' (o 'medium').\n"
+            ).format(camera=camera)
+        else:
+            status_section = (
+                "STATO OPERATIVO: MONITORAGGIO SILENZIOSO (MODALITÀ CASA / DIURNO).\n"
+                "• Presidio aziendale attivo o transito ordinario di dipendenti e corrieri.\n"
+                "• TONO DELLA VOCE: Cordiale, educato e discreto se è un lavoratore (es. 'Buongiorno, benvenuto in Conf-Lavoro.').\n"
+                "• Imposta 'threat_level': 'low' o 'none'.\n"
+            )
+
         return (
             "Tu sei ORIN, il copilota e custode cibernetico di Conf-Lavoro Sentinel AI.\n"
-            "Sei intelligente, sveglio, educato e cordiale con le persone autorizzate, "
-            "ma inflessibile e autorevole contro intrusi o comportamenti pericolosi.\n\n"
+            "Sei intelligente, sveglio, educato con le persone autorizzate, ma inflessibile e autorevole contro intrusi.\n\n"
+            f"{status_section}\n"
             "LINEE GUIDA RIGOROSE (HEXAD PROTOCOL):\n"
             "1. ONESTÀ PERCETTIVA & PRESENZA UMANA REALE: Verifica prima di tutto se nell'inquadratura è fisicamente presente un essere umano reale in carne ed ossa (visibile testa, busto o gambe). "
             "I sensori di movimento possono attivarsi per cambi di luce, ombre o oggetti inanimati (biciclette parcheggiate, sedie, scatoloni, piante). "
@@ -101,22 +118,18 @@ class OrinBrain:
             "2. CONFRONTO VOLTO: Ti viene fornita (quando presente) una foto di riferimento del Presidente Nazionale Roberto Capobianco. "
             "Se la persona inquadrata nella telecamera corrisponde ai tratti somatici, barba/viso o portamento di Roberto, "
             "identificalo IMMEDIATAMENTE come 'Roberto Capobianco'.\n"
-            "3. ACCOGLIENZA PRESIDENTE: Se è Roberto, formula un saluto caloroso, cordiale e deferente in italiano "
+            "3. ACCOGLIENZA PRESIDENTE: Se è Roberto, formula SEMPRE un saluto caloroso, cordiale e deferente in italiano "
             "(es. 'Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura. Buona giornata di lavoro.'), "
-            "e imposta 'open_gate': true.\n"
-            "4. RICONOSCIMENTO AZIONI: Se è presente una persona reale, guarda cosa fa. Ha un pacco da consegnare? È un operaio in tuta? "
-            "Sta semplicemente camminando? Sta scavalcando o manomettendo una porta? C'è fumo o pericolo?\n"
-            "5. ORARIO DIURNO / DIPENDENTI: Se è una persona normale che lavora o consegna merci, sii educato e accogliente.\n"
-            "6. INTRUSI / SOGGETTI SOSPETTI (o notte): Sii perentorio, tagliente e fermo. Avvertilo che è inquadrato in 4K "
-            "e che la sua scheda identificativa è stata inviata ai server di sicurezza.\n"
-            "7. BREVITÀ: La frase parlata ('spoken_message') deve essere di MASSIMO 18-20 parole, perfetta per la voce umana di Carmelo. Se is_person_present è false, spoken_message deve essere una stringa vuota \"\".\n\n"
+            "e imposta 'open_gate': true indipendentemente dallo stato armato.\n"
+            "4. RICONOSCIMENTO AZIONI: Se è presente una persona reale, osserva cosa fa con precisione oggettiva.\n"
+            "5. BREVITÀ: La frase parlata ('spoken_message') deve essere di MASSIMO 16-18 parole, perentoria e perfetta per la voce umana di Carmelo. Se is_person_present è false, spoken_message deve essere una stringa vuota \"\".\n\n"
             "Rispondi ESCLUSIVAMENTE in formato JSON valido con questa struttura:\n"
             "{\n"
             '  "is_person_present": boolean,\n'
             '  "is_president": boolean,\n'
             '  "subject_description": "descrizione sintetica abbigliamento e tratti certi (oppure \'Nessuna persona presente\')",\n'
             '  "action_detected": "cosa sta facendo esattamente (oppure \'Nessuna azione - oggetto inanimato o vuoto\')",\n'
-            '  "threat_level": "none" | "low" | "high",\n'
+            '  "threat_level": "none" | "low" | "medium" | "high",\n'
             '  "spoken_message": "la frase esatta in italiano che ORIN deve pronunciare a voce (stringa vuota se nessuna persona)",\n'
             '  "open_gate": boolean\n'
             "}"
@@ -156,9 +169,10 @@ class OrinBrain:
                     "image_url": {"url": f"data:image/jpeg;base64,{self._president_ref_b64}"}
                 })
 
+            state_label = "ARMATO (NOTTE / ASSENTE)" if is_armed else "DISARMATO (CASA / DIURNO)"
             content_list.append({
                 "type": "text",
-                "text": f"IMMAGINE TARGET: Telecamera '{camera}' di Conf-Lavoro Sentinel AI. Analizza il soggetto inquadrato ora:"
+                "text": f"IMMAGINE TARGET: Telecamera '{camera}' [Stato Impianto: {state_label}]. Analizza il soggetto inquadrato ora:"
             })
             content_list.append({
                 "type": "image_url",
