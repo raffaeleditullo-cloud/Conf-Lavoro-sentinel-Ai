@@ -95,7 +95,10 @@ class ReolinkSpotlightController:
                         pass
                 elif "password=" in val:
                     try:
-                        p = val.split("password=")[1].split("&")[0].split(" ")[0]
+                        # Negli URL HTTP-FLV la password e' seguita da '&' oppure da '#video=copy':
+                        # si ferma a entrambi e decodifica eventuali caratteri codificati (%40 -> @).
+                        from urllib.parse import unquote
+                        p = unquote(val.split("password=")[1].split("&")[0].split("#")[0].split(" ")[0])
                         if p:
                             pwd = p
                             break
