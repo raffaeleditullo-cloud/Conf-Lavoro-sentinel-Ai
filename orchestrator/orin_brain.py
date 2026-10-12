@@ -34,8 +34,10 @@ except ImportError:
 
 # Configurazione API Google Gemini (Cervello Visivo e Vocale Nativo)
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 DEFAULT_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts")
+ELEVENLABS_API_BASE = "https://api.elevenlabs.io/v1/text-to-speech"
+DEFAULT_ELEVEN_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_turbo_v2_5")
 TIMEOUT_SECONDS = float(os.environ.get("ORIN_TIMEOUT_SECONDS", "8.0"))
 
 # Cartella immagini di riferimento dei volti noti (es. Presidente Roberto)
@@ -69,8 +71,41 @@ def load_gemini_api_key() -> str:
     return ""
 
 
-def optimize_image_for_vlm(image_bytes: bytes, max_dim: int = 512, quality: int = 75) -> str:
-    """Comprime l'immagine in RAM a 512px max JPEG per abbattere i tempi di upload di rete a meno di 20ms."""
+def load_elevenlabs_api_key() -> str:
+    """Carica la chiave API ElevenLabs da variabile d'ambiente o dai file protetti su disco."""
+    key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+    if key:
+        return key
+    possible_paths = [
+        os.path.expanduser("~/.secrets/ElevenLabs Api.txt"),
+        os.path.expanduser("~/.secrets/elevenlabs_api_key.txt"),
+        os.path.expanduser("~/.secrets/elevenlabs.txt"),
+        "/root/.secrets/ElevenLabs Api.txt",
+        "c:/Users/stree/Desktop/HEXAD B-1/.env",
+        os.path.expanduser("~/Desktop/HEXAD B-1/.env"),
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    if "ELEVENLABS_API_KEY=" in content:
+                        for line in content.splitlines():
+                            if line.strip().startswith("ELEVENLABS_API_KEY="):
+                                k = line.split("=", 1)[1].strip()
+                                if k:
+                                    return k
+                    else:
+                        k = content.strip()
+                        if k and not k.startswith("#"):
+                            return k
+            except Exception:
+                pass
+    return ""
+
+
+def optimize_image_for_vlm(image_bytes: bytes, max_dim: int = 384, quality: int = 65) -> str:
+    """Comprime l'immagine in RAM a 384px JPEG per abbattere i tempi di upload di rete a meno di 15ms."""
     try:
         from PIL import Image
         img = Image.open(io.BytesIO(image_bytes))
@@ -85,17 +120,18 @@ def optimize_image_for_vlm(image_bytes: bytes, max_dim: int = 512, quality: int 
 
 class OrinBrain:
     """
-    Cervello visivo e interattivo di Sentinel AI (ORIN) basato direttamente su Google Gemini.
+    Cervello visivo e interattivo di Sentinel AI (ORIN) basato su Google Gemini e ElevenLabs Turbo.
     Analizza i fotogrammi dei varchi, comprende le azioni, riconosce il Presidente
-    e genera frasi e audio con intelligenza neurale nativa Google.
+    e genera frasi e audio con intelligenza neurale a latenza ultra-bassa (<2s).
     """
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or load_gemini_api_key()
+        self.elevenlabs_api_key = load_elevenlabs_api_key()
         raw_model = (model or os.environ.get("GEMINI_MODEL") or DEFAULT_MODEL).replace("models/", "")
-        # Normalizzazione automatica: se è rimasto configurato un vecchio modello 2.x o 1.x dismesso da Google, usa gemini-3.8-flash
+        # Normalizzazione automatica: se è rimasto configurato un vecchio modello 2.x o 1.x dismesso da Google (404), usa gemini-flash-lite-latest
         if any(raw_model.startswith(p) for p in ("gemini-2.", "gemini-1.", "gemini-2-", "gemini-1-")):
-            raw_model = "gemini-3.8-flash"
+            raw_model = "gemini-flash-lite-latest"
         self.model = raw_model
         self._president_ref_b64 = None
         self._load_president_reference()
@@ -367,9 +403,90 @@ class OrinBrain:
         except Exception as ce:
             logger.debug("Impossibile salvare cache audio: %s", ce)
 
+    @classmethod
+    def _synthesize_ulaw(cls, spoken_text: str, voice_pack: str, volume_percent: float) -> Optional[bytes]:
+        """
+        Sintesi vocale ad altissima velocita':
+        1. ElevenLabs Turbo v2.5 nativo in G.711 mu-law 8 kHz (~350-500ms, zero transcoding).
+        2. Fallback fail-safe su Google Gemini TTS se ElevenLabs non e' configurato o in caso di errore.
+        """
+        # 1. Tentativo prioritario con ElevenLabs Turbo v2.5
+        audio_ulaw = cls._synthesize_elevenlabs(spoken_text, voice_pack)
+        if audio_ulaw:
+            return audio_ulaw
+
+        # 2. Fallback automatico su Google Gemini TTS
+        return cls._synthesize_gemini_tts(spoken_text, voice_pack, volume_percent)
+
     @staticmethod
-    def _synthesize_ulaw(spoken_text: str, voice_pack: str, volume_percent: float) -> Optional[bytes]:
-        """Sintesi vocale ufficiale Google Gemini con voce neurale nativa in mu-law 8 kHz per il Fanvil A233."""
+    def _synthesize_elevenlabs(spoken_text: str, voice_pack: str) -> Optional[bytes]:
+        """Sintesi ultra-rapida con ElevenLabs Turbo v2.5 nativa in mu-law 8000 Hz per Fanvil A233."""
+        api_key = load_elevenlabs_api_key()
+        if not api_key:
+            return None
+
+        # Voci ElevenLabs ufficiali Sentinel AI
+        # Adam (Dominant, Firm): voce maschile severa e dissuasiva per la sorveglianza
+        # Matilda (Professional): voce femminile cordiale per accoglienza
+        # HEXAD Sovereign: voce di comando per il protocollo HEXAD
+        voices = {
+            "carmelo": os.environ.get("ELEVENLABS_VOICE_CARMELO", "pNInz6obpgDQGcFmaJgB"),
+            "sami": os.environ.get("ELEVENLABS_VOICE_SAMI", "XrExE9yKIg1WjnnlVkGX"),
+            "hexad": os.environ.get("ELEVENLABS_VOICE_HEXAD", "RXZAxL4vq9TFajHv7zbR"),
+            "charon": os.environ.get("ELEVENLABS_VOICE_CARMELO", "pNInz6obpgDQGcFmaJgB"),
+            "kore": os.environ.get("ELEVENLABS_VOICE_SAMI", "XrExE9yKIg1WjnnlVkGX"),
+        }
+
+        # Supporto ad ID ElevenLabs passati direttamente (lunghezza >= 20)
+        cleaned_voice = voice_pack.strip()
+        if len(cleaned_voice) >= 20 and " " not in cleaned_voice:
+            voice_id = cleaned_voice
+        else:
+            voice_id = voices.get(cleaned_voice.lower(), voices["carmelo"])
+
+        model_id = os.environ.get("ELEVENLABS_MODEL", DEFAULT_ELEVEN_MODEL)
+        url = f"{ELEVENLABS_API_BASE}/{voice_id}?output_format=ulaw_8000"
+
+        payload = {
+            "text": spoken_text,
+            "model_id": model_id,
+            "voice_settings": {
+                "stability": 0.45,
+                "similarity_boost": 0.85,
+                "style": 0.0,
+                "use_speaker_boost": True
+            }
+        }
+
+        try:
+            t0 = time.time()
+            logger.info(">>> [ORIN VOICE - ELEVENLABS TURBO] Avvio sintesi (%s -> %s) -> '%s'", voice_pack, voice_id, spoken_text)
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "xi-api-key": api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "audio/basic"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                if resp.status == 200:
+                    data = resp.read()
+                    if data and len(data) > 100:
+                        dt = (time.time() - t0) * 1000.0
+                        logger.info(
+                            ">>> [ORIN VOICE - ELEVENLABS TURBO] Sintesi completata in %.0f ms (%.1f s audio mu-law)",
+                            dt, len(data) / 8000.0
+                        )
+                        return data
+        except Exception as e:
+            logger.warning(">>> [ORIN VOICE] ElevenLabs Turbo non disponibile (%s), passaggio a Gemini TTS...", e)
+            return None
+
+    @staticmethod
+    def _synthesize_gemini_tts(spoken_text: str, voice_pack: str, volume_percent: float) -> Optional[bytes]:
+        """Sintesi vocale fail-safe Google Gemini con voce neurale nativa convertita in mu-law 8 kHz."""
         from ulaw_audio import pcm24k_to_ulaw8k
 
         api_key = load_gemini_api_key()
@@ -377,9 +494,6 @@ class OrinBrain:
             logger.info(">>> [ORIN VOICE] GEMINI_API_KEY non trovata: riproduzione traccia offline di fallback.")
             return None
 
-        # Mappatura voci native Google Gemini per Conflavoro
-        # Charon: maschile profonda, autorevole, dissuasiva (ex Carmelo)
-        # Kore: femminile chiara, empatica, accoglienza (ex Sami)
         voices = {
             "carmelo": "Charon",
             "sami": "Kore",
@@ -395,7 +509,7 @@ class OrinBrain:
 
         try:
             t0 = time.time()
-            logger.info(">>> [ORIN VOICE - GOOGLE] Avvio sintesi neurale (%s -> %s) -> '%s' (vol: %.0f%%)", voice_pack, voice_name, spoken_text, volume_percent)
+            logger.info(">>> [ORIN VOICE - GOOGLE TTS] Avvio sintesi neurale (%s -> %s) -> '%s' (vol: %.0f%%)", voice_pack, voice_name, spoken_text, volume_percent)
 
             payload = {
                 "contents": [
@@ -449,7 +563,7 @@ class OrinBrain:
             # Converte il flusso 24kHz 16-bit PCM in mu-law 8kHz nativo Fanvil A233
             audio_ulaw = pcm24k_to_ulaw8k(raw_pcm)
             logger.info(
-                ">>> [ORIN VOICE - GOOGLE] Sintesi neurale completata in %.0f ms (%.1f s audio mu-law)",
+                ">>> [ORIN VOICE - GOOGLE TTS] Sintesi neurale completata in %.0f ms (%.1f s audio mu-law)",
                 (time.time() - t0) * 1000.0, len(audio_ulaw) / 8000.0
             )
             return audio_ulaw
