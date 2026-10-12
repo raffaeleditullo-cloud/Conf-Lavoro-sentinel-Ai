@@ -1446,7 +1446,7 @@ async function pollOrinStatus() {
     const beacon = document.getElementById('orinStatusBeacon');
     if (beacon) {
       if (data.status === 'online') {
-        beacon.textContent = 'ORIN ONLINE // GOOGLE GEMINI 2.5';
+        beacon.textContent = 'ORIN ONLINE // GOOGLE GEMINI';
         beacon.className = 'status-beacon is-accent';
       } else {
         beacon.textContent = 'ORIN STANDBY';

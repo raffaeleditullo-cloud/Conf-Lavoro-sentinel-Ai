@@ -34,8 +34,9 @@ except ImportError:
 
 # Configurazione API Google Gemini (Cervello Visivo e Vocale Nativo)
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-TIMEOUT_SECONDS = float(os.environ.get("ORIN_TIMEOUT_SECONDS", "3.5"))
+DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+DEFAULT_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts")
+TIMEOUT_SECONDS = float(os.environ.get("ORIN_TIMEOUT_SECONDS", "8.0"))
 
 # Cartella immagini di riferimento dei volti noti (es. Presidente Roberto)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -89,9 +90,13 @@ class OrinBrain:
     e genera frasi e audio con intelligenza neurale nativa Google.
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         self.api_key = api_key or load_gemini_api_key()
-        self.model = DEFAULT_MODEL
+        raw_model = (model or os.environ.get("GEMINI_MODEL") or DEFAULT_MODEL).replace("models/", "")
+        # Normalizzazione automatica: se è rimasto configurato un vecchio modello 2.x o 1.x dismesso da Google, usa gemini-3.8-flash
+        if any(raw_model.startswith(p) for p in ("gemini-2.", "gemini-1.", "gemini-2-", "gemini-1-")):
+            raw_model = "gemini-3.8-flash"
+        self.model = raw_model
         self._president_ref_b64 = None
         self._load_president_reference()
 
@@ -216,7 +221,7 @@ class OrinBrain:
                 "generationConfig": {
                     "response_mime_type": "application/json",
                     "temperature": 0.0,
-                    "max_output_tokens": 300
+                    "max_output_tokens": 800
                 }
             }
 
@@ -385,7 +390,8 @@ class OrinBrain:
             "aoede": "Aoede"
         }
         voice_name = voices.get(voice_pack.lower(), "Charon")
-        url = f"{GEMINI_API_BASE}/gemini-2.0-flash:generateContent?key={api_key}"
+        tts_model = os.environ.get("GEMINI_TTS_MODEL", DEFAULT_TTS_MODEL).replace("models/", "")
+        url = f"{GEMINI_API_BASE}/{tts_model}:generateContent?key={api_key}"
 
         try:
             t0 = time.time()
