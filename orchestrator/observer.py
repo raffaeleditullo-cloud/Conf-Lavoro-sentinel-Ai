@@ -1029,9 +1029,20 @@ def main():
         logger.info("Gemini Live non attivo o differito: %s", ge)
 
     try:
+        from audio_ear import audio_ear
+        audio_ear.start()
+    except Exception as ae:
+        logger.info("AudioEar non avviato: %s", ae)
+
+    try:
         client.loop_forever(retry_first_connection=True)
     except (KeyboardInterrupt, SystemExit):
         logger.info("Arresto orchestratore...")
+        try:
+            from audio_ear import audio_ear
+            audio_ear.stop()
+        except Exception:
+            pass
         try:
             from gemini_live_engine import gemini_live_engine
             gemini_live_engine.stop()

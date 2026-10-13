@@ -78,6 +78,9 @@ services:
       - ./orchestrator/audio:/app/audio:ro
       # Configurazione di runtime e stato detector_status.json (in scrittura)
       - ./config:/config
+    # Dispositivi audio fisici (ALSA) per microfono USB / acquisizione ambientale (Passo C)
+    devices:
+      - /dev/snd:/dev/snd
     env_file:
       - .env
     depends_on:

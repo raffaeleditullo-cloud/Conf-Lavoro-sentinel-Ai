@@ -372,6 +372,119 @@ class OrinBrain:
             queue=True,
         )
 
+    def hear_and_respond(
+        self,
+        audio_bytes: bytes,
+        context_image_bytes: Optional[bytes] = None,
+        camera: Optional[str] = None,
+        voice_pack: str = "carmelo",
+        volume_percent: float = 70.0,
+        play_response: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Interazione conversazionale bidirezionale (Passo C):
+        Ascolta la voce catturata dal microfono, comprende il significato e l'intento,
+        osserva il fotogramma della telecamera (se disponibile) e risponde a voce
+        sull'altoparlante Fanvil A233 con la voce ufficiale di Carmelo La Rosa.
+        """
+        if not self.is_active():
+            return {"error": "Gemini API key non configurata", "reply": "", "transcription": ""}
+
+        t0 = time.time()
+        try:
+            parts = []
+
+            # 1. Prompt di ruolo e comportamento istituzionale
+            system_instruction = (
+                "Sei Sentinel AI, il sistema di sicurezza, accoglienza e vigilanza vocale autonoma per la sede Conflavoro PMI.\n"
+                "Parli con la voce ufficiale maschile di Carmelo.\n"
+                "Un operatore, visitatore o custode ha appena parlato al microfono.\n"
+                "ISTRUZIONI:\n"
+                "1. Ascolta attentamente ciò che ha detto l'interlocutore.\n"
+                "2. Se l'audio contiene solo fruscio, colpi di tosse, click o nessuna parola comprensibile, imposta 'reply' su '' e 'intent' su 'silence'.\n"
+                "3. Se l'interlocutore esegue un test audio (es. 'prova', 'test radio', 'mi senti?'), conferma con precisione professionale che la trasmissione e la modulazione sono ricevute forte e chiaro.\n"
+                "4. Se l'interlocutore chiede informazioni, orari o indicazioni, rispondi con cortesia istituzionale, precisione e brevità.\n"
+                "5. Se l'interlocutore saluta o si presenta, rispondi cordialmente.\n"
+                "6. Se il soggetto nell'immagine mostra atteggiamento sospetto o tenta manomissioni, mantieni tono fermo e autoritario di allarme.\n"
+                "7. LUNGHEZZA MASSIMA DELLA RISPOSTA: 1 o massimo 2 frasi brevi, sintetiche e incisive (ottimizzate per altoparlante IP industriale).\n"
+                "Rispondi ESCLUSIVAMENTE in formato JSON puro con questi campi:\n"
+                "{\n"
+                '  "transcription": "<trascrizione fedele in italiano delle parole dette>",\n'
+                '  "reply": "<la tua risposta parlata in italiano>",\n'
+                '  "intent": "<test | greeting | info | threat | silence | unknown>"\n'
+                "}"
+            )
+            parts.append({"text": system_instruction})
+
+            # 2. Immagine di contesto visivo (se presente)
+            if context_image_bytes:
+                img_b64 = optimize_image_for_vlm(context_image_bytes, max_dim=384, quality=65)
+                parts.append({
+                    "inline_data": {
+                        "mime_type": "image/jpeg",
+                        "data": img_b64
+                    }
+                })
+
+            # 3. Audio dell'utente
+            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+            parts.append({
+                "inline_data": {
+                    "mime_type": "audio/wav",
+                    "data": audio_b64
+                }
+            })
+
+            payload = {
+                "contents": [{"parts": parts}],
+                "generationConfig": {
+                    "temperature": 0.15,
+                    "maxOutputTokens": 200,
+                    "responseMimeType": "application/json"
+                }
+            }
+
+            url = f"{GEMINI_API_BASE}/{self.model}:generateContent?key={self.api_key}"
+            req_data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=req_data,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+
+            with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                latency_ms = (time.time() - t0) * 1000
+
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    return {"transcription": "", "reply": "", "intent": "unknown", "latency_ms": latency_ms}
+
+                content_parts = candidates[0].get("content", {}).get("parts", [])
+                raw_text = "".join(p.get("text", "") for p in content_parts).strip()
+                result = json.loads(raw_text)
+                result["latency_ms"] = latency_ms
+
+                transcription = result.get("transcription", "").strip()
+                reply = result.get("reply", "").strip()
+                intent = result.get("intent", "").strip().lower()
+
+                logger.info(
+                    ">>> [ORIN BRAIN - AUDIO DIALOGUE] Udito: '%s' | Risposta: '%s' | Intent: %s (%.0fms)",
+                    transcription, reply, intent, latency_ms
+                )
+
+                if play_response and reply and intent != "silence":
+                    self.speak(reply, voice_pack=voice_pack, volume_percent=volume_percent)
+
+                return result
+
+        except Exception as e:
+            logger.warning("ORIN hear_and_respond Errore: %s", e)
+            return {"error": str(e), "reply": "", "transcription": "", "intent": "error", "latency_ms": (time.time() - t0) * 1000}
+
+
     @staticmethod
     def _voice_cache_key(voice_pack: str, spoken_text: str) -> str:
         # La chiave include l'ID voce ElevenLabs effettivo: cambiando voce (o dopo le prove
