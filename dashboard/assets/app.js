@@ -1300,6 +1300,131 @@ async function pollJetsonTelemetry() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 5E. MONITORAGGIO REALE DEI CONNETTORI DI CAMPO & CLOUD (/api/system/health)
+// ──────────────────────────────────────────────────────────────────────────────
+async function refreshConnectorsHealth() {
+  try {
+    const res = await fetch('/api/system/health');
+    if (!res.ok) return;
+    const data = await res.json();
+    const nodes = data.nodes || {};
+
+    const updateBadge = (badgeId, metaId, node, defaultName) => {
+      const badge = document.getElementById(badgeId);
+      const meta = document.getElementById(metaId);
+      if (!badge) return;
+
+      if (node && node.online) {
+        badge.className = 'cam-status-pill online';
+        badge.textContent = `Online · ${node.latency_ms}ms`;
+        if (meta) meta.textContent = `${node.ip} · Latenza ${node.latency_ms}ms`;
+      } else {
+        badge.className = 'cam-status-pill offline';
+        badge.textContent = 'Non Raggiungibile';
+        if (meta && node) meta.textContent = `${node.ip} · Timeout connessione`;
+      }
+    };
+
+    updateBadge('connBadgeGoogle', 'connMetaGoogle', nodes.google_ai, 'Google Cloud AI');
+    updateBadge('connBadgeNas', 'connMetaNas', nodes.nas_ugreen, 'NAS Ugreen');
+    updateBadge('connBadgeMqtt', 'connMetaMqtt', nodes.mqtt_broker, 'Broker MQTT');
+    updateBadge('connBadgeFanvil', 'connMetaFanvil', nodes.fanvil_speaker, 'Fanvil A233');
+    updateBadge('connBadgeRelay', 'connMetaRelay', nodes.relay_modbus, 'Relè Waveshare');
+
+    // Telecamere & Vision Engine
+    const camsBadge = document.getElementById('connBadgeCams');
+    const camsMeta = document.getElementById('connMetaCams');
+    if (camsBadge) {
+      const cam1Ok = nodes.cam1 && nodes.cam1.online;
+      const cam2Ok = nodes.cam2 && nodes.cam2.online;
+      const cam3Ok = nodes.cam3 && nodes.cam3.online;
+      const frigateOk = nodes.frigate_detector && nodes.frigate_detector.online;
+      const allCamsOk = cam1Ok && cam2Ok && cam3Ok && frigateOk;
+      const anyCamOk = cam1Ok || cam2Ok || cam3Ok;
+
+      if (allCamsOk) {
+        camsBadge.className = 'cam-status-pill online';
+        camsBadge.textContent = 'Tutti i Varchi Attivi';
+        if (camsMeta) camsMeta.textContent = '3 Cam 4K + TensorRT operativi';
+      } else if (anyCamOk) {
+        camsBadge.className = 'cam-status-pill warning';
+        camsBadge.textContent = 'Parzialmente Attivo';
+        if (camsMeta) camsMeta.textContent = 'Una o più telecamere offline';
+      } else {
+        camsBadge.className = 'cam-status-pill offline';
+        camsBadge.textContent = 'Telecamere Offline';
+        if (camsMeta) camsMeta.textContent = 'Verificare alimentazione PoE / switch';
+      }
+    }
+
+    // Beacon complessivo
+    const beacon = document.getElementById('connOverallBeacon');
+    if (beacon) {
+      if (data.status === 'healthy') {
+        beacon.className = 'status-beacon is-accent';
+        beacon.textContent = 'Tutti i nodi operativi';
+      } else if (data.status === 'warning') {
+        beacon.className = 'status-beacon is-warning';
+        beacon.textContent = 'Attenzione: Nodi secondari offline';
+      } else {
+        beacon.className = 'status-beacon is-alert';
+        beacon.textContent = 'Allerta: Componenti critici disconnessi';
+      }
+    }
+  } catch (err) {
+    console.debug('[Sentinel Dashboard] Errore aggiornamento connettori:', err);
+  }
+}
+
+async function testNodeConnection(nodeKey) {
+  const btnMap = {
+    'google_ai': 'btnTestGoogle',
+    'nas_ugreen': 'btnTestNas',
+    'mqtt_broker': 'btnTestMqtt',
+    'fanvil_speaker': 'btnTestFanvil',
+    'relay_modbus': 'btnTestRelay',
+    'frigate_detector': 'btnTestCams'
+  };
+  const btnId = btnMap[nodeKey];
+  const btn = btnId ? document.getElementById(btnId) : null;
+  const originalText = btn ? btn.textContent : '';
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Verifica in corso...';
+  }
+
+  try {
+    const res = await fetch(`/api/system/health/ping?node=${nodeKey}`, { method: 'POST' });
+    const data = await res.json();
+    const node = data.data || (data.nodes && data.nodes[nodeKey]);
+
+    if (node && node.online) {
+      if (typeof say === 'function') {
+        say(`${node.name || nodeKey} online: risponde in ${node.latency_ms} ms.`);
+      }
+    } else {
+      if (typeof say === 'function') {
+        say(`Attenzione: ${nodeKey} non risponde al ping di rete.`);
+      }
+    }
+    await refreshConnectorsHealth();
+  } catch (e) {
+    if (typeof say === 'function') {
+      say(`Errore durante il test di ${nodeKey}`);
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+}
+
+window.testNodeConnection = testNodeConnection;
+window.refreshConnectorsHealth = refreshConnectorsHealth;
+
+// ──────────────────────────────────────────────────────────────────────────────
 // 6. GESTIONE PACCHETTI AUDIO UFFICIALI (CARMELO & SAMI) & HARDWARE
 // ──────────────────────────────────────────────────────────────────────────────
 let currentAudioPlayer = null;
@@ -2009,6 +2134,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(pollLatestIdentikit, 4000);
   pollOrinStatus();
   setInterval(pollOrinStatus, 10000);
+
+  // Monitoraggio Connettori Hardware & Rete in Tempo Reale (Passo 2)
+  refreshConnectorsHealth();
+  setInterval(refreshConnectorsHealth, 10000);
 
   // Controllo sessione PIN attiva
   const savedRole = sessionStorage.getItem('sentinel_role');

@@ -1096,13 +1096,13 @@
             <div class="panel-header-minimal">
               <div class="ev-head-text">
                 <h3>Connettori Attivi &amp; Servizi di Rete</h3>
-                <p class="ev-head-sub">Integrazioni esterne, storage cloud, bus messaggi e attuatori di campo</p>
+                <p class="ev-head-sub">Verifica telemetrica in tempo reale di tutti i nodi fisici, bus messaggi e cloud</p>
               </div>
-              <span class="status-beacon is-accent">Tutti i nodi operativi</span>
+              <span class="status-beacon is-accent" id="connOverallBeacon">Controllo nodi...</span>
             </div>
 
             <div class="connector-cards-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
-              <!-- Connettore 1: Google Cloud -->
+              <!-- Connettore 1: Google Cloud AI -->
               <div class="setting-box connector-box">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                   <div style="display:flex; align-items:center; gap:10px;">
@@ -1110,15 +1110,15 @@
                       <svg style="width:20px; height:20px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
                     </div>
                     <div>
-                      <strong style="font-size:14px; color:var(--text-title);">Google Workspace / Drive</strong>
-                      <div style="font-size:11px; color:var(--text-muted);">Backup Cloud &amp; Identikit</div>
+                      <strong style="font-size:14px; color:var(--text-title);">Google Gemini Cloud AI</strong>
+                      <div id="connMetaGoogle" style="font-size:11px; color:var(--text-muted);">Vision VLM &amp; Dialogo</div>
                     </div>
                   </div>
-                  <span class="cam-status-pill online" style="font-size:10px;">Attivo</span>
+                  <span id="connBadgeGoogle" class="cam-status-pill online" style="font-size:10px;">In attesa</span>
                 </div>
-                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Archiviazione ridondata istantanea dei metadati forensi e delle schede biometriche su cloud protetto.</p>
+                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Cervello neurale per identificazione relazionale, comprensione del parlato e sintesi vocale KERYX.</p>
                 <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="say('Connettore Google verificato: sincronizzazione attiva.');">Verifica Sincronizzazione</button>
+                  <button type="button" id="btnTestGoogle" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="testNodeConnection('google_ai');">Test Connessione</button>
                 </div>
               </div>
 
@@ -1131,14 +1131,14 @@
                     </div>
                     <div>
                       <strong style="font-size:14px; color:var(--text-title);">NAS Ugreen (SMB / CIFS)</strong>
-                      <div style="font-size:11px; color:var(--text-muted);">//192.168.1.11/sentinel-eventi</div>
+                      <div id="connMetaNas" style="font-size:11px; color:var(--text-muted);">192.168.1.11 / sentinel-eventi</div>
                     </div>
                   </div>
-                  <span class="cam-status-pill online" style="font-size:10px;">Collegato</span>
+                  <span id="connBadgeNas" class="cam-status-pill online" style="font-size:10px;">In attesa</span>
                 </div>
-                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Storage locale ad alta capacità per clip video MP4 continue e snapshot in risoluzione 4K.</p>
+                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Storage locale per clip video continue, rassegna registrazioni e archivio evidenze 4K.</p>
                 <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="renderEvents(); say('Archivio NAS Ugreen aggiornato.');">Sfoglia Archivio</button>
+                  <button type="button" id="btnTestNas" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="testNodeConnection('nas_ugreen');">Test Connessione</button>
                 </div>
               </div>
 
@@ -1151,14 +1151,14 @@
                     </div>
                     <div>
                       <strong style="font-size:14px; color:var(--text-title);">Bus Messaggi MQTT</strong>
-                      <div style="font-size:11px; color:var(--text-muted);">127.0.0.1:1883 (Autenticato)</div>
+                      <div id="connMetaMqtt" style="font-size:11px; color:var(--text-muted);">127.0.0.1:1883 (Autenticato)</div>
                     </div>
                   </div>
-                  <span class="cam-status-pill online" style="font-size:10px;">In Onda</span>
+                  <span id="connBadgeMqtt" class="cam-status-pill online" style="font-size:10px;">In attesa</span>
                 </div>
                 <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Dorsale telemetrica per trigger varchi Frigate, priorità AudioBus e comandi Dashboard.</p>
                 <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="say('Broker MQTT attivo con latenza inferiore a 1ms.');">Test Bus</button>
+                  <button type="button" id="btnTestMqtt" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="testNodeConnection('mqtt_broker');">Test Bus</button>
                 </div>
               </div>
 
@@ -1171,14 +1171,14 @@
                     </div>
                     <div>
                       <strong style="font-size:14px; color:var(--text-title);">Altoparlante Fanvil A233</strong>
-                      <div style="font-size:11px; color:var(--text-muted);">192.168.1.31 // RTP Multicast 5004</div>
+                      <div id="connMetaFanvil" style="font-size:11px; color:var(--text-muted);">192.168.1.31 // RTP 5004</div>
                     </div>
                   </div>
-                  <span class="cam-status-pill online" style="font-size:10px;">Pronto</span>
+                  <span id="connBadgeFanvil" class="cam-status-pill online" style="font-size:10px;">In attesa</span>
                 </div>
                 <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Canale audio ad alta fedeltà G.711 µ-law mono con pre-roll 250ms e coda RTP prioritaria.</p>
                 <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="triggerVoice();">Test Suono</button>
+                  <button type="button" id="btnTestFanvil" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="testNodeConnection('fanvil_speaker');">Test Connessione</button>
                 </div>
               </div>
 
@@ -1191,14 +1191,34 @@
                     </div>
                     <div>
                       <strong style="font-size:14px; color:var(--text-title);">Scheda Relè Waveshare TCP</strong>
-                      <div style="font-size:11px; color:var(--text-muted);">192.168.1.30:4196 (Modbus)</div>
+                      <div id="connMetaRelay" style="font-size:11px; color:var(--text-muted);">192.168.1.30:4196 (Modbus)</div>
                     </div>
                   </div>
-                  <span class="cam-status-pill online" style="font-size:10px;">Online</span>
+                  <span id="connBadgeRelay" class="cam-status-pill online" style="font-size:10px;">In attesa</span>
                 </div>
                 <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Ch 1: Fari 220V Piazzale (30s) | Ch 2: Impulso Cancello Carrabile (3s con Gate DEMON).</p>
                 <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-                  <button type="button" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="triggerFaro();">Accendi Fari</button>
+                  <button type="button" id="btnTestRelay" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="testNodeConnection('relay_modbus');">Test Connessione</button>
+                </div>
+              </div>
+
+              <!-- Connettore 6: Telecamere 4K & Vision Engine -->
+              <div class="setting-box connector-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="connector-icon-badge" style="background:#e0f2fe; color:#0284c7; padding:8px; border-radius:8px; display:grid; place-items:center;">
+                      <svg style="width:20px; height:20px; fill:currentColor;" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    </div>
+                    <div>
+                      <strong style="font-size:14px; color:var(--text-title);">Telecamere 4K &amp; TensorRT</strong>
+                      <div id="connMetaCams" style="font-size:11px; color:var(--text-muted);">Piazzale · Magazzino · Corridoio</div>
+                    </div>
+                  </div>
+                  <span id="connBadgeCams" class="cam-status-pill online" style="font-size:10px;">In attesa</span>
+                </div>
+                <p style="font-size:12px; color:var(--text-body); margin-top:10px; line-height:1.4;">Flussi video HTTP-FLV a bassissima latenza e inferenza neurale TensorRT su Jetson Orin.</p>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+                  <button type="button" id="btnTestCams" class="ultra-primary-btn" style="padding:5px 12px; font-size:11px;" onclick="testNodeConnection('frigate_detector');">Test Visione</button>
                 </div>
               </div>
             </div>

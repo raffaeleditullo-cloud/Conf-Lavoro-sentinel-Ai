@@ -202,6 +202,63 @@ def send_orchestrator_cmd(topic: str, payload: dict) -> bool:
         logger.warning("[MQTT CMD] Comando non inoltrato all'orchestratore (%s): uso il driver locale", e)
         return False
 
+def check_network_health():
+    """
+    Esegue un controllo socket reale ad alta velocita' (in parallelo su thread pool)
+    su tutti i dispositivi fisici dell'impianto Conf-Lavoro Sentinel AI.
+    """
+    import socket, time
+    from concurrent.futures import ThreadPoolExecutor
+
+    def probe(host, port, timeout=0.25):
+        t0 = time.monotonic()
+        try:
+            sock = socket.create_connection((host, int(port)), timeout=timeout)
+            sock.close()
+            dt_ms = round((time.monotonic() - t0) * 1000, 1)
+            return True, dt_ms
+        except Exception:
+            return False, None
+
+    targets = {
+        "cam1": ("Cam 1 · Piazzale Esterno", os.environ.get("CAM_PIAZZALE_IP", "192.168.1.22"), 80),
+        "cam2": ("Cam 2 · Magazzino Interno", os.environ.get("CAM_MAGAZZINO_IP", "192.168.1.20"), 80),
+        "cam3": ("Cam 3 · Corridoio Transito", os.environ.get("CAM_CORRIDOIO_IP", "192.168.1.21"), 80),
+        "relay_modbus": ("Scheda Relè Waveshare", os.environ.get("RELAY_HOST", "192.168.1.30"), int(os.environ.get("RELAY_PORT", 4196))),
+        "fanvil_speaker": ("Diffusore Fanvil A233", os.environ.get("SPEAKER_HOST", "192.168.1.31"), int(os.environ.get("SPEAKER_PORT", 80))),
+        "nas_ugreen": ("NAS Ugreen Storage", os.environ.get("NAS_IP", "192.168.1.11"), 445),
+        "mqtt_broker": ("Broker MQTT Mosquitto", os.environ.get("MQTT_HOST", "127.0.0.1"), int(os.environ.get("MQTT_PORT", 1883))),
+        "frigate_detector": ("Motore Visione TensorRT", FRIGATE_HOST, FRIGATE_PORT),
+        "google_ai": ("Google Gemini Cloud AI", "generativelanguage.googleapis.com", 443),
+    }
+
+    def check_target(item):
+        key, (name, host, port) = item
+        timeout = 0.8 if key == "google_ai" else 0.25
+        ok, ms = probe(host, port, timeout=timeout)
+        if not ok and key.startswith("cam"):
+            ok, ms = probe(host, 1935, timeout=0.2)
+            if not ok:
+                ok, ms = probe(host, 554, timeout=0.2)
+        ip_label = f"{host}:{port}" if port not in (80, 443) else host
+        return key, {"name": name, "ip": ip_label, "online": ok, "latency_ms": ms}
+
+    with ThreadPoolExecutor(max_workers=len(targets)) as executor:
+        results = executor.map(check_target, targets.items())
+
+    nodes = dict(results)
+
+    critical_nodes = ["cam1", "relay_modbus", "fanvil_speaker", "mqtt_broker"]
+    critical_ok = all(nodes[k]["online"] for k in critical_nodes if k in nodes)
+    all_ok = all(n["online"] for n in nodes.values())
+
+    status = "healthy" if all_ok else ("warning" if critical_ok else "critical")
+    return {
+        "status": status,
+        "timestamp": time.time(),
+        "nodes": nodes
+    }
+
 def get_jetson_metrics():
     """Legge la telemetria reale da sysfs, /proc/meminfo e /proc/uptime su Jetson Orin Nano."""
     metrics = {
@@ -219,8 +276,13 @@ def get_jetson_metrics():
             "cam2": False,
             "cam3": False,
             "relay_modbus": False,
-            "nas_ugreen": False
-        }
+            "fanvil_speaker": False,
+            "nas_ugreen": False,
+            "mqtt_broker": False,
+            "frigate_detector": False,
+            "google_ai": False
+        },
+        "device_details": {}
     }
 
     # 1. Temperatura SoC Tegra Orin Nano
@@ -294,21 +356,10 @@ def get_jetson_metrics():
         except Exception:
             pass
 
-    # 5. Socket check veloce periferiche hardware (timeout 0.2s)
-    import socket
-    def check_socket(h, p):
-        try:
-            s = socket.create_connection((h, p), timeout=0.2)
-            s.close()
-            return True
-        except Exception:
-            return False
-
-    metrics["devices"]["relay_modbus"] = check_socket(os.environ.get("RELAY_HOST", "192.168.1.30"), int(os.environ.get("RELAY_PORT", "4196")))
-    metrics["devices"]["nas_ugreen"] = check_socket(os.environ.get("NAS_IP", "192.168.1.11"), 445)
-    metrics["devices"]["cam1"] = check_socket(os.environ.get("CAM_PIAZZALE_IP", "192.168.1.22"), 554)
-    metrics["devices"]["cam2"] = check_socket(os.environ.get("CAM_MAGAZZINO_IP", "192.168.1.20"), 554)
-    metrics["devices"]["cam3"] = check_socket(os.environ.get("CAM_CORRIDOIO_IP", "192.168.1.21"), 554)
+    # 5. Socket check reale periferiche hardware
+    health = check_network_health()
+    metrics["devices"] = {k: v["online"] for k, v in health["nodes"].items()}
+    metrics["device_details"] = health["nodes"]
 
     return metrics
 
@@ -545,6 +596,11 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         # API Telemetria Jetson Reale
         if parsed.path == "/api/status":
             self._send_json(get_jetson_metrics())
+            return
+
+        # API Health Check Reale di Rete e Periferiche di Campo (Passo 2)
+        elif parsed.path == "/api/system/health":
+            self._send_json(check_network_health())
             return
 
         # API Diagnostica Fari Reolink Spotlight
@@ -1009,6 +1065,17 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         content_len = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_len) if content_len > 0 else b""
+
+        # Test Interattivo Connettività Singolo Nodo Hardware / Cloud
+        if parsed.path == "/api/system/health/ping" or parsed.path.startswith("/api/system/health/ping"):
+            query = parse_qs(parsed.query)
+            node_key = query.get("node", [""])[0]
+            health = check_network_health()
+            if node_key and node_key in health["nodes"]:
+                self._send_json({"node": node_key, "data": health["nodes"][node_key], "status": health["status"]})
+            else:
+                self._send_json(health)
+            return
 
         if parsed.path == "/api/relay/faretto":
             duration = 30.0
