@@ -94,5 +94,23 @@ docker compose restart orchestrator dashboard
 
 Verifica log in tempo reale:
 ```bash
-docker compose logs -f --tail 20 orchestrator | grep -E "RIFLESSO|ORIN|AudioBus|Latenza"
+docker compose logs -f --tail 20 orchestrator | grep -E "RIFLESSO|ORIN|AudioBus|AudioEar|Latenza"
 ```
+
+---
+
+## 6. Passo C — Universal Audio Ear & Dialogo Bidirezionale (Collaudato 13/10/2026)
+
+Convalidato in campo su Jetson Orin Nano da Alessio Russo con altoparlante Fanvil A233:
+
+1. **`orchestrator/audio_ear.py`**:
+   - Acquisizione continua ALSA mono 16 kHz 16-bit (`plughw:0,0`).
+   - **Gate Half-Duplex Deterministico**: interroga `rtp_audio_bus.get_audio_bus().is_playing()`. Se il Fanvil A233 sta riproducendo, il microfono viene istantaneamente mutato per eliminare fischi, eco e loop di auto-ascolto.
+   - **Voice Activity Detection (VAD)**: campionamento a frame da 100ms. Oltre la soglia `-44 dBFS` aggancia il parlato umano; dopo 0.9s di silenzio consecutivo impacchetta l'audio WAV in RAM.
+   - **Attivazione Sicura (`AUDIO_EAR_ENABLED`)**: se impostato su `false` o in assenza di microfono hardware, il modulo resta inattivo senza bloccare l'Orchestratore o la deterrenza.
+2. **`orchestrator/orin_brain.py` (`hear_and_respond`)**:
+   - Riceve l'audio WAV e genera la risposta in formato JSON (`transcription`, `reply`, `intent`) tramite `gemini-flash-lite-latest`.
+   - Normalizzazione fonetica tramite KERYX.
+   - Sintesi neurale streaming tramite **ElevenLabs Turbo v2.5 (voce ufficiale Carmelo La Rosa `HuK8QKF35exsCh2e7fLT`)**.
+   - Consegna all'AudioBus multicast RTP sul Fanvil A233 con latenza end-to-end di ~2.4 secondi.
+
