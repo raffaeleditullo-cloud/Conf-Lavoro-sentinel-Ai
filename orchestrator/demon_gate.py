@@ -65,7 +65,7 @@ class DemonActionGate:
             return False, f"DEMON BLOCK: La telecamera '{camera}' non presidia il varco carraio"
 
         # Regola 4: Verifica coerenza riconoscimento
-        if not orin_res.get("is_president"):
+        if not (orin_res.get("subject_identified") or orin_res.get("is_president")):
             return False, "DEMON BLOCK: Nessuna identità autorizzata certificata"
 
         self.last_gate_open_time = now

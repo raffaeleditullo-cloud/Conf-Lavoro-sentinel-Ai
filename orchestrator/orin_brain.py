@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-CONF-LAVORO SENTINEL AI — MODULO CERVELLO CIBERNETICO: ORIN (ORIN BRAIN)
+ORIN CYBERNETIC INTELLIGENCE — MODULO CERVELLO CIBERNETICO (ORIN BRAIN)
 Architettura di Visione Multimodale, Riconoscimento Relazionale e Dialogo Predittivo
 
-Proprietà intellettuale: Conf-Lavoro Sentinel AI
+Proprietà intellettuale: Conflavoro PMI — ORIN
 Regolazione cognitiva: HEXAD Cybernetic Protocol (OCULUS, CORIS, ANIMA, MNEME, DEMON, PEIRA)
 Modello Vision & Voice: Google Gemini 2.5 (Nativo Google Generative Language REST API)
 """
@@ -23,6 +23,11 @@ import hashlib
 
 logger = logging.getLogger("SentinelOrin")
 
+try:
+    from biometric_store import BiometricStore
+except ImportError:
+    from orchestrator.biometric_store import BiometricStore
+
 # Integrazione Motore di Prosodia e Fonetica KERYX
 try:
     from keryx_verbalizer import verbalize_for_speech
@@ -40,10 +45,10 @@ ELEVENLABS_API_BASE = "https://api.elevenlabs.io/v1/text-to-speech"
 DEFAULT_ELEVEN_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_turbo_v2_5")
 TIMEOUT_SECONDS = float(os.environ.get("ORIN_TIMEOUT_SECONDS", "8.0"))
 
-# Cartella immagini di riferimento dei volti noti (es. Presidente Roberto)
+# Banca dati biometrica dinamica (config/biometrics/, gestita dalla dashboard)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-FACES_DIR = os.path.join(BASE_DIR, "config", "reference_faces")
-PRESIDENT_REF_PATH = os.path.join(FACES_DIR, "roberto_capobianco.jpg")
+MAX_GALLERY_FACES = 6   # limite di foto di riferimento inviate al modello per ogni analisi
+DIALOGUE_LOG_MAX_BYTES = 512 * 1024
 AUDIO_CACHE_DIR = os.path.join(os.path.dirname(__file__), "audio_cache")
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
 
@@ -120,8 +125,8 @@ def optimize_image_for_vlm(image_bytes: bytes, max_dim: int = 384, quality: int 
 
 class OrinBrain:
     """
-    Cervello visivo e interattivo di Sentinel AI (ORIN) basato su Google Gemini e ElevenLabs Turbo.
-    Analizza i fotogrammi dei varchi, comprende le azioni, riconosce il Presidente
+    Cervello visivo e interattivo di ORIN basato su Google Gemini e ElevenLabs Turbo.
+    Analizza i fotogrammi dei varchi, comprende le azioni, riconosce le identità autorizzate
     e genera frasi e audio con intelligenza neurale a latenza ultra-bassa (<2s).
     """
 
@@ -133,29 +138,89 @@ class OrinBrain:
         if any(raw_model.startswith(p) for p in ("gemini-2.", "gemini-1.", "gemini-2-", "gemini-1-")):
             raw_model = "gemini-flash-lite-latest"
         self.model = raw_model
-        self._president_ref_b64 = None
-        self._load_president_reference()
+        self.biometrics = BiometricStore(os.environ.get("CONFIG_DIR") or os.path.join(BASE_DIR, "config"))
+        self._gallery = []          # [{"profile": {...}, "face_b64": "..."}]
+        self._gallery_mtime = -1.0
+        self._load_biometric_profiles()
 
     def is_active(self) -> bool:
         """Verifica se l'API Google Gemini è configurata e pronta."""
         return bool(self.api_key or load_gemini_api_key())
 
-    def _load_president_reference(self):
-        """Carica in cache l'immagine di riferimento del Presidente Roberto Capobianco se disponibile."""
-        if os.path.exists(PRESIDENT_REF_PATH):
+    def _load_biometric_profiles(self, force: bool = False) -> list:
+        """
+        Carica la galleria dei volti autorizzati da config/biometrics/.
+        Si ricarica da sola quando la dashboard registra o revoca un profilo
+        (controllo sul mtime di profiles.json): nessun riavvio dell'orchestratore.
+        """
+        mtime = self.biometrics.mtime()
+        if not force and mtime == self._gallery_mtime:
+            return self._gallery
+        gallery = []
+        for profile in self.biometrics.list_profiles():
+            face_path = self.biometrics.media_path("face", profile["id"])
+            if not face_path:
+                continue
             try:
-                with open(PRESIDENT_REF_PATH, "rb") as f:
-                    self._president_ref_b64 = optimize_image_for_vlm(f.read(), max_dim=400, quality=70)
-                logger.info(">>> [ORIN] Memoria facciale caricata e ottimizzata: Presidente Roberto Capobianco (%d b64 chars)", len(self._president_ref_b64))
+                with open(face_path, "rb") as f:
+                    face_b64 = optimize_image_for_vlm(f.read(), max_dim=320, quality=70)
+                gallery.append({"profile": profile, "face_b64": face_b64})
             except Exception as e:
-                logger.warning("Impossibile caricare foto di riferimento Presidente: %s", e)
+                logger.warning("Profilo biometrico %s: foto non caricabile (%s)", profile.get("id"), e)
+        self._gallery = gallery
+        self._gallery_mtime = mtime
+        logger.info(">>> [ORIN] Galleria biometrica: %d profili autorizzati (%s)",
+                    len(gallery), ", ".join(g["profile"].get("name", "?") for g in gallery) or "nessuno")
+        return gallery
 
-    def _build_system_prompt(self, is_armed: bool, camera: str) -> str:
+    def _log_dialogue(self, entry: Dict[str, Any]):
+        """Accoda una battuta del dialogo interfonico per il feed live della dashboard."""
+        log_dir = os.environ.get("LOG_DIR") or ("/app/logs" if os.path.isdir("/app/logs") else os.path.join(BASE_DIR, "storage", "logs"))
+        path = os.path.join(log_dir, "orin_dialogue.jsonl")
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+            if os.path.exists(path) and os.path.getsize(path) > DIALOGUE_LOG_MAX_BYTES:
+                with open(path, "r", encoding="utf-8") as f:
+                    tail = f.readlines()[-100:]
+                with open(path, "w", encoding="utf-8") as f:
+                    f.writelines(tail)
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except Exception as e:
+            logger.debug("Dialogo non registrato nel feed: %s", e)
+
+    @staticmethod
+    def _apply_identity(result: Dict[str, Any], gallery: list):
+        """
+        Valida il riconoscimento del modello contro la galleria reale e applica le regole del profilo.
+        Un ID inventato o non presente in galleria viene scartato; apertura cancello e saluto
+        derivano dal profilo registrato, non dal testo generato dal modello.
+        """
+        matched_id = result.pop("matched_profile_id", None)
+        entry = next((g for g in gallery if g["profile"]["id"] == matched_id), None) if matched_id else None
+        if not entry or not result.get("is_person_present", True):
+            result.update({"subject_identified": False, "identity_id": None, "identity_name": None,
+                           "is_president": False, "open_gate": False})
+            return
+        prof = entry["profile"]
+        result.update({
+            "subject_identified": True,
+            "identity_id": prof["id"],
+            "identity_name": prof.get("name"),
+            "identity_role": prof.get("role"),
+            "open_gate": bool(prof.get("open_gate")),
+            "threat_level": "none",
+            "spoken_message": prof.get("greeting") or f"Benvenuto {prof.get('name', '')}.",
+        })
+        # Alias storico: demon_gate e identikit_profiler leggono ancora 'is_president'
+        result["is_president"] = True
+
+    def _build_system_prompt(self, is_armed: bool, camera: str, gallery: Optional[list] = None) -> str:
         """Costruisce il prompt HEXAD disciplinato e differenziato per stato di armamento."""
         if is_armed:
             status_section = (
                 "STATO OPERATIVO: SISTEMA ARMATO (MODALITÀ NOTTE / ASSENTE).\n"
-                "• L'accesso a quest'area ('{camera}') NON È CONSENTITO a quest'ora (eccetto il Presidente Roberto Capobianco).\n"
+                "• L'accesso a quest'area ('{camera}') NON È CONSENTITO a quest'ora (eccetto le identità autorizzate della galleria).\n"
                 "• TONO DELLA VOCE: PERENTORIO, SEVERO, FERMO E DISSUASIVO.\n"
                 "• NON USARE MAI frasi preconfezionate, saluti di cortesia o 'benvenuto'.\n"
                 "• RAGIONAMENTO VISIVO: Osserva con precisione cosa sta facendo la persona (postura, movimento, posizione, oggetti) e intimale direttamente a voce di fermarsi e andarsene (es. 'Alt! Ti vedo vicino alla porta. Allontanati immediatamente dall\\'area!').\n"
@@ -170,7 +235,7 @@ class OrinBrain:
             )
 
         return (
-            "Tu sei ORIN, la sentinella e custode cibernetico intelligente di Conf-Lavoro Sentinel AI.\n"
+            "Tu sei ORIN, la sentinella e custode cibernetico intelligente di Conflavoro PMI.\n"
             "Possiedi gli occhi delle telecamere e ragioni in tempo reale su ogni fotogramma per proteggere la sede aziendale.\n"
             "Non usi frasi preconfezionate o stereotipate: osservi la scena e formuli spontaneamente il pensiero vocale più calzante.\n\n"
             f"{status_section}\n"
@@ -178,18 +243,16 @@ class OrinBrain:
             "1. ONESTÀ PERCETTIVA & PRESENZA UMANA REALE: Verifica prima di tutto se nell'inquadratura è fisicamente presente un essere umano reale in carne ed ossa (visibile testa, busto o gambe). "
             "I sensori di movimento possono attivarsi per cambi di luce, ombre o oggetti inanimati (biciclette parcheggiate, sedie, scatoloni, piante). "
             "Se NON vedi con certezza una persona viva, imposta 'is_person_present': false, 'threat_level': 'none', 'spoken_message': '' e non inventare persone o azioni inesistenti.\n"
-            "2. CONFRONTO VOLTO: Ti viene fornita (quando presente) una foto di riferimento del Presidente Nazionale Roberto Capobianco. "
-            "Se la persona inquadrata nella telecamera corrisponde ai tratti somatici, barba/viso o portamento di Roberto, "
-            "identificalo IMMEDIATAMENTE come 'Roberto Capobianco'.\n"
-            "3. ACCOGLIENZA PRESIDENTE: Se è Roberto, formula SEMPRE un saluto caloroso, cordiale e deferente in italiano "
-            "(es. 'Buongiorno Presidente Roberto! Benvenuto in sede, apro subito il cancello.'), "
-            "e imposta 'open_gate': true indipendentemente dallo stato armato.\n"
+            "2. CONFRONTO VOLTO: Ti viene fornita una galleria di foto di riferimento di persone AUTORIZZATE, ciascuna con il proprio ID. "
+            "Se la persona inquadrata corrisponde con certezza ai tratti somatici di UNA di esse, restituisci il suo ID in 'matched_profile_id'. "
+            "Nel dubbio, o se non sono presenti riferimenti, restituisci null: un falso riconoscimento è molto peggio di un mancato riconoscimento.\n"
+            "3. ACCOGLIENZA: per le persone riconosciute saluto e apertura varco sono decisi dal sistema in base al profilo; tu compila solo i campi.\n"
             "4. RICONOSCIMENTO AZIONI: Se è presente una persona reale, osserva cosa fa con precisione oggettiva.\n"
             "5. CARATTERE E BREVITÀ: La frase parlata ('spoken_message') deve essere di MASSIMO 10-14 parole, secca, incisiva e naturale per la voce neurale italiana. Deve riflettere l'azione reale osservata nell'inquadratura. Se is_person_present è false, spoken_message deve essere una stringa vuota \"\".\n\n"
             "Rispondi ESCLUSIVAMENTE in formato JSON valido con questa struttura:\n"
             "{\n"
             '  "is_person_present": boolean,\n'
-            '  "is_president": boolean,\n'
+            '  "matched_profile_id": "ID del riferimento autorizzato riconosciuto, oppure null",\n'
             '  "subject_description": "descrizione sintetica abbigliamento e tratti certi (oppure \'Nessuna persona presente\')",\n'
             '  "action_detected": "cosa sta facendo esattamente (oppure \'Nessuna azione - oggetto inanimato o vuoto\')",\n'
             '  "threat_level": "none" | "low" | "medium" | "high",\n'
@@ -210,6 +273,7 @@ class OrinBrain:
         """
         t0 = time.time()
         api_key = self.api_key or load_gemini_api_key()
+        gallery = self._load_biometric_profiles()[:MAX_GALLERY_FACES]
 
         if not api_key:
             logger.debug("ORIN: GEMINI_API_KEY non configurata, fallback nominale.")
@@ -221,17 +285,11 @@ class OrinBrain:
             # Costruzione dei contenuti per il modello multimodale Google Gemini
             parts = []
             
-            # Se abbiamo la foto di riferimento del Presidente, la alleghiamo come confronto
-            if self._president_ref_b64:
-                parts.append({
-                    "text": "IMMAGINE 1: Foto di riferimento ufficiale del Presidente Roberto Capobianco."
-                })
-                parts.append({
-                    "inline_data": {
-                        "mime_type": "image/jpeg",
-                        "data": self._president_ref_b64
-                    }
-                })
+            # Galleria dei volti autorizzati: una foto di riferimento per ogni profilo
+            for entry in gallery:
+                prof = entry["profile"]
+                parts.append({"text": f"RIFERIMENTO AUTORIZZATO (ID: {prof['id']}): {prof.get('name', '')}."})
+                parts.append({"inline_data": {"mime_type": "image/jpeg", "data": entry["face_b64"]}})
 
             state_label = "ARMATO (NOTTE / ASSENTE)" if is_armed else "DISARMATO (CASA / DIURNO)"
             parts.append({
@@ -246,7 +304,7 @@ class OrinBrain:
 
             payload = {
                 "system_instruction": {
-                    "parts": [{"text": self._build_system_prompt(is_armed, camera)}]
+                    "parts": [{"text": self._build_system_prompt(is_armed, camera, gallery)}]
                 },
                 "contents": [
                     {
@@ -288,10 +346,11 @@ class OrinBrain:
                 result = json.loads(raw_content)
                 result["latency_ms"] = latency_ms
                 result["engine"] = f"google/{self.model}"
+                self._apply_identity(result, gallery)
 
                 logger.info(
-                    ">>> [ORIN BRAIN - GOOGLE GEMINI] Elaborazione completata in %.0fms: Pres=%s | Minaccia=%s | Msg: '%s'",
-                    latency_ms, result.get("is_president"), result.get("threat_level"), result.get("spoken_message")
+                    ">>> [ORIN BRAIN - GOOGLE GEMINI] Elaborazione completata in %.0fms: Identità=%s | Minaccia=%s | Msg: '%s'",
+                    latency_ms, result.get("identity_name") or "-", result.get("threat_level"), result.get("spoken_message")
                 )
                 return result
 
@@ -314,6 +373,8 @@ class OrinBrain:
         return {
             "is_person_present": is_armed,
             "is_president": False,
+            "subject_identified": False,
+            "identity_name": None,
             "subject_description": "Soggetto rilevato da sensore ottico" if is_armed else "Nessuna persona certa",
             "action_detected": "Transito varco" if is_armed else "Nessuna azione",
             "threat_level": threat,
@@ -393,10 +454,12 @@ class OrinBrain:
         t0 = time.time()
         try:
             parts = []
+            authorized = [g["profile"] for g in self._load_biometric_profiles()]
+            authorized_names = ", ".join(p.get("name", "") for p in authorized if p.get("name"))
 
             # 1. Prompt di ruolo e comportamento istituzionale
             system_instruction = (
-                "Sei Sentinel AI, il sistema di sicurezza, accoglienza e vigilanza vocale autonoma per la sede Conflavoro PMI.\n"
+                "Sei ORIN, il sistema di sicurezza, accoglienza e vigilanza vocale autonoma per la sede Conflavoro PMI.\n"
                 "Parli con la voce ufficiale maschile di Carmelo.\n"
                 "Un operatore, visitatore o custode ha appena parlato al microfono.\n"
                 "ISTRUZIONI:\n"
@@ -406,12 +469,16 @@ class OrinBrain:
                 "4. Se l'interlocutore chiede informazioni, orari o indicazioni, rispondi con cortesia istituzionale, precisione e brevità.\n"
                 "5. Se l'interlocutore saluta o si presenta, rispondi cordialmente.\n"
                 "6. Se il soggetto nell'immagine mostra atteggiamento sospetto o tenta manomissioni, mantieni tono fermo e autoritario di allarme.\n"
-                "7. LUNGHEZZA MASSIMA DELLA RISPOSTA: 1 o massimo 2 frasi brevi, sintetiche e incisive (ottimizzate per altoparlante IP industriale).\n"
+                "7. ACCESSO VOCALE: Persone autorizzate registrate: [" + (authorized_names or "nessuna") + "]. "
+                "Se l'interlocutore si presenta pronunciando chiaramente il nome di UNA di esse (es. 'Sono <nome>, autorizzazione per ORIN'), "
+                "imposta 'claimed_identity' con il nome ESATTO come scritto nell'elenco; altrimenti null. Non indovinare: solo nome realmente pronunciato.\n"
+                "8. LUNGHEZZA MASSIMA DELLA RISPOSTA: 1 o massimo 2 frasi brevi, sintetiche e incisive (ottimizzate per altoparlante IP industriale).\n"
                 "Rispondi ESCLUSIVAMENTE in formato JSON puro con questi campi:\n"
                 "{\n"
                 '  "transcription": "<trascrizione fedele in italiano delle parole dette>",\n'
                 '  "reply": "<la tua risposta parlata in italiano>",\n'
-                '  "intent": "<test | greeting | info | threat | silence | unknown>"\n'
+                '  "intent": "<test | greeting | info | threat | silence | unknown>",\n'
+                '  "claimed_identity": "<nome autorizzato pronunciato oppure null>"\n'
                 "}"
             )
             parts.append({"text": system_instruction})
@@ -474,6 +541,27 @@ class OrinBrain:
                     ">>> [ORIN BRAIN - AUDIO DIALOGUE] Udito: '%s' | Risposta: '%s' | Intent: %s (%.0fms)",
                     transcription, reply, intent, latency_ms
                 )
+
+                # Validazione accesso vocale: il nome dichiarato deve esistere davvero in archivio.
+                # E' un controllo di frase/nome, non una verifica biometrica dell'impronta vocale:
+                # per questo NON aziona il relè, conferma solo l'identita' dichiarata.
+                claimed = str(result.get("claimed_identity") or "").strip().lower()
+                matched = next((p for p in authorized if claimed and p.get("name", "").strip().lower() == claimed), None)
+                result["voice_access_validated"] = bool(matched)
+                result["identity_name"] = matched.get("name") if matched else None
+                if matched and intent != "silence":
+                    reply = matched.get("greeting") or reply
+                    result["reply"] = reply
+
+                self._log_dialogue({
+                    "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "camera": camera,
+                    "transcription": transcription,
+                    "reply": reply if intent != "silence" else "",
+                    "intent": intent,
+                    "identity_name": result["identity_name"],
+                    "latency_ms": round(latency_ms),
+                })
 
                 if play_response and reply and intent != "silence":
                     self.speak(reply, voice_pack=voice_pack, volume_percent=volume_percent)

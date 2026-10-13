@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Roboto:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="assets/styles.css?v=9.9">
   <link rel="stylesheet" href="assets/orin.css?v=14">
+  <link rel="stylesheet" href="assets/orin-biometrics.css?v=1">
 </head>
 <body class="orin">
 
@@ -41,7 +42,7 @@
   </svg>
 
   <!-- ──────────────────────────────────────────────────────────────────────────
-       ORIN — interfaccia a comandi scritti della dashboard Sentinel.
+       ORIN — interfaccia a comandi scritti della dashboard.
        Le 5 pagine della dashboard sono intatte (stessi ID usati da app.js) e
        vivono dentro finestre che si aprono su comando. Aspetto: assets/orin.css;
        finestre e occhio: orin-shell.js, orin-eye.js; comandi: orin-commands.js.
@@ -98,6 +99,16 @@
         <span class="dock-app-label">Cloud</span>
         <span class="dock-active-indicator"></span>
         <div class="dock-badge">Questa è l'app cloud (Manutentore)</div>
+      </button>
+
+      <!-- 4b. App Registro Biometrico (Solo Manutentore) -->
+      <button type="button" class="dock-app-btn maintainer-only-block" id="dockBtnBiometrics" data-app="biometrics" aria-label="Registro Biometrico">
+        <div class="dock-app-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6"/><path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+        </div>
+        <span class="dock-app-label">Identità</span>
+        <span class="dock-active-indicator"></span>
+        <div class="dock-badge">Registro biometrico ORIN (Manutentore)</div>
       </button>
 
       <!-- 5. App Impostazioni & Orari -->
@@ -681,13 +692,12 @@
                       <span id="orinStatusBeacon" class="status-beacon is-accent">ORIN Attivo</span>
                     </div>
 
-                    <!-- Scheda Memoria Biometrica Presidente Roberto Capobianco -->
+                    <!-- Identità autorizzate: sintesi dinamica dal Registro Biometrico -->
                     <div class="orin-vip-banner">
-                      <img src="/api/orin/president_photo.jpg" class="orin-vip-avatar" alt="Dott. Roberto Capobianco" onerror="this.src='assets/img/conflavoro-ai-icon-oro.svg'">
                       <div style="flex:1;">
-                        <span class="orin-vip-tag">Presidenza // Accesso Autorizzato</span>
-                        <div class="orin-vip-title">Dott. Roberto Capobianco</div>
-                        <p class="orin-vip-desc">Presidente Conflavoro PMI in memoria visiva permanente. Riconoscimento a distanza con accoglienza cordiale e apertura automatica cancello carraio (Relè 2).</p>
+                        <span class="orin-vip-tag">Identità // Accesso Autorizzato</span>
+                        <div class="orin-vip-title" id="orinVipTitle">Registro biometrico</div>
+                        <p class="orin-vip-desc" id="orinVipDesc">Volti e voci autorizzati sono gestiti dal Registro Biometrico (dock «Identità»).</p>
                       </div>
                     </div>
 
@@ -735,10 +745,10 @@
                     <div class="setting-box" style="margin-top:18px;">
                       <label class="setting-section-label" style="margin-bottom:8px;">DIFFUSIONE MESSAGGI AL VARCO</label>
                       <div class="orin-quick-tags" style="margin-bottom:10px;">
-                        <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura.')">
-                          <span>Saluto Presidente</span>
+                        <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Buongiorno, benvenuto in Conflavoro. Il cancello è in apertura.')">
+                          <span>Saluto Ospite</span>
                         </button>
-                        <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Attenzione, area privata Conflavoro PMI sorvegliata da Sentinel AI. Siete pregati di allontanarvi.')">
+                        <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Attenzione, area privata Conflavoro PMI sorvegliata da ORIN. Siete pregati di allontanarvi.')">
                           <span>Avviso Dissuasione</span>
                         </button>
                         <button type="button" class="orin-quick-btn" onclick="setOrinSpeechText('Benvenuto in Conflavoro PMI, accesso autorizzato.')">
@@ -747,7 +757,7 @@
                       </div>
 
                       <div style="display:flex; gap:10px;">
-                        <input type="text" id="orinLiveInput" class="ultra-input" placeholder="Digita il messaggio da trasmettere sull'altoparlante..." value="Buongiorno Presidente Roberto! È un piacere vederla, cancello in apertura.">
+                        <input type="text" id="orinLiveInput" class="ultra-input" placeholder="Digita il messaggio da trasmettere sull'altoparlante..." value="Buongiorno, benvenuto in Conflavoro. Il cancello è in apertura.">
                         <button type="button" id="btnOrinSpeak" class="ultra-primary-btn" onclick="triggerOrinSpeak()" style="padding:9px 18px; white-space:nowrap;">
                           <span id="orinSpeakBtnText">Parla Live</span>
                         </button>
@@ -1228,6 +1238,30 @@
     </section>
 
     <!-- ══════════════════════════════════════════════════════════════════════════
+         FINESTRA: REGISTRO BIOMETRICO ORIN (win-biometrics)
+         ══════════════════════════════════════════════════════════════════════════ -->
+    <section class="orin-window" id="win-biometrics" data-window="biometrics" role="dialog" aria-labelledby="win-biometrics-title" hidden>
+      <header class="orin-window-bar">
+        <h2 class="orin-window-title" id="win-biometrics-title">Registro Biometrico ORIN</h2>
+        <div class="orin-window-tools">
+          <button type="button" class="orin-window-btn" data-window-action="maximize" aria-pressed="false" aria-label="Ingrandisci Registro Biometrico" title="Ingrandisci"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+          <button type="button" class="orin-window-btn" data-window-action="close" aria-label="Chiudi Registro Biometrico" title="Chiudi"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+      </header>
+      <div class="orin-window-body bio-body">
+        <div class="bio-head">
+          <div>
+            <h3 class="bio-title">Identità autorizzate</h3>
+            <p class="bio-sub">Volti e voci registrati in <code>config/biometrics</code>. ORIN riconosce solo chi è in questo elenco.</p>
+          </div>
+          <span class="bio-pill" id="bioCountPill">0 profili</span>
+        </div>
+        <div id="bioList" class="bio-list" aria-live="polite"></div>
+        <button type="button" class="bio-add-btn" id="bioAddBtn">+ Aggiungi Nuova Identità</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════════════
          FINESTRA: INTERFONO LIVE & REGISTRATORE PUSH-TO-TALK (win-ptt)
          ══════════════════════════════════════════════════════════════════════════ -->
     <section class="orin-window" id="win-ptt" data-window="ptt" role="dialog" aria-labelledby="win-ptt-title" hidden>
@@ -1267,6 +1301,13 @@
 
             <div id="pttTimerDisplay" style="font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--brand); display:none;">00:00</div>
             <p style="font-size:11px; color:var(--text-faint); margin-top:8px;">Puoi anche tenere premuta la barra Spazio per parlare</p>
+            <!-- Feed conversazionale ORIN Brain -->
+            <div class="bio-dialogue" id="orinDialogue">
+              <div class="bio-dialogue-head"><strong>Dialogo al varco</strong><span class="bio-pill" id="orinDialogueCount">0</span></div>
+              <div class="bio-dialogue-feed" id="orinDialogueFeed" aria-live="polite">
+                <p class="bio-empty">Nessuna conversazione registrata al varco.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1285,7 +1326,7 @@
         </div>
         <div>
           <h3 class="system-drawer-title">Diagnostica &amp; Telemetria</h3>
-          <span class="system-drawer-subtitle">Jetson Orin Nano · Sentinel AI</span>
+          <span class="system-drawer-subtitle">Jetson Orin Nano · ORIN</span>
         </div>
       </div>
       <button type="button" class="system-drawer-close" onclick="closeSystemDrawer()" aria-label="Chiudi diagnostica">
@@ -1654,9 +1695,81 @@
     </div>
   </div>
 
+  <!-- ──────────────────────────────────────────────────────────────────────────
+       MODALE ENROLLMENT BIOMETRICO (viso + voce)
+       ────────────────────────────────────────────────────────────────────────── -->
+  <div id="bioEnrollModal" class="bio-modal" role="dialog" aria-modal="true" aria-labelledby="bioModalTitle" hidden>
+    <div class="bio-card">
+      <header class="bio-card-head">
+        <div>
+          <span class="bio-eyebrow" id="bioModalEyebrow">ORIN // Identità Biometrica</span>
+          <h2 id="bioModalTitle">Nuova identità autorizzata</h2>
+        </div>
+        <button type="button" class="bio-x" id="bioModalClose" aria-label="Chiudi">&times;</button>
+      </header>
+
+      <div class="bio-card-body">
+        <!-- 1. Dati -->
+        <section class="bio-step">
+          <h3><span class="bio-num">1</span> Dati identità</h3>
+          <div class="bio-grid">
+            <label>Nome e cognome<input type="text" id="bioName" maxlength="80" autocomplete="off"></label>
+            <label>Ruolo<input type="text" id="bioRole" maxlength="120" autocomplete="off"></label>
+          </div>
+          <label>Saluto personalizzato ORIN<input type="text" id="bioGreeting" maxlength="200" autocomplete="off"></label>
+          <label class="bio-switch"><input type="checkbox" id="bioOpenGate"><span>Apertura cancello (Relè Ch 2) al riconoscimento</span></label>
+        </section>
+
+        <!-- 2. Volto -->
+        <section class="bio-step">
+          <h3><span class="bio-num">2</span> Acquisizione volto</h3>
+          <div class="bio-stage">
+            <video id="bioVideo" playsinline muted autoplay></video>
+            <img id="bioFacePreview" alt="Anteprima volto catturato" hidden>
+            <div class="bio-reticle" id="bioReticle" hidden><span></span></div>
+            <div class="bio-countdown" id="bioCountdown" hidden></div>
+            <p class="bio-stage-msg" id="bioFaceMsg">Premi «Avvia fotocamera» e allinea occhi e volto al mirino.</p>
+          </div>
+          <div class="bio-actions">
+            <button type="button" class="bio-btn" id="bioFaceStart">Avvia fotocamera</button>
+            <button type="button" class="bio-btn is-primary" id="bioFaceCapture" hidden>Cattura Volto</button>
+            <button type="button" class="bio-btn" id="bioFaceRetake" hidden>Rifai lo scatto</button>
+          </div>
+        </section>
+
+        <!-- 3. Voce -->
+        <section class="bio-step">
+          <h3><span class="bio-num">3</span> Impronta vocale <small>(consigliata)</small></h3>
+          <p class="bio-instruction" id="bioPhrase">Premi Registra e pronuncia con voce naturale: «Sono Alessio Russo, autorizzazione per ORIN»</p>
+          <canvas id="bioWave" width="600" height="80" aria-label="Onde audio in tempo reale"></canvas>
+          <div class="bio-progress"><span id="bioRecBar"></span></div>
+          <div class="bio-actions">
+            <button type="button" class="bio-btn" id="bioVoiceRec">Registra (4 s)</button>
+            <button type="button" class="bio-btn" id="bioVoiceRetake" hidden>Registra di nuovo</button>
+          </div>
+          <audio id="bioVoicePlayer" controls hidden></audio>
+          <p class="bio-stage-msg" id="bioVoiceMsg"></p>
+        </section>
+
+        <!-- Conferma con PIN (mostrato solo se il PIN non e' in memoria) -->
+        <section class="bio-step" id="bioPinRow" hidden>
+          <h3><span class="bio-num">4</span> Conferma</h3>
+          <label>PIN Manutentore<input type="password" id="bioPin" inputmode="numeric" maxlength="6" autocomplete="off"></label>
+        </section>
+      </div>
+
+      <footer class="bio-card-foot">
+        <span class="bio-error" id="bioError" role="alert"></span>
+        <button type="button" class="bio-btn" id="bioCancel">Annulla</button>
+        <button type="button" class="bio-btn is-primary" id="bioSave">Salva identità</button>
+      </footer>
+    </div>
+  </div>
+
   <script src="assets/app.js?v=9.9"></script>
   <script src="assets/orin-eye.js?v=1"></script>
   <script src="assets/orin-commands.js?v=2"></script>
-  <script src="assets/orin-shell.js?v=9"></script>
+  <script src="assets/orin-shell.js?v=10"></script>
+  <script src="assets/orin-biometrics.js?v=1"></script>
 </body>
 </html>

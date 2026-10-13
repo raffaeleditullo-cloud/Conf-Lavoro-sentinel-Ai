@@ -103,6 +103,13 @@ DEFAULT_SETTINGS = {
 
 # Inizializza file targhe e impostazioni se non presenti
 os.makedirs(CONFIG_DIR, exist_ok=True)
+
+# Banca dati biometrica ORIN (viso + voce). Il modulo e' condiviso con l'orchestratore.
+sys.path.insert(0, DRIVERS_DIR)
+from biometric_store import BiometricStore, BiometricError
+biometric_store = BiometricStore(CONFIG_DIR)
+# Foto 512px + WAV 4s in base64 stanno ampiamente sotto questo limite
+MAX_BODY_BYTES = 12 * 1024 * 1024
 if not os.path.exists(PLATES_FILE):
     initial_plates = [
         {"plate": "FG492KS", "owner": "Ing. Rocco Di Tolla", "role": "Direzione Generale", "active": True, "date": "2026-09-08"},
@@ -364,6 +371,32 @@ def get_jetson_metrics():
     return metrics
 
 LOGS_DIR = os.environ.get("LOG_DIR", "/app/logs" if os.path.isdir("/app/logs") else os.path.abspath(os.path.join(BASE_DIR, "..", "storage", "logs")))
+
+def load_settings() -> dict:
+    """Impostazioni di sistema: valori di default sovrascritti da system_settings.json."""
+    settings = dict(DEFAULT_SETTINGS)
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            settings.update(json.load(f))
+    except Exception:
+        pass
+    return settings
+
+def read_orin_dialogue(limit=30):
+    """Ultime battute del dialogo interfonico scritte da OrinBrain.hear_and_respond()."""
+    path = os.path.join(LOGS_DIR, "orin_dialogue.jsonl")
+    entries = []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            lines = f.readlines()[-limit:]
+        for line in lines:
+            try:
+                entries.append(json.loads(line))
+            except ValueError:
+                pass
+    except OSError:
+        pass
+    return entries
 
 def read_recent_identikits(limit=15):
     """Legge le schede identikit forensi generate da identikit_profiler.py."""
@@ -1022,14 +1055,14 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         elif parsed.path == "/api/orin/status":
             try:
                 sys.path.insert(0, DRIVERS_DIR)
-                from orin_brain import orin_brain, PRESIDENT_REF_PATH
+                from orin_brain import orin_brain
                 has_key = orin_brain.is_active()
                 self._send_json({
                     "name": "ORIN",
                     "status": "online" if has_key else "standby",
                     "model": orin_brain.model,
                     "engine": "google-gemini",
-                    "president_cached": bool(orin_brain._president_ref_b64 or os.path.exists(PRESIDENT_REF_PATH)),
+                    "biometric_profiles": len(biometric_store.list_profiles()),
                     "google_gemini_active": has_key,
                     "elevenlabs_active": False
                 })
@@ -1037,33 +1070,75 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 self._send_json({"name": "ORIN", "status": "standby", "error": str(e)})
             return
 
-        # API Immagine Biometrica di Riferimento Presidente Roberto Capobianco
-        elif parsed.path in ("/api/orin/president_photo.jpg", "/config/reference_faces/roberto_capobianco.jpg"):
-            target_path = os.path.join(CONFIG_DIR, "reference_faces", "roberto_capobianco.jpg")
-            if not os.path.exists(target_path):
-                target_path = os.path.abspath(os.path.join(BASE_DIR, "..", "config", "reference_faces", "roberto_capobianco.jpg"))
-            if os.path.exists(target_path):
-                try:
-                    with open(target_path, "rb") as f:
-                        data = f.read()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "image/jpeg")
-                    self.send_header("Content-Length", str(len(data)))
-                    self.send_header("Cache-Control", "public, max-age=86400")
-                    self.end_headers()
-                    self.wfile.write(data)
-                    return
-                except Exception:
-                    pass
-            self.send_error(404, "Foto presidente non trovata")
+        # Banca dati biometrica ORIN: elenco profili
+        elif parsed.path == "/api/biometrics/profiles":
+            self._send_json({
+                "profiles": [biometric_store.public_view(p) for p in biometric_store.list_profiles()]
+            })
+            return
+
+        # Media biometrici registrati (fototessera JPEG / impronta vocale WAV)
+        elif parsed.path.startswith("/api/biometrics/faces/") or parsed.path.startswith("/api/biometrics/voices/"):
+            kind = "face" if "/faces/" in parsed.path else "voice"
+            media = biometric_store.media_path(kind, parsed.path.rsplit("/", 1)[-1])
+            if not media:
+                self.send_error(404, "Media biometrico non trovato")
+                return
+            try:
+                with open(media, "rb") as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg" if kind == "face" else "audio/wav")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "private, max-age=300")
+                self.end_headers()
+                self.wfile.write(data)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            except OSError:
+                self.send_error(404, "Media biometrico non leggibile")
+            return
+
+        # Feed del dialogo interfonico al varco (ultime battute reali di ORIN)
+        elif parsed.path == "/api/orin/dialogue":
+            try:
+                limit = max(1, min(100, int(parse_qs(parsed.query).get("limit", ["30"])[0])))
+            except ValueError:
+                limit = 30
+            self._send_json({"entries": read_orin_dialogue(limit)})
             return
 
         # Serve i file statici normalmente
         return super().do_GET()
 
+    def _biometrics_authorized(self) -> bool:
+        """Registrare o revocare un'identita' abilitata al varco richiede il PIN manutentore."""
+        sent = str(self.headers.get("X-Orin-Pin", "")).strip()
+        if sent and sent == str(load_settings().get("admin_pin", "9999")).strip():
+            return True
+        self._send_json({"success": False, "error": "PIN manutentore richiesto"}, status=401)
+        return False
+
+    def do_DELETE(self):
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/biometrics/profiles/"):
+            if not self._biometrics_authorized():
+                return
+            pid = parsed.path.rsplit("/", 1)[-1]
+            if biometric_store.delete(pid):
+                logger.info("Biometria: profilo %s revocato", pid)
+                self._send_json({"success": True})
+            else:
+                self._send_json({"success": False, "error": "Profilo non trovato"}, status=404)
+            return
+        self.send_error(404, "Endpoint non trovato")
+
     def do_POST(self):
         parsed = urlparse(self.path)
         content_len = int(self.headers.get("Content-Length", 0))
+        if content_len > MAX_BODY_BYTES:
+            self.send_error(413, "Richiesta troppo grande")
+            return
         body = self.rfile.read(content_len) if content_len > 0 else b""
 
         # Test Interattivo Connettività Singolo Nodo Hardware / Cloud
@@ -1461,6 +1536,28 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
                 return
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=400)
+        elif parsed.path == "/api/biometrics/enroll":
+            if not self._biometrics_authorized():
+                return
+            try:
+                data = json.loads(body.decode("utf-8")) if body else {}
+                profile = biometric_store.enroll(
+                    name=data.get("name"),
+                    role=data.get("role"),
+                    open_gate=bool(data.get("open_gate")),
+                    greeting=data.get("greeting"),
+                    face_b64=data.get("face_b64"),
+                    audio_b64=data.get("audio_b64"),
+                )
+                logger.info("Biometria: registrato profilo '%s' (%s)", profile["name"], profile["id"])
+                self._send_json({"success": True, "profile": biometric_store.public_view(profile)})
+            except BiometricError as e:
+                self._send_json({"success": False, "error": str(e)}, status=400)
+            except Exception as e:
+                logger.error("Biometria: errore registrazione: %s", e)
+                self._send_json({"success": False, "error": "Errore interno durante il salvataggio"}, status=500)
+            return
+
         elif parsed.path == "/api/orin/speak":
             try:
                 data = json.loads(body.decode("utf-8")) if body else {}

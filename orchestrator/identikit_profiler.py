@@ -271,7 +271,7 @@ class IdentikitProfiler:
         # Aggiornamento scheda profilo
         profile["orin_intelligence"] = orin_res
         if orin_res.get("is_president"):
-            profile["stato_valutazione"] = "PRESIDENTE RICONOSCIUTO: ROBERTO CAPOBIANCO — ACCOGLIENZA ATTIVA"
+            profile["stato_valutazione"] = "IDENTITÀ AUTORIZZATA RICONOSCIUTA: %s — ACCOGLIENZA ATTIVA" % str(orin_res.get("identity_name") or "").upper()
 
         # Riscrive il file JSON arricchito
         try:
@@ -291,7 +291,7 @@ class IdentikitProfiler:
             pass
 
         # Azione A: Convalida deterministica HEXAD DEMON per apertura cancello carraio
-        if orin_res.get("open_gate") or orin_res.get("is_president"):
+        if orin_res.get("open_gate"):
             try:
                 from demon_gate import demon_gate
                 allowed, reason = demon_gate.authorize_gate_open(camera, orin_res, is_armed)
@@ -299,7 +299,7 @@ class IdentikitProfiler:
                 allowed, reason = False, "DEMON Gate non disponibile"
 
             if allowed:
-                logger.info(">>> [DEMON ACTION GATE: AUTORIZZATO] Apertura cancello carraio per Presidente Roberto su '%s'", camera)
+                logger.info(">>> [DEMON ACTION GATE: AUTORIZZATO] Apertura cancello carraio per %s su '%s'", orin_res.get("identity_name"), camera)
                 try:
                     if self.relay:
                         self.relay.apri_cancello(channel=1, impulso_secondi=3.0)

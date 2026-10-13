@@ -316,6 +316,7 @@ body.orin.has-windows .orin-windows {
 #win-events { width: 1000px; }
 #win-plates { width: 860px; }
 #win-diagnostics { width: 940px; }
+#win-biometrics { width: 860px; }
 
 .orin-window.is-max {
   inset: 0 !important;

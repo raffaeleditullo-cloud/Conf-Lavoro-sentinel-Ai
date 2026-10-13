@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════════
- * CONF-LAVORO Sentinel AI — Operations Controller
+ * ORIN — Operations Controller
  * ══════════════════════════════════════════════════════════════════════════════ */
 
 // 1. GESTIONE NAVIGAZIONE VISTE (ROUTING INTERNO FLUIDO)
@@ -294,7 +294,7 @@ async function runActuatorAction(key) {
   }
 
   if (errorMessage) {
-    console.warn(`[Sentinel Dashboard] Comando '${key}' non riuscito:`, errorMessage);
+    console.warn(`[ORIN Dashboard] Comando '${key}' non riuscito:`, errorMessage);
     resetActuatorProgress(key);
     setActuatorState(key, 'error', seconds, errorMessage);
     actuatorTimers[key] = setTimeout(() => setActuatorState(key, 'idle', seconds), 6000);
@@ -326,7 +326,7 @@ async function loadPlates() {
       renderPlates();
     }
   } catch (err) {
-    console.warn('[Sentinel Dashboard] Errore caricamento whitelist targhe:', err);
+    console.warn('[ORIN Dashboard] Errore caricamento whitelist targhe:', err);
   }
 }
 
@@ -983,7 +983,7 @@ function openIdentikitModal(p) {
       threatBadge.textContent = 'MONITORAGGIO SILENZIOSO';
       threatBadge.style.background = '#0288d1';
     } else if (p.orin_intelligence && p.orin_intelligence.is_president) {
-      threatBadge.textContent = 'ACCESSO AUTORIZZATO // PRESIDENZA';
+      threatBadge.textContent = 'ACCESSO AUTORIZZATO // ' + String(p.orin_intelligence.identity_name || 'IDENTITÀ').toUpperCase();
       threatBadge.style.background = 'var(--brand)';
       threatBadge.style.color = '#fff';
     } else {
@@ -1006,7 +1006,7 @@ function openIdentikitModal(p) {
       if (orinData.is_president) {
         if (orinVipBadge) {
           orinVipBadge.style.display = 'inline-flex';
-          orinVipBadge.textContent = 'PRESIDENZA // ACCESSO AUTORIZZATO';
+          orinVipBadge.textContent = String(orinData.identity_name || 'IDENTITÀ').toUpperCase() + ' // ACCESSO AUTORIZZATO';
         }
       } else {
         if (orinVipBadge) orinVipBadge.style.display = 'none';
@@ -1151,7 +1151,8 @@ function updateWallIdentikitCard(p) {
   if (orinBadge) {
     if (p.orin_intelligence) {
       if (p.orin_intelligence.is_president) {
-        orinBadge.innerHTML = '<span class="orin-vip-tag">Presidenza // Autorizzato</span>';
+        orinBadge.innerHTML = '<span class="orin-vip-tag"></span>';
+        orinBadge.firstChild.textContent = (p.orin_intelligence.identity_name || 'Identità') + ' // Autorizzato';
         orinBadge.style.display = 'block';
       } else if (p.orin_intelligence.spoken_message) {
         orinBadge.innerHTML = `<span style="color:var(--brand); font-size:11.5px; font-weight:600; font-style:italic;">"${p.orin_intelligence.spoken_message.slice(0, 50)}..."</span>`;
@@ -1372,7 +1373,7 @@ async function refreshConnectorsHealth() {
       }
     }
   } catch (err) {
-    console.debug('[Sentinel Dashboard] Errore aggiornamento connettori:', err);
+    console.debug('[ORIN Dashboard] Errore aggiornamento connettori:', err);
   }
 }
 
@@ -1606,6 +1607,12 @@ async function pollOrinStatus() {
         beacon.textContent = 'ORIN STANDBY';
         beacon.className = 'status-beacon';
       }
+    }
+    const vipTitle = document.getElementById('orinVipTitle');
+    if (vipTitle && Number.isInteger(data.biometric_profiles)) {
+      vipTitle.textContent = data.biometric_profiles === 1
+        ? '1 identità autorizzata'
+        : `${data.biometric_profiles} identità autorizzate`;
     }
   } catch (_) {}
 }
@@ -1981,6 +1988,14 @@ function applyRole(role) {
   }
 }
 
+// Sblocco riuscito: applica il ruolo, chiude il tastierino e avvisa i moduli
+// (es. onboarding biometrico di orin-biometrics.js) passando ruolo e PIN usato.
+function finishUnlock(role, pin) {
+  applyRole(role);
+  closeAuthModal();
+  if (typeof window.onPinUnlocked === 'function') window.onPinUnlocked(role, pin);
+}
+
 async function submitKeypad() {
   if (currentEnteredPin.length === 0) return;
 
@@ -1997,8 +2012,7 @@ async function submitKeypad() {
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.role) {
-        applyRole(data.role);
-        closeAuthModal();
+        finishUnlock(data.role, pinToTest);
         return;
       }
     }
@@ -2008,12 +2022,10 @@ async function submitKeypad() {
 
   // Fallback se server offline o standalone
   if (pinToTest === '9999') {
-    applyRole('maintainer');
-    closeAuthModal();
+    finishUnlock('maintainer', pinToTest);
     return;
   } else if (pinToTest === '1111') {
-    applyRole('client');
-    closeAuthModal();
+    finishUnlock('client', pinToTest);
     return;
   }
 

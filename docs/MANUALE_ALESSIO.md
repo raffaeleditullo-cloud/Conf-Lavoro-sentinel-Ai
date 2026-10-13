@@ -352,3 +352,13 @@ Router / Switch PoE (Gateway: 192.168.20.1)
 > Waveshare e Fanvil durante il cablaggio. Frigate non interagisce direttamente con essi,
 > ma l'orchestratore della Fase 2 si collegherà esattamente a quegli IP.
 
+
+## Registro biometrico ORIN (viso + voce)
+
+1. Sblocca la dashboard con il **PIN Manutentore**. Al primo avvio, se non c'è nessuna identità registrata, si apre da sola la configurazione iniziale (campi già compilati per Alessio Russo).
+2. **Volto**: «Avvia fotocamera», allinea il volto al mirino ovale, «Cattura Volto» (countdown 3-2-1). Puoi rifare lo scatto.
+3. **Voce**: «Registra (4 s)» e pronuncia *«Sono Alessio Russo, autorizzazione per ORIN»*. Riascolta prima di salvare.
+4. «Salva identità». Il profilo finisce in `config/biometrics/` (`profiles.json`, `faces/`, `voices/`) e l'orchestratore lo usa subito, senza riavvio.
+5. Altre identità (es. il Presidente): dock **Identità** → «+ Aggiungi Nuova Identità». Revoca dallo stesso elenco.
+
+Nota: fotocamera e microfono del browser funzionano solo su **localhost** o **HTTPS**. Dal Jetson usa `http://localhost:8080`; da smartphone serve HTTPS.

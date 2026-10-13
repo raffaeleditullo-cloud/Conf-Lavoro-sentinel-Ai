@@ -33,3 +33,9 @@ mosquitto/config/pwfile
 config/system_settings.json
 config/detector_status.json
 
+
+# Dati biometrici reali (volti e voci registrati dalla dashboard): mai nel repository
+config/biometrics/
+
+# Stato agenti e memoria locale
+.hexad/

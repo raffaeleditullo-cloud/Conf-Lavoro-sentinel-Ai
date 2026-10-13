@@ -101,8 +101,8 @@
   function openWindow(key) {
     const win = $(`win-${key}`);
     if (!win) return false;
-    if ((key === 'diagnostics' || key === 'connectors') && role() !== 'maintainer') {
-      say(`La sezione ${key === 'diagnostics' ? 'diagnostica Jetson' : 'connettori cloud'} è riservata all'amministratore. Entra con il PIN manutentore (9999).`);
+    if ((key === 'diagnostics' || key === 'connectors' || key === 'biometrics') && role() !== 'maintainer') {
+      say(`La sezione ${key === 'diagnostics' ? 'diagnostica Jetson' : key === 'biometrics' ? 'registro biometrico' : 'connettori cloud'} è riservata all'amministratore. Entra con il PIN manutentore (9999).`);
       return false;
     }
     if (win.hidden) {
@@ -282,7 +282,8 @@
     'connectors': 'Cloud',
     'settings': 'Config',
     'diagnostics': 'Jetson',
-    'ptt': 'Voce'
+    'ptt': 'Voce',
+    'biometrics': 'Identità'
   };
 
   const SNAP_LAYOUTS = {
@@ -985,7 +986,7 @@
           pttRecorder.start(100);
         }
       } catch (err) {
-        console.warn('[Sentinel PTT] Accesso microfono negato o non disponibile:', err);
+        console.warn('[ORIN PTT] Accesso microfono negato o non disponibile:', err);
         if (!window.isSecureContext) {
           say('I browser bloccano il microfono su connessioni HTTP locali. Per sbloccarlo su Chrome/Edge: apri chrome://flags/#unsafely-treat-insecure-origin-as-secure, inserisci l\'URL della dashboard e attiva.', { alert: true });
         } else {
@@ -1093,7 +1094,7 @@
       try {
         pttRecorder.stop();
       } catch (err) {
-        console.warn('[Sentinel PTT] Errore stop recorder:', err);
+        console.warn('[ORIN PTT] Errore stop recorder:', err);
       }
     } else {
       // Fallback: se il microfono non era disponibile ma l'utente ha scritto o dettato del testo

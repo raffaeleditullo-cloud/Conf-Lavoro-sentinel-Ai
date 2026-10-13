@@ -61,8 +61,6 @@ class GeminiLiveEngine:
         # Riferimenti hardware opzionali (Relè cancello)
         self.relay_callback: Optional[Callable[[str], None]] = None
 
-        # Carica reference del Presidente Roberto se presente
-        self.president_ref_b64 = self._load_president_ref()
 
     def _load_api_key(self) -> str:
         """Carica la chiave da variabile d'ambiente o dal file protetto su disco."""
@@ -78,16 +76,15 @@ class GeminiLiveEngine:
                 logger.warning("Impossibile leggere segreto Gemini Live: %s", e)
         return ""
 
-    def _load_president_ref(self) -> Optional[str]:
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        ref_path = os.path.join(base_dir, "config", "reference_faces", "roberto_capobianco.jpg")
-        if os.path.exists(ref_path):
-            try:
-                with open(ref_path, "rb") as f:
-                    return base64.b64encode(f.read()).decode("utf-8")
-            except Exception:
-                pass
-        return None
+    @staticmethod
+    def _authorized_names() -> str:
+        """Nomi delle identita' abilitate al varco nella banca dati biometrica (config/biometrics/)."""
+        try:
+            from biometric_store import BiometricStore
+            store = BiometricStore(os.environ.get("CONFIG_DIR") or os.path.join(os.path.dirname(__file__), "..", "config"))
+            return ", ".join(p["name"] for p in store.list_profiles() if p.get("open_gate") and p.get("name"))
+        except Exception:
+            return ""
 
     def is_active(self) -> bool:
         """True se il motore è attivo, configurato e connesso al WebSocket."""
@@ -155,10 +152,11 @@ class GeminiLiveEngine:
     def _build_setup_message(self) -> dict:
         """Costruisce il payload di inizializzazione con personalità, voce e Tool Calling del cancello."""
         system_prompt = (
-            "Sei Sentinel, la sentinella cibernetica di Conf-Lavoro Sentinel AI, intelligenza vigile a guardia del varco aziendale.\n\n"
+            "Sei ORIN, la sentinella cibernetica di Conflavoro PMI, intelligenza vigile a guardia del varco aziendale.\n\n"
             "REGOLE DI COMPORTAMENTO (STILE JARVIS):\n"
-            "1. RICONOSCIMENTO PRESIDENTE: Se riconosci il Presidente Nazionale Roberto Capobianco (viso, barba, portamento) o se si presenta a voce, "
-            "salutalo con cordialità, calore e deferenza, ed esegui IMMEDIATAMENTE la funzione 'apri_cancello'.\n"
+            "1. IDENTITÀ AUTORIZZATE: Persone abilitate all'apertura del varco: [" + (self._authorized_names() or "nessuna") + "]. "
+            "Se una di esse si presenta a voce con il proprio nome, salutala con cordialità ed esegui la funzione 'apri_cancello'. "
+            "Non aprire per nessun altro.\n"
             "2. PRESENZA INTELLIGENTE E SILENZIO: Non parlare a vanvera. Se vedi una persona autorizzata o dipendente che sta semplicemente "
             "camminando o lavorando pacificamente, RIMANI IN SILENZIO e vigila con attenzione senza interromperlo continuamente. "
             "Intervieni con la voce solo quando è necessario, se ti parlano direttamente, o in caso di anomalia.\n"
