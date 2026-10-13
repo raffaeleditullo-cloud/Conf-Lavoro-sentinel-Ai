@@ -872,36 +872,95 @@ class SentinelDashboardHandler(SimpleHTTPRequestHandler):
         # API Proxy Singolo Frame Telecamere da Frigate (http://<FRIGATE_HOST>:<PORT>/api/<camera>/latest.jpg)
         # Usa latest.jpg invece dello stream MJPEG continuo per evitare BrokenPipeError:
         # lo stream MJPEG non termina mai, blocca il thread HTTP e causa timeout + ciclo di ricaricamento.
-        # Il frontend effettua il polling periodico di latest.jpg simulando il video.
+        # Flussi Video Telecamere: Supporta sia MJPEG streaming continuo fluido (10-15 fps) che snapshot singolo
         elif parsed.path.startswith("/api/camera/"):
-            # Supporta sia /api/camera/{cam} che /api/camera/{cam}/latest.jpg
             cam_path = parsed.path.replace("/api/camera/", "").strip().rstrip("/")
-            if cam_path.endswith("/latest.jpg"):
+            query = parse_qs(parsed.query)
+
+            # 1. Modalita' singolo fotogramma JPEG (per thumbnail e compatibilita')
+            if cam_path.endswith("/latest.jpg") or query.get("format", [""])[0] == "jpeg":
                 cam_name = cam_path.replace("/latest.jpg", "")
-            else:
-                cam_name = cam_path
-            import urllib.request
-            # Richiede sempre il singolo fotogramma latest.jpg da Frigate
-            frigate_url = f"http://{FRIGATE_HOST}:{FRIGATE_PORT}/api/{cam_name}/latest.jpg"
+                frigate_url = f"http://{FRIGATE_HOST}:{FRIGATE_PORT}/api/{cam_name}/latest.jpg"
+                try:
+                    import urllib.request
+                    req = urllib.request.Request(frigate_url)
+                    with urllib.request.urlopen(req, timeout=8) as response:
+                        data = response.read()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "image/jpeg")
+                        self.send_header("Content-Length", str(len(data)))
+                        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                        self.send_header("Access-Control-Allow-Origin", "*")
+                        self.end_headers()
+                        self.wfile.write(data)
+                    return
+                except (BrokenPipeError, ConnectionResetError):
+                    return
+                except Exception:
+                    self._send_json({"connected": False, "status": "offline", "camera": cam_name}, status=503)
+                    return
+
+            # 2. Modalita' Flusso Video Fluido Continuo MJPEG (/api/camera/{cam}/mjpeg o /api/camera/{cam})
+            cam_name = cam_path.replace("/mjpeg", "").replace("/stream", "")
+            fps = query.get("fps", ["10"])[0]
+            height = query.get("h", [""])[0]
+
+            import http.client
+            conn = None
             try:
-                req = urllib.request.Request(frigate_url)
-                # Timeout elevato: su Jetson Orin Nano Frigate puo' impiegare fino a 10s per il primo frame
-                with urllib.request.urlopen(req, timeout=10) as response:
-                    data = response.read()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "image/jpeg")
-                    self.send_header("Content-Length", str(len(data)))
-                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-                    self.send_header("Access-Control-Allow-Origin", "*")
-                    self.end_headers()
-                    self.wfile.write(data)
+                conn = http.client.HTTPConnection(FRIGATE_HOST, FRIGATE_PORT, timeout=6.0)
+                path = f"/api/{cam_name}?fps={fps}"
+                if height:
+                    path += f"&h={height}"
+                conn.request("GET", path)
+                resp = conn.getresponse()
+
+                if resp.status != 200:
+                    # Se Frigate non ha lo stream MJPEG pronto, ripiega su latest.jpg
+                    conn.close()
+                    conn = None
+                    import urllib.request
+                    req = urllib.request.Request(f"http://{FRIGATE_HOST}:{FRIGATE_PORT}/api/{cam_name}/latest.jpg")
+                    with urllib.request.urlopen(req, timeout=5) as r2:
+                        d = r2.read()
+                        self.send_response(200)
+                        self.send_header("Content-Type", "image/jpeg")
+                        self.send_header("Content-Length", str(len(d)))
+                        self.send_header("Cache-Control", "no-cache")
+                        self.send_header("Access-Control-Allow-Origin", "*")
+                        self.end_headers()
+                        self.wfile.write(d)
+                    return
+
+                c_type = resp.getheader("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+                self.send_response(200)
+                self.send_header("Content-Type", c_type)
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+
+                while True:
+                    chunk = resp.read(8192)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
                 return
             except (BrokenPipeError, ConnectionResetError):
                 return
-            except Exception:
-                # Frigate non raggiungibile o telecamera offline: restituisce 503
-                self._send_json({"connected": False, "status": "offline", "camera": cam_name}, status=503)
+            except Exception as e:
+                logger.debug("Stream video MJPEG '%s' terminato: %s", cam_name, e)
+                try:
+                    self._send_json({"connected": False, "status": "offline", "camera": cam_name}, status=503)
+                except Exception:
+                    pass
                 return
+            finally:
+                if conn:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
 
         # API Stato ORIN Cybernetic Brain
         elif parsed.path == "/api/orin/status":

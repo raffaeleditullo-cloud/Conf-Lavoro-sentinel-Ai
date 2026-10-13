@@ -447,13 +447,15 @@ async function handleSavePlate(e) {
   }
 }
 
-// Intervalli di polling per ogni cam (ID -> intervalId)
+// Modalita' di streaming video: 'mjpeg' (flusso continuo a 10-15 fps) oppure 'snapshot' (polling ogni 1s)
+let camStreamMode = 'mjpeg';
 const camPollIntervals = {};
 const CAM_NAMES = { 1: 'piazzale', 2: 'magazzino', 3: 'corridoio' };
-const CAM_POLL_MS = 1000; // refresh frame ogni 1 secondo
+const CAM_POLL_MS = 1000; // refresh solo in modalita' snapshot di ripiego
 
 function startCamPolling(camId) {
-  if (camPollIntervals[camId]) return; // già attivo
+  if (camStreamMode === 'mjpeg') return; // in modalita' mjpeg non serve riassegnare la sorgente
+  if (camPollIntervals[camId]) return;
   camPollIntervals[camId] = setInterval(() => {
     const stream = document.getElementById(`streamCam${camId}`);
     if (!stream) return;
@@ -477,17 +479,19 @@ function handleStreamLoaded(camId) {
   if (standby) standby.classList.add('feed-connected');
   if (stream) stream.classList.add('online');
   if (badge) {
-    // Il pallino colorato e' uno pseudo-elemento CSS: qui va solo l'etichetta
     badge.className = 'cam-status-pill live';
     badge.textContent = 'Live';
   }
-  // Il polling riassegna la sorgente ogni secondo e ogni fotogramma ricevuto
-  // richiama questa funzione: vale quindi da orologio della diretta, senza
-  // bisogno di un timer aggiuntivo.
-  if (meta) meta.textContent = `In diretta · ${new Date().toLocaleTimeString('it-IT')}`;
+  if (meta) {
+    const modeTag = camStreamMode === 'mjpeg' ? 'Diretta 10 fps' : '1 fps';
+    meta.textContent = `${modeTag} · ${new Date().toLocaleTimeString('it-IT')}`;
+  }
   syncCamModalStatus(camId);
-  // Avvia il polling periodico per aggiornare il frame
-  startCamPolling(camId);
+
+  // In modalita' snapshot avvia il polling; in modalita' mjpeg la diretta e' continua
+  if (camStreamMode !== 'mjpeg') {
+    startCamPolling(camId);
+  }
 }
 
 function handleStreamError(camId) {
@@ -501,19 +505,24 @@ function handleStreamError(camId) {
     badge.textContent = 'Offline';
   }
   const meta = document.getElementById(`camCardMeta${camId}`);
-  if (meta) meta.textContent = 'Segnale assente · nuovo tentativo tra 10s';
+  if (meta) meta.textContent = 'Segnale assente · riaggancio in corso...';
   syncCamModalStatus(camId);
-  // Ferma il polling e riprova il collegamento ogni 10 secondi
   stopCamPolling(camId);
+
+  // Riconnessione automatica dopo 5 secondi
   setTimeout(() => {
     if (stream) {
       const camName = CAM_NAMES[camId];
-      stream.src = `/api/camera/${camName}/latest.jpg?_retry=${Date.now()}`;
+      if (camStreamMode === 'mjpeg') {
+        stream.src = `/api/camera/${camName}/mjpeg?fps=10&_r=${Date.now()}`;
+      } else {
+        stream.src = `/api/camera/${camName}/latest.jpg?_retry=${Date.now()}`;
+      }
     }
-  }, 10000);
+  }, 5000);
 }
 
-// Esponi esplicitamente su window per retrocompatibilità globale
+// Esponi esplicitamente su window per retrocompatibilita' globale
 window.handleStreamLoaded = handleStreamLoaded;
 window.handleStreamError = handleStreamError;
 
@@ -577,10 +586,18 @@ function openCamModal(camId) {
   document.body.style.overflow = 'hidden';
 
   syncCamModalStatus(camId);
-  refreshCamModalFrame();
 
-  if (camModalPollInterval) clearInterval(camModalPollInterval);
-  camModalPollInterval = setInterval(refreshCamModalFrame, CAM_POLL_MS);
+  if (camModalPollInterval) {
+    clearInterval(camModalPollInterval);
+    camModalPollInterval = null;
+  }
+
+  if (camStreamMode === 'mjpeg') {
+    img.src = `/api/camera/${CAM_NAMES[camId]}/mjpeg?fps=15`;
+  } else {
+    refreshCamModalFrame();
+    camModalPollInterval = setInterval(refreshCamModalFrame, CAM_POLL_MS);
+  }
 
   const closeBtn = modal.querySelector('.cam-modal-close');
   if (closeBtn) closeBtn.focus();
@@ -639,6 +656,18 @@ function initCameraStreams() {
       handleStreamLoaded(camId);
     }
   });
+
+  // Orologio continuo dei metadati del feed (aggiorna solo il timestamp senza ricaricare l'immagine)
+  setInterval(() => {
+    [1, 2, 3].forEach(camId => {
+      const meta = document.getElementById(`camCardMeta${camId}`);
+      const badge = document.getElementById(`camStatusBadge${camId}`);
+      if (meta && badge && badge.classList.contains('live')) {
+        const modeTag = camStreamMode === 'mjpeg' ? 'Diretta 10 fps' : '1 fps';
+        meta.textContent = `${modeTag} · ${new Date().toLocaleTimeString('it-IT')}`;
+      }
+    });
+  }, 1000);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
