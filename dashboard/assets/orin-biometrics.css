@@ -1,138 +1,144 @@
 /* ══════════════════════════════════════════════════════════════════════════════
  * ORIN — Registro Biometrico, modale di enrollment e feed del dialogo
  *
- * Tema industriale scuro con dettagli oro Conflavoro, limitato ai componenti
- * .bio-* e al riquadro dialogo: il resto della dashboard (Video Wall incluso)
- * non viene toccato.
+ * Stesso linguaggio grafico del resto di ORIN: finestre bianche, accento azzurro,
+ * corallo solo per le azioni distruttive. Usa i token di orin.css.
  * ══════════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --bio-bg: #080c14;
-  --bio-panel: #0f172a;
-  --bio-panel-2: #162036;
-  --bio-line: #243049;
-  --bio-text: #e8edf6;
-  --bio-muted: #93a1b8;
-  --bio-gold: #d4af37;
-  --bio-gold-hi: #e8c15a;
-  --bio-danger: #ef5350;
-  --bio-ok: #3ecf8e;
+  --bio-accent: var(--orin-blu);
+  --bio-accent-strong: var(--orin-blu-scuro);
+  --bio-accent-soft: var(--orin-blu-tenue);
+  --bio-surface: #f6f9fe;
+  --bio-line: var(--orin-linea);
+  --bio-text: var(--orin-testo);
+  --bio-muted: var(--orin-testo-2);
+  --bio-danger: var(--orin-corallo);
+  --bio-ok: #137333;
 }
 
 /* ── Finestra Registro ─────────────────────────────────────────────────────── */
-.bio-body { background: var(--bio-bg); color: var(--bio-text); padding: 20px; }
+.bio-body { color: var(--bio-text); padding: 4px 24px 24px; }
 .bio-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
-.bio-title { margin: 0 0 4px; font-size: 18px; color: var(--bio-gold-hi); font-family: var(--font-brand); }
+.bio-title { margin: 0 0 4px; font-size: 18px; color: var(--bio-text); font-family: var(--font-brand); }
 .bio-sub { margin: 0; font-size: 12.5px; color: var(--bio-muted); line-height: 1.45; }
-.bio-sub code { color: var(--bio-gold); }
+.bio-sub code { padding: 1px 5px; font-size: 11.5px; color: var(--bio-accent-strong); background: var(--bio-accent-soft); border-radius: 4px; }
 .bio-pill {
-  flex-shrink: 0; padding: 3px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
-  color: var(--bio-gold-hi); background: rgba(212, 175, 55, 0.12); border: 1px solid rgba(212, 175, 55, 0.4);
+  flex-shrink: 0; padding: 3px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  color: var(--bio-accent-strong); background: var(--bio-accent-soft); border: 1px solid var(--brand-line);
 }
 .bio-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-.bio-empty { margin: 0; padding: 22px 14px; text-align: center; color: var(--bio-muted); font-size: 13px; border: 1px dashed var(--bio-line); border-radius: 12px; }
+.bio-empty { margin: 0; padding: 22px 14px; text-align: center; color: var(--bio-muted); font-size: 13px; background: var(--bio-surface); border: 1px dashed var(--bio-line); border-radius: 12px; }
 
 .bio-profile {
   display: flex; align-items: center; gap: 14px; padding: 12px 14px;
-  background: var(--bio-panel); border: 1px solid var(--bio-line); border-radius: 14px;
+  background: #fff; border: 1px solid var(--bio-line); border-radius: 14px; box-shadow: var(--orin-elev-1);
 }
-.bio-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--bio-gold); background: var(--bio-panel-2); flex-shrink: 0; }
+.bio-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--bio-accent-soft); outline: 2px solid var(--bio-accent); background: var(--bio-surface); flex-shrink: 0; }
 .bio-profile-info { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .bio-profile-info strong { flex-basis: 100%; font-size: 15px; color: var(--bio-text); }
-.bio-badge { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--bio-muted); background: var(--bio-panel-2); border: 1px solid var(--bio-line); }
-.bio-badge.is-gate { color: var(--bio-ok); border-color: rgba(62, 207, 142, 0.45); }
+.bio-badge { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--bio-muted); background: var(--bio-surface); border: 1px solid var(--bio-line); }
+.bio-badge.is-gate { color: var(--bio-ok); background: #e6f4ea; border-color: #b7dfc2; }
 .bio-profile-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 
 .bio-add-btn {
-  width: 100%; padding: 15px; font-size: 15px; font-weight: 800; letter-spacing: 0.02em; cursor: pointer;
-  color: #1a1405; background: linear-gradient(180deg, var(--bio-gold-hi), var(--bio-gold)); border: 0; border-radius: 12px;
+  width: 100%; padding: 15px; font-size: 15px; font-weight: 800; cursor: pointer;
+  color: #fff; background: var(--bio-accent); border: 0; border-radius: 12px; box-shadow: var(--orin-elev-1);
 }
-.bio-add-btn:hover { filter: brightness(1.07); }
+.bio-add-btn:hover { background: var(--bio-accent-strong); }
 
 /* ── Pulsanti condivisi ────────────────────────────────────────────────────── */
 .bio-btn {
-  padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; border-radius: 10px;
-  color: var(--bio-text); background: var(--bio-panel-2); border: 1px solid var(--bio-line);
+  padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; border-radius: 999px;
+  color: var(--bio-accent-strong); background: #fff; border: 1px solid var(--brand-line);
 }
-.bio-btn:hover { border-color: var(--bio-gold); }
-.bio-btn.is-primary { color: #1a1405; background: var(--bio-gold); border-color: var(--bio-gold); }
-.bio-btn.is-danger { color: var(--bio-danger); border-color: rgba(239, 83, 80, 0.45); }
+.bio-btn:hover { background: var(--bio-accent-soft); }
+.bio-btn.is-primary { color: #fff; background: var(--bio-accent); border-color: var(--bio-accent); }
+.bio-btn.is-primary:hover { background: var(--bio-accent-strong); }
+.bio-btn.is-danger { color: var(--bio-danger); border-color: #f1b8b3; }
+.bio-btn.is-danger:hover { background: #fce8e6; }
 .bio-btn:disabled { opacity: 0.5; cursor: progress; }
 .bio-btn[hidden] { display: none; }
+.bio-add-btn:focus-visible, .bio-btn:focus-visible, .bio-x:focus-visible { outline: 3px solid var(--bio-accent); outline-offset: 2px; }
 
 /* ── Modale enrollment ─────────────────────────────────────────────────────── */
 .bio-modal {
   position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center;
-  padding: 16px; background: rgba(4, 7, 13, 0.82); backdrop-filter: blur(6px);
+  padding: 16px; background: rgba(10, 40, 100, 0.55); backdrop-filter: blur(6px);
 }
 .bio-modal[hidden] { display: none; }
 body.bio-modal-open { overflow: hidden; }
 .bio-card {
   width: min(680px, 100%); max-height: 100%; display: flex; flex-direction: column;
-  background: var(--bio-panel); color: var(--bio-text); border: 1px solid var(--bio-line); border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  background: #fff; color: var(--bio-text); border-radius: 18px; box-shadow: var(--orin-elev-5); overflow: hidden;
 }
-.bio-card-head { display: flex; justify-content: space-between; gap: 12px; padding: 18px 20px 12px; border-bottom: 1px solid var(--bio-line); }
-.bio-card-head h2 { margin: 2px 0 0; font-size: 19px; color: var(--bio-gold-hi); font-family: var(--font-brand); }
-.bio-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bio-muted); }
-.bio-x { align-self: flex-start; width: 36px; height: 36px; font-size: 24px; line-height: 1; cursor: pointer; color: var(--bio-muted); background: transparent; border: 0; }
-.bio-card-body { padding: 8px 20px; overflow-y: auto; flex: 1; }
-.bio-step { padding: 14px 0; border-bottom: 1px solid var(--bio-line); }
+.bio-card-head {
+  display: flex; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; color: #fff;
+  background: linear-gradient(180deg, var(--orin-cielo-alto), var(--orin-cielo-basso));
+}
+.bio-card-head h2 { margin: 2px 0 0; font-size: 19px; color: #fff; font-family: var(--font-brand); }
+.bio-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255, 255, 255, 0.8); }
+.bio-x { align-self: flex-start; width: 36px; height: 36px; font-size: 26px; line-height: 1; cursor: pointer; color: #fff; background: transparent; border: 0; border-radius: 50%; }
+.bio-x:hover { background: rgba(255, 255, 255, 0.18); }
+.bio-card-body { padding: 4px 20px; overflow-y: auto; flex: 1; }
+.bio-step { padding: 16px 0; border-bottom: 1px solid var(--bio-line); }
 .bio-step:last-child { border-bottom: 0; }
-.bio-step h3 { display: flex; align-items: center; gap: 9px; margin: 0 0 12px; font-size: 14px; color: var(--bio-text); }
+.bio-step h3 { display: flex; align-items: center; gap: 9px; margin: 0 0 12px; font-size: 14.5px; color: var(--bio-text); font-family: var(--font-brand); }
 .bio-step h3 small { color: var(--bio-muted); font-weight: 500; }
-.bio-num { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #1a1405; background: var(--bio-gold); border-radius: 50%; }
+.bio-num { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; background: var(--bio-accent); border-radius: 50%; }
 .bio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .bio-step label { display: block; margin-bottom: 10px; font-size: 11.5px; font-weight: 700; color: var(--bio-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .bio-step input[type="text"], .bio-step input[type="password"] {
   display: block; width: 100%; margin-top: 5px; padding: 10px 12px; font-size: 16px; /* 16px: niente zoom su iOS */
-  color: var(--bio-text); background: var(--bio-bg); border: 1px solid var(--bio-line); border-radius: 10px; text-transform: none; letter-spacing: 0;
+  color: var(--bio-text); background: #fff; border: 1px solid var(--bio-line); border-radius: 10px; text-transform: none; letter-spacing: 0;
 }
-.bio-step input:focus { outline: 2px solid var(--bio-gold); outline-offset: 1px; }
+.bio-step input:focus { outline: 2px solid var(--bio-accent); outline-offset: 1px; border-color: var(--bio-accent); }
 .bio-step label.bio-switch { display: flex; align-items: center; gap: 10px; text-transform: none; letter-spacing: 0; font-size: 13.5px; color: var(--bio-text); cursor: pointer; }
-.bio-switch input { width: 20px; height: 20px; accent-color: var(--bio-gold); }
+.bio-switch input { width: 20px; height: 20px; accent-color: var(--bio-accent); }
 
 /* Riquadro fotocamera con mirino ovale */
-.bio-stage { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 14px; background: #000; border: 1px solid var(--bio-line); }
+.bio-stage { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 14px; background: #202124; border: 1px solid var(--bio-line); }
 .bio-stage video, .bio-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .bio-stage video { transform: scaleX(-1); } /* anteprima a specchio; lo scatto salvato non e' specchiato */
 .bio-stage video[hidden], .bio-stage img[hidden] { display: none; }
 .bio-reticle { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .bio-reticle[hidden] { display: none; }
 .bio-reticle span {
-  width: 46%; aspect-ratio: 3 / 4; border: 3px solid var(--bio-gold-hi); border-radius: 50%;
-  box-shadow: 0 0 18px rgba(232, 193, 90, 0.75), inset 0 0 18px rgba(232, 193, 90, 0.35), 0 0 0 999px rgba(4, 7, 13, 0.45);
+  width: 46%; aspect-ratio: 3 / 4; border: 3px solid #8ab4f8; border-radius: 50%;
+  box-shadow: 0 0 18px rgba(138, 180, 248, 0.85), inset 0 0 18px rgba(138, 180, 248, 0.35), 0 0 0 999px rgba(10, 30, 70, 0.45);
   animation: bioPulse 2s ease-in-out infinite;
 }
-@keyframes bioPulse { 50% { box-shadow: 0 0 28px rgba(232, 193, 90, 1), inset 0 0 22px rgba(232, 193, 90, 0.5), 0 0 0 999px rgba(4, 7, 13, 0.45); } }
-.bio-countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 96px; font-weight: 900; color: var(--bio-gold-hi); text-shadow: 0 0 24px rgba(0, 0, 0, 0.8); }
+@keyframes bioPulse { 50% { box-shadow: 0 0 28px rgba(138, 180, 248, 1), inset 0 0 22px rgba(138, 180, 248, 0.5), 0 0 0 999px rgba(10, 30, 70, 0.45); } }
+@media (prefers-reduced-motion: reduce) { .bio-reticle span { animation: none; } }
+.bio-countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 96px; font-weight: 900; color: #fff; text-shadow: 0 2px 24px rgba(10, 30, 70, 0.8); }
 .bio-countdown[hidden] { display: none; }
 .bio-stage-msg { margin: 8px 0 0; font-size: 12.5px; color: var(--bio-muted); line-height: 1.45; }
-.bio-stage .bio-stage-msg { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 8px 12px; background: rgba(4, 7, 13, 0.72); }
+.bio-stage .bio-stage-msg { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 8px 12px; color: #fff; background: rgba(10, 30, 70, 0.7); }
 .bio-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
-.bio-instruction { margin: 0 0 10px; padding: 10px 12px; font-size: 13.5px; color: var(--bio-gold-hi); background: rgba(212, 175, 55, 0.08); border-left: 3px solid var(--bio-gold); border-radius: 6px; }
-#bioWave { display: block; width: 100%; height: 80px; background: var(--bio-bg); border: 1px solid var(--bio-line); border-radius: 10px; }
-.bio-progress { height: 4px; margin-top: 8px; background: var(--bio-bg); border-radius: 2px; overflow: hidden; }
-.bio-progress span { display: block; height: 100%; width: 0; background: var(--bio-gold); }
+.bio-instruction { margin: 0 0 10px; padding: 10px 12px; font-size: 13.5px; color: var(--bio-accent-strong); background: var(--bio-accent-soft); border-left: 3px solid var(--bio-accent); border-radius: 6px; }
+#bioWave { display: block; width: 100%; height: 80px; background: var(--bio-surface); border: 1px solid var(--bio-line); border-radius: 10px; }
+.bio-progress { height: 4px; margin-top: 8px; background: var(--bio-accent-soft); border-radius: 2px; overflow: hidden; }
+.bio-progress span { display: block; height: 100%; width: 0; background: var(--bio-accent); }
 #bioVoicePlayer { display: block; width: 100%; margin-top: 12px; }
 #bioVoicePlayer[hidden] { display: none; }
 
-.bio-card-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--bio-line); }
+.bio-card-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--bio-line); background: var(--bio-surface); }
 .bio-error { flex: 1; font-size: 12.5px; color: var(--bio-danger); }
 
 /* ── Feed dialogo al varco (finestra Interfono) ────────────────────────────── */
-.bio-dialogue { width: 100%; margin-top: 22px; text-align: left; background: var(--bio-bg); color: var(--bio-text); border: 1px solid var(--bio-line); border-radius: 14px; overflow: hidden; }
-.bio-dialogue-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--bio-line); font-size: 13px; color: var(--bio-gold-hi); }
+.bio-dialogue { width: 100%; margin-top: 22px; text-align: left; background: #fff; color: var(--bio-text); border: 1px solid var(--bio-line); border-radius: 14px; overflow: hidden; }
+.bio-dialogue-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--bio-line); font-size: 13px; background: var(--bio-surface); }
 .bio-dialogue-feed { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; padding: 12px; }
-.bio-dialogue-feed .bio-empty { border: 0; padding: 12px; }
-.bio-bubble { max-width: 84%; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.4; }
-.bio-bubble small { display: block; margin-top: 3px; font-size: 10.5px; opacity: 0.7; font-family: var(--font-mono, monospace); }
-.bio-bubble.is-user { align-self: flex-start; background: var(--bio-panel-2); border-bottom-left-radius: 4px; }
-.bio-bubble.is-orin { align-self: flex-end; color: #1a1405; background: var(--bio-gold); border-bottom-right-radius: 4px; }
+.bio-dialogue-feed .bio-empty { border: 0; background: transparent; padding: 12px; }
+.bio-bubble { max-width: 84%; padding: 8px 12px; border-radius: 16px; font-size: 13px; line-height: 1.4; }
+.bio-bubble small { display: block; margin-top: 3px; font-size: 10.5px; opacity: 0.75; font-family: var(--font-mono, monospace); }
+.bio-bubble.is-user { align-self: flex-start; background: #f1f3f4; border-bottom-left-radius: 4px; }
+.bio-bubble.is-orin { align-self: flex-end; color: #fff; background: var(--bio-accent); border-bottom-right-radius: 4px; }
 
 /* ── Mobile ────────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  .bio-body { padding: 4px 4px 16px; }
   .bio-grid { grid-template-columns: 1fr; }
   .bio-modal { padding: 0; align-items: stretch; }
   .bio-card { width: 100%; border-radius: 0; }

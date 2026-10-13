@@ -275,12 +275,12 @@
     const canvas = $('bioWave');
     const g = canvas.getContext('2d');
     const data = new Uint8Array(analyser.fftSize);
-    const gold = getComputedStyle(document.documentElement).getPropertyValue('--bio-gold').trim() || '#d4af37';
+    const wave = '#1a73e8'; // azzurro ORIN (--orin-blu)
     const tick = () => {
       analyser.getByteTimeDomainData(data);
       g.clearRect(0, 0, canvas.width, canvas.height);
       g.lineWidth = 2;
-      g.strokeStyle = gold;
+      g.strokeStyle = wave;
       g.beginPath();
       const step = canvas.width / data.length;
       for (let i = 0; i < data.length; i++) {

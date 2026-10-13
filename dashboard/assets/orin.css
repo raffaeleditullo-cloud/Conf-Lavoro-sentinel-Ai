@@ -2235,3 +2235,57 @@ body[data-role="maintainer"] .dock-app-btn.maintainer-only-block {
   background: #fef3c7;
   color: #b45309;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   RITOCCHI GRAFICI (solo layout e colore, nessuna logica)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Chip temperatura: mai su due righe */
+.topbar-temp-chip { white-space: nowrap; flex-shrink: 0; }
+
+/* Connettori: l'intestazione va a capo invece di schiacciare titolo e pastiglia di stato */
+.connector-box > div:first-child { flex-wrap: wrap; gap: 8px 10px; }
+.connector-box > div:first-child > div:first-child { min-width: 0; flex: 1 1 200px; }
+.connector-box .connector-icon-badge { flex-shrink: 0; }
+.connector-box .cam-status-pill { white-space: nowrap; flex-shrink: 0; }
+
+@media (max-width: 767.98px) {
+  /* Indicatore "finestra aperta" nella dock inferiore: una barra sotto l'icona, non un trattino a sinistra */
+  .dock-app-btn.is-active .dock-active-indicator {
+    left: 50%;
+    top: auto;
+    bottom: -7px;
+    width: 22px;
+    height: 3px;
+    transform: translateX(-50%);
+    border-radius: 3px 3px 0 0;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Con un foglio aperto la barra comandi non deve coprirne il contenuto */
+  body.orin.has-windows .orin-command { display: none; }
+}
+
+/* Stato dei connettori: verde se raggiungibile, rosso se no (nelle altre pastiglie "offline" resta neutro) */
+.cam-status-pill.online {
+  background: var(--tone-ok-bg);
+  border-color: var(--tone-ok-border);
+  color: var(--tone-ok-fg);
+}
+.cam-status-pill.online::before { background: var(--tone-ok-dot); }
+.connector-box .cam-status-pill.offline {
+  background: var(--tone-alert-bg);
+  border-color: var(--tone-alert-border);
+  color: var(--tone-alert-fg);
+}
+.connector-box .cam-status-pill.offline::before { background: var(--tone-alert-dot); }
+
+@media (max-width: 760px) {
+  /* Topbar su telefono: tutto in una riga senza tagliare la pastiglia di stato */
+  .orin-topbar { gap: 8px; padding: 0 10px; }
+  .orin-wordmark { font-size: 21px; }
+  .topbar-temp-chip { padding: 5px 9px; font-size: 11px; gap: 5px; }
+  .orin-topbar .hud-security-zone { min-width: 0; }
+  .orin-topbar .security-status { padding: 6px 10px; font-size: 12px; }
+}
