@@ -257,23 +257,40 @@ class GeminiLiveEngine:
                 motivo = args.get("motivo", "Autorizzato da Gemini Live")
                 logger.info(">>> [GEMINI LIVE ACTION] Comando 'apri_cancello' ricevuto! Motivo: %s", motivo)
 
-                # Esecuzione fisica tramite callback / relè
-                success = True
+                # Convalida deterministica DEMON Gate + esecuzione fisica tramite callback / relè
+                success = False
+                stato_msg = "Apertura bloccata da DEMON Gate"
                 try:
-                    if self.relay_callback:
+                    from demon_gate import demon_gate
+                    allowed, reason = demon_gate.authorize_gate_open(
+                        "piazzale", {"subject_identified": True}, is_armed=False
+                    )
+                    if not allowed:
+                        logger.info(">>> [GEMINI LIVE DEMON BLOCK] %s", reason)
+                        stato_msg = reason
+                    elif self.relay_callback:
                         self.relay_callback(motivo)
+                        success = True
+                        stato_msg = "Relè cancello attivato con impulso 3.0s"
                     else:
-                        from relay_controller import relay
-                        relay.apri_cancello(channel=1, impulso_secondi=3.0)
+                        from relay_controller import WaveshareRelayController
+                        rc = WaveshareRelayController(
+                            host=os.environ.get("RELAY_HOST", "192.168.1.30"),
+                            port=int(os.environ.get("RELAY_PORT", "4196")),
+                        )
+                        rc.apri_cancello(channel=1, impulso_secondi=3.0)
+                        success = True
+                        stato_msg = "Relè cancello attivato con impulso 3.0s"
                 except Exception as ex:
                     logger.warning("Errore apertura relè da Gemini Live: %s", ex)
                     success = False
+                    stato_msg = "Errore relè"
 
                 responses.append({
                     "response": {
                         "output": {
                             "success": success,
-                            "stato": "Relè cancello attivato con impulso 3.0s" if success else "Errore relè"
+                            "stato": stato_msg
                         }
                     },
                     "id": call_id

@@ -129,7 +129,7 @@ class IdentikitProfiler:
         }
 
         # Salva la scheda JSON su disco locale
-        filename = f"{now.strftime('%Y%m%d_%H%M%S')}_{camera}_{event_id[:8]}.json"
+        filename = f"identikit_{now.strftime('%Y%m%d_%H%M%S')}_{camera}_{event_id[:8]}.json"
         local_path = os.path.join(self.log_dir, filename)
         try:
             with open(local_path, "w", encoding="utf-8") as f:

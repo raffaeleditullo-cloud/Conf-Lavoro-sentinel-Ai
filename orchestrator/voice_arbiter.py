@@ -31,7 +31,7 @@ import time
 import logging
 import threading
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Optional
 
 logger = logging.getLogger("SentinelVoiceArbiter")
 

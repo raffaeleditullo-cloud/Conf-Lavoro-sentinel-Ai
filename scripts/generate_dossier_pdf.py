@@ -11,8 +11,8 @@ from playwright.sync_api import sync_playwright
 import pypdf
 
 # Percorsi
-WORKSPACE_DIR = r"c:\Users\stree\Desktop\Conf_lavoro Sentinel AI"
-DESKTOP_DIR = r"c:\Users\stree\Desktop"
+WORKSPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DESKTOP_DIR = os.path.expanduser("~/Desktop")
 OUTPUT_PDF = os.path.join(DESKTOP_DIR, "CONF_LAVORO_SENTINEL_AI_Presentazione_Tecnica.pdf")
 IMG_DIR = os.path.join(WORKSPACE_DIR, "dashboard", "assets", "img")
 

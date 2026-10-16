@@ -404,7 +404,10 @@ def read_recent_identikits(limit=15):
         return []
     cards = []
     try:
-        files = [f for f in os.listdir(LOGS_DIR) if f.startswith("identikit_") and f.endswith(".json")]
+        files = [
+            f for f in os.listdir(LOGS_DIR)
+            if f.endswith(".json") and (f.startswith("identikit_") or (len(f) > 15 and f[:8].isdigit()))
+        ]
         files.sort(key=lambda x: os.path.getmtime(os.path.join(LOGS_DIR, x)), reverse=True)
         for fname in files[:limit]:
             fpath = os.path.join(LOGS_DIR, fname)

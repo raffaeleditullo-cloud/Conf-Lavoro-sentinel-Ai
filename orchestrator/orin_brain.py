@@ -86,8 +86,6 @@ def load_elevenlabs_api_key() -> str:
         os.path.expanduser("~/.secrets/elevenlabs_api_key.txt"),
         os.path.expanduser("~/.secrets/elevenlabs.txt"),
         "/root/.secrets/ElevenLabs Api.txt",
-        "c:/Users/stree/Desktop/HEXAD B-1/.env",
-        os.path.expanduser("~/Desktop/HEXAD B-1/.env"),
     ]
     for p in possible_paths:
         if os.path.exists(p):
