@@ -342,8 +342,11 @@ class OrinBrain:
                 for p in content_parts:
                     if "text" in p:
                         raw_content += p["text"]
+                clean_json = raw_content.strip()
+                if clean_json.startswith("```"):
+                    clean_json = clean_json.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
-                result = json.loads(raw_content)
+                result = json.loads(clean_json)
                 result["latency_ms"] = latency_ms
                 result["engine"] = f"google/{self.model}"
                 self._apply_identity(result, gallery)

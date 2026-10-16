@@ -232,10 +232,13 @@ def mark_clip_archived(event_id: str) -> bool:
     """Restituisce True solo la prima volta che viene archiviata la clip di un evento."""
     if not event_id:
         return True
+    if event_id in archived_clips:
+        return False
     if len(archived_clips) > MAX_TRACKED_EVENTS:
         archived_clips.clear()
     archived_clips.add(event_id)
     return True
+
 
 _settings_cache = {}
 _settings_mtime = 0.0
